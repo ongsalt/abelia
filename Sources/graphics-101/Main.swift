@@ -9,14 +9,14 @@ import Wayland
 func Counter() -> some UIElement {
     let count: Signal<Float> = Signal(0.0)
 
-    Compositor.current?.requestAnimationFrame { time in
-        count.value = Float(time.attoseconds / 1_000_000_000_000_000)
-        // print(count.value)
-        if count.value > 4800 {
-            return .done
-        }
-        return .ongoing
-    }
+    // Compositor.current?.requestAnimationFrame { time in
+    //     count.value = Float(time.attoseconds / 1_000_000_000_000_000)
+    //     // print(count.value)
+    //     if count.value > 4800 {
+    //         return .done
+    //     }
+    //     return .ongoing
+    // }
 
     return VStack(gap: 12) {
         UIBox()
@@ -36,9 +36,6 @@ func Counter() -> some UIElement {
             .cornerRadius(36)
             .border(width: 1, color: .neutral200)
             .shadow(color: .black.multiply(opacity: 0.22), blur: 28)
-        // .withLayer { layer in
-        //     layer.
-        // }
 
     }
 }
@@ -99,15 +96,27 @@ struct Graphics101 {
 
         Compositor.current = compositor
 
-        // let l = Layer(rect: Rect.init(center: [100,100], size: [100,100]))
+        // let l = Layer(rect: Rect.init(center: [100, 100], size: [100, 100]))
         // l.backgroundColor = .red
         // compositor.rootLayer.addChild(l)
+
+        // Task {
+        //     try await Task.sleep(for: .seconds(3))
+        //     let l = Layer(rect: Rect.init(center: [200, 200], size: [100, 100]))
+        //     l.backgroundColor = .blue
+        //     compositor.rootLayer.addChild(l)
+        // }
 
         let runtime = UIRuntime(
             layer: compositor.rootLayer,
             element: Window()
         )
         runtime.start()
+
+        Task {
+            try await Task.sleep(for: .seconds(1))
+            compositor.printLayer()
+        }
 
         RunLoop.main.run()
         drop(token)

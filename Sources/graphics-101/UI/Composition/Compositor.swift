@@ -102,6 +102,15 @@ class Compositor {
             renderTask = nil
         }
     }
+
+    func printLayer(_ layer: Layer? = nil, level: Int = 0) {
+        let layer = layer ?? self.rootLayer
+        print("\(String(repeating: " ", count: level))[\(layer.id)] \(layer.frame)")
+
+        for c in layer.children {
+            printLayer(c, level: level + 1)
+        }
+    }
 }
 
 /// Alternative: CALayer style

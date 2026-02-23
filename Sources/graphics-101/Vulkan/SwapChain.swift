@@ -154,6 +154,8 @@ final class SwapChain {
         let extent = chooseSwapExtent(
             capabilities: supportDetails.capabilities, preferredSize: preferredSize)
 
+        // print(surfaceFormat, extent)
+
         // print(supportDetails.formats)
         let surfaceCaps = supportDetails.capabilities
 

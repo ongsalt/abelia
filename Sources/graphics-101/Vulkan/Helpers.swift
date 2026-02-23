@@ -26,10 +26,13 @@ extension VkResult {
     }
 
     func expect(_ message: String) {
-        if self != VK_SUCCESS {
+        if self.rawValue < 0 {
             let m = "\(message), code: \(self.rawValue)"
             print("Fatal error: \(m)")
             fatalError(m)
+        }
+        if self != VK_SUCCESS {
+            print("Not VK_SUCCESS: \(self.rawValue)")
         }
     }
 
@@ -38,8 +41,11 @@ extension VkResult {
     }
 
     func unwrapOrElse<E>(_ block: () throws(E) -> Void) throws(E) {
-        if self != VK_SUCCESS {
+        if self.rawValue < 0 {
             try block()
+        }
+        if self != VK_SUCCESS {
+            print("Not VK_SUCCESS: \(self.rawValue)")
         }
     }
 }
@@ -158,9 +164,9 @@ extension UnsafeMutableRawBufferPointer {
     }
 }
 
-
 extension VkBufferUsageFlagBits {
-    static func | (lhs: VkBufferUsageFlagBits, rhs: VkBufferUsageFlagBits) -> VkBufferUsageFlagBits {
+    static func | (lhs: VkBufferUsageFlagBits, rhs: VkBufferUsageFlagBits) -> VkBufferUsageFlagBits
+    {
         VkBufferUsageFlagBits(lhs.rawValue | rhs.rawValue)
     }
 }

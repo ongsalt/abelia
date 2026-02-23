@@ -115,6 +115,7 @@ class Layer: Identifiable {
         // self.frame = rect
         // TODO: fix this
         self.bounds = rect
+        self.position = rect.topLeft
     }
 
     func addChild(_ layer: Layer, after position: Int? = nil) {
