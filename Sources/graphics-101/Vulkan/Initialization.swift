@@ -92,7 +92,7 @@ private func createWaylandSurface(
         &createInfo,
         nil,
         &surface
-    ).unwrap()
+    ).expect("Cannot create wayland surface")
 
     return surface!
 }

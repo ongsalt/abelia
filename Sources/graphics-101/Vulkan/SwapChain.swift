@@ -58,7 +58,7 @@ final class SwapChain {
         vkAcquireNextImageKHR(
             device, swapChain, UInt64.max, presentSemaphores[frameIndex], nil,
             &imageIndex
-        ).unwrap()
+        ).expect("Cannot acquire next image")
 
         return (images[Int(imageIndex)], imageViews[Int(imageIndex)], imageIndex)
     }
