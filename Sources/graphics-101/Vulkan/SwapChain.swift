@@ -60,6 +60,13 @@ final class SwapChain {
             &imageIndex
         ).expect("Cannot acquire next image")
 
+        // ok we got VK_SUBOPTIMAL_KHR sometime
+        // this doesnt happen on gnome only on niri. look like not our fault
+        // - Iced wgpu backend fails with Vulkan: https://github.com/niri-wm/niri/issues/1910
+        // - Zed: https://github.com/niri-wm/niri/issues/2335
+        // TODO: recreate swapchain maybe
+
+
         return (images[Int(imageIndex)], imageViews[Int(imageIndex)], imageIndex)
     }
 
