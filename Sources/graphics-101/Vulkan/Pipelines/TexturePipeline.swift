@@ -4,13 +4,13 @@ import Wayland
 
 struct TextureVertexData {
     let sizing: SIMD4<Float>
-    let textureData: SIMD4<UInt>
+    let textureData: SIMD4<UInt32>
     let position: SIMD2<Float>
 
     static func bindingDescriptions(binding: UInt32) -> VkVertexInputBindingDescription {
         VkVertexInputBindingDescription(
             binding: binding,
-            stride: UInt32(MemoryLayout<Self>.size),
+            stride: UInt32(MemoryLayout<Self>.stride),
             inputRate: VK_VERTEX_INPUT_RATE_VERTEX
         )
     }
@@ -86,7 +86,6 @@ class TexturePipeline {
             $0.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO
             $0.vertexBindingDescriptionCount = bindingDescriptions.count
             $0.pVertexBindingDescriptions = bindingDescriptions.readonly
-
             $0.vertexAttributeDescriptionCount = attributeDescriptions.count
             $0.pVertexAttributeDescriptions = attributeDescriptions.readonly
         }

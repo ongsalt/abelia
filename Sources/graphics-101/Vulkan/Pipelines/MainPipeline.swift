@@ -103,11 +103,6 @@ class MainPipeline {
             // rasterizer.depthBiasSlopeFactor = 0.0  // Optional
         }
 
-        // let pushConstantRange = Box(VkPushConstantRange()) {
-        //     $0.stageFlags = VK_SHADER_STAGE_VERTEX_BIT.rawValue
-        //     $0.size = UInt32(MemoryLayout<VkDeviceAddress>.size)
-        // }
-
         let colorBlendAttachment = Box(VkPipelineColorBlendAttachmentState()) {
             $0.colorWriteMask = VkColorComponentFlags(
                 VK_COLOR_COMPONENT_R_BIT.rawValue | VK_COLOR_COMPONENT_G_BIT.rawValue

@@ -22,7 +22,6 @@ class RenderTextureRegistry {
             maxSize: maxSize
         )
 
-        // self.updateDescriptorSet()
     }
 
     func newRenderTarget(
@@ -138,7 +137,7 @@ class RenderTextureRegistry {
         let imageInfo = Pin(
             textures.map {
                 var info = $0.descriptorImageInfo
-                info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL // lieeee
+                info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL  // lieeee
                 return info
             })
         var writeDescSet = with(VkWriteDescriptorSet()) {
@@ -149,7 +148,7 @@ class RenderTextureRegistry {
             $0.descriptorCount = UInt32(textures.count)
             $0.pImageInfo = imageInfo.readonly
         }
-        Log.debug(.vulkan, "writeDescSet: \(writeDescSet)")
+        // Log.debug(.vulkan, "writeDescSet: \(writeDescSet)")
         // VkDescriptorImageInfo(sampler: VkSampler!, imageView: VkImageView!, imageLayout: VK_IMAGE_LAYOUT_VIDEO_ENCODE_DPB_KHR)
         vkUpdateDescriptorSets(vulkan.device, 1, &writeDescSet, 0, nil)
     }
@@ -162,7 +161,6 @@ class RenderTextureRegistry {
             $0.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
             $0.descriptorCount = maxSize  // how tf would i know,
             $0.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT.rawValue
-            // | VK_SHADER_STAGE_VERTEX_BIT.rawValue
         }
         let flags = Box(
             VkDescriptorBindingFlags(

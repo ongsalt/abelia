@@ -5,7 +5,6 @@ import Wayland  // for pointers
 @MainActor
 class Renderer2 {
     let state: VulkanState
-
     let pipeline: TexturePipeline
     let renderTexture: RenderTexture
     let buffer: RawGPUBuffer
@@ -16,20 +15,20 @@ class Renderer2 {
         self.state = state
         self.textureRegistry = RenderTextureRegistry(vulkan: state)
         self.renderTexture = textureRegistry.newRenderTarget(size: state.swapChain.extent.simd2)
-        
+
         self.pipeline = TexturePipeline(state: state, textureRegistry: textureRegistry)
 
         self.buffer = RawGPUBuffer(allocator: state.allocator, device: state.device)
 
         let indexes: [UInt32] = [0, 1, 2, 0, 3, 2]
         let vertexData: [TextureVertexData] = [
-            .init(sizing: [0, 0, 100, 100], textureData: .zero, position: [0, 0]),
-            .init(sizing: [0, 0, 100, 100], textureData: .zero, position: [0, 100]),
-            .init(sizing: [0, 0, 100, 100], textureData: .zero, position: [100, 100]),
-            .init(sizing: [0, 0, 100, 100], textureData: .zero, position: [100, 0]),
+            .init(sizing: [0, 0, 0.5, 0.5], textureData: .zero, position: [0, 0]),
+            .init(sizing: [0, 0, 0.5, 0.5], textureData: .zero, position: [0, 0.5]),
+            .init(sizing: [0, 0, 0.5, 0.5], textureData: .zero, position: [0.5, 0.5]),
+            .init(sizing: [0, 0, 0.5, 0.5], textureData: .zero, position: [0.5, 0]),
         ]
         self.indexOffset = self.buffer.write(vertexData)
-        _ = self.buffer.write(indexes)
+        _ = self.buffer.write(indexes, offset: self.indexOffset)
 
     }
 
@@ -64,7 +63,6 @@ class Renderer2 {
         await withUnsafeContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async { [state] in
                 let res = state.swapChain.acquireNextImage()
-
                 continuation.resume(returning: res)
             }
         }
@@ -129,21 +127,19 @@ class Renderer2 {
 
         let dependencyInfo = Box(VkDependencyInfo()) {
             $0.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO
-            $0.imageMemoryBarrierCount = 2
+            $0.imageMemoryBarrierCount = 1
             $0.pImageMemoryBarriers = imageBarrier.readonly
         }
 
         vkCmdPipelineBarrier2(commandBuffer, dependencyInfo.ptr)
 
         // Setup rendering attachment
-        // print(swapChain.surfaceFormat)
         let colorAttachmentInfo = Box(VkRenderingAttachmentInfo()) {
             $0.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO
             $0.imageView = self.renderTexture.view
             $0.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL
             $0.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR
             $0.storeOp = VK_ATTACHMENT_STORE_OP_STORE
-            // fuckkkkkk
             $0.clearValue.color.float32 = (0.1, 0.0, 0.0, 1.0)
 
             $0.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT
@@ -153,8 +149,7 @@ class Renderer2 {
 
         let renderingInfo = Box(VkRenderingInfo()) {
             $0.sType = VK_STRUCTURE_TYPE_RENDERING_INFO
-            $0.renderArea.extent.width = swapChain.extent.width
-            $0.renderArea.extent.height = swapChain.extent.height
+            $0.renderArea.extent = swapChain.extent
             $0.layerCount = 1
             $0.colorAttachmentCount = 1
             $0.pColorAttachments = colorAttachmentInfo.readonly
@@ -163,8 +158,8 @@ class Renderer2 {
         // actual rendering
         vkCmdBeginRendering(commandBuffer, renderingInfo.ptr)
 
-        pipeline.bind(commandBuffer: commandBuffer)
         setViewport(swapChain.extent.simd2, commandBuffer: commandBuffer)
+        pipeline.bind(commandBuffer: commandBuffer)
 
         var offsets: UInt64 = 0
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, &buffer.buffer, &offsets)
@@ -178,8 +173,19 @@ class Renderer2 {
         //     UInt32(MemoryLayout<VkDeviceAddress>.size), &address
         // )
 
-        vkCmdDrawIndexed(commandBuffer, 6, 1, 0, 0, 0)
+        var descriptorSet: VkDescriptorSet? = textureRegistry.descriptorSet
+        vkCmdBindDescriptorSets(
+            commandBuffer,
+            VK_PIPELINE_BIND_POINT_GRAPHICS,
+            pipeline.pipelineLayout,
+            0,
+            1,
+            &descriptorSet,
+            0,
+            nil
+        )
 
+        vkCmdDrawIndexed(commandBuffer, 6, 1, 0, 0, 0)
         vkCmdEndRendering(commandBuffer)
 
         // Transition image to present
@@ -247,13 +253,13 @@ class Renderer2 {
 
         // should this be in the main queue tho
         vkQueuePresentKHR(state.presentQueue, presentInfo.ptr).unwrap()
-
         swapChain.frameIndex = (swapChain.frameIndex + 1) % swapChain.framesInFlightCount
 
         return true
     }
 
     private func setViewport(_ size: SIMD2<UInt32>, commandBuffer: VkCommandBuffer) {
+        Log.debug(.vulkan, "viewport size: \(size)")
         var viewport = VkViewport(
             x: 0,
             y: 0,
