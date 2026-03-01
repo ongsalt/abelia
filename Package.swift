@@ -17,15 +17,10 @@ let package = Package(
                 .interoperabilityMode(.C)
             ]
         ),
-
-        .systemLibrary(name: "CFreeType", pkgConfig: "freetype2"),
-        .target(
-            name: "FreeType",
-            dependencies: ["CFreeType"]
-        ),
         
         .systemLibrary(name: "CPango", pkgConfig: "pangoft2"),
 
+        // Everything vulkan is in here
         .target(
             name: "CVMA",
             cSettings: [
@@ -39,7 +34,7 @@ let package = Package(
                 .product(name: "Numerics", package: "swift-numerics"),
                 .target(name: "Wayland", condition: .when(platforms: [.linux])),
                 "CVMA",
-                "FreeType",
+                // "FreeType",
                 "CPango",
             ],
             resources: [

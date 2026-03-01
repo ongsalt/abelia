@@ -1,5 +1,4 @@
 import Foundation
-import FreeType
 
 final class Text: UIElement {
     var text: String

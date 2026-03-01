@@ -1,4 +1,0 @@
-import CFreeType
-
-class Library {
-}

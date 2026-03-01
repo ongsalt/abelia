@@ -26,13 +26,15 @@ private func createInstance() -> VkInstance {
     var instance: VkInstance! = VkInstance(bitPattern: 0)
 
     // how long should this be alive tho
+    let appName = CString("yomum")
+    let engineName = CString("yomum engine")
     let appInfo = Box(
         VkApplicationInfo(
             sType: VK_STRUCTURE_TYPE_APPLICATION_INFO,
             pNext: nil,
-            pApplicationName: "yomum".persist(),
+            pApplicationName: appName.ptr,
             applicationVersion: Vulkan.makeVersion(major: 1, minor: 0, patch: 0),
-            pEngineName: "yomum engine".persist(),
+            pEngineName: engineName.ptr,
             engineVersion: Vulkan.makeVersion(major: 1, minor: 0, patch: 0),
             apiVersion: Vulkan.apiVersion
         )

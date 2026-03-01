@@ -63,12 +63,12 @@ class SurfaceLayer {
 // 8. ninegrid (rect.{top, left, bottom, right})
 
 
-class BackdropEffectLayer: ContainerLayer {
+class EffectLayer: ContainerLayer {
     let filters: [ImageFilter] = []
 }
 // this might be dispatch to multiple shader
 // one thing all of these have in common is that they require layer underneath to be rasterized
-// This can be done in composite phase
+// Or we nuke this class and make this a property of a _Layer then the framework just flag it
 
 enum ImageFilter {
     case blendMode(BlendMode)
@@ -106,9 +106,16 @@ class ContainerLayer: _Layer {
 /// - someone request redraw (wayland frame timing?) with damaged layers list
 /// proc raster(root):
 ///   get render surface
+///   group child by dependencies: need to be cached
+///     - non overlapping EffectLayer can be in the same pipeline
+///     - 
 ///   walk layer tree starting from root
 ///     - root layer must always be raster
 ///     - skip every shouldRaster layer that is not damaged
 ///     - if damaged -> raster(said node)
 /// should we still do damaged rect at this point
+/// 
 /// TODO: just test compositing speed in vulkan-rust
+/// 
+/// https://nothings.org/gamedev/compositing_tree/
+/// 

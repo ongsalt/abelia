@@ -3,16 +3,18 @@
 @MainActor
 class UIRenderer {
     let renderQueue: RenderQueue
-    // 1 buffer, each shader will get different offset in this
-    let pipelines: PipelineRegistry
+
+    let mainPipeline: MainPipeline
+
     let buffer: RawGPUBuffer
     let uniformBuffer: GPUBuffer<(Float32, Float32)>
 
     var shouldRender: Bool = false
 
     init(state: VulkanState, onFinishCallback: (() -> Void)? = nil) throws {
+        mainPipeline = MainPipeline(device: state.device, swapChain: state.swapChain)
         renderQueue = RenderQueue(state: state, onFinishCallback: onFinishCallback)
-        pipelines = try PipelineRegistry(device: state.device, swapChain: state.swapChain)
+        
         buffer = RawGPUBuffer(
             allocator: state.allocator,
             device: state.device,
@@ -43,7 +45,7 @@ class UIRenderer {
         for cmd in info.commands {
             switch cmd {
             case .main(let vertexes, let indexes):
-                let pipeline = pipelines.main
+                let pipeline = mainPipeline
                 let vertexBufferOffset = bufferOffset
                 bufferOffset += buffer.write(vertexes, offset: bufferOffset)
                 let indexBufferOffset = bufferOffset

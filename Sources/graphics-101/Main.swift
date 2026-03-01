@@ -1,7 +1,6 @@
 @preconcurrency import CVMA
 import CoreFoundation
 import Foundation
-import FreeType
 import Synchronization
 import Wayland
 
@@ -69,8 +68,6 @@ struct Graphics101 {
 
         let window: RawWindow = RawWindow(display: display, title: "yomama")
         window.show()
-
-        FreeType.initialize()
 
         let token = RunLoop.main.addListener(on: [.beforeWaiting]) { _ in
             // print("Will sleep")
