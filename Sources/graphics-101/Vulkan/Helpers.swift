@@ -28,11 +28,11 @@ extension VkResult {
     func expect(_ message: String) {
         if self.rawValue < 0 {
             let m = "\(message), code: \(self.rawValue)"
-            print("Fatal error: \(m)")
+            Log.debug(.vulkan, "error code: \(self.rawValue)")
             fatalError(m)
         }
         if self != VK_SUCCESS {
-            print("Not VK_SUCCESS: \(self.rawValue)")
+            Log.warn(.vulkan, "Not VK_SUCCESS: \(self.rawValue)")
         }
     }
 
@@ -45,8 +45,18 @@ extension VkResult {
             try block()
         }
         if self != VK_SUCCESS {
-            print("Not VK_SUCCESS: \(self.rawValue)")
+            Log.warn(.vulkan, "Not VK_SUCCESS: \(self.rawValue)")
         }
+    }
+
+    func throwing() throws(VulkanError) {
+        if self.rawValue < 0 {
+            throw VulkanError(code: self)
+        }
+    }
+
+    struct VulkanError: Error {
+        let code: VkResult
     }
 }
 
@@ -126,6 +136,12 @@ struct Vulkan {
         }
     }
 
+    static func create<T>(fn: (UnsafeMutablePointer<T>) -> VkResult) -> T {
+        let ptr = UnsafeMutablePointer<T>.allocate(capacity: 1)
+        fn(ptr).expect("Cannot create \(T.self)")
+        return ptr.pointee
+    }
+
 }
 
 struct SwapChainSupportDetails {
@@ -168,5 +184,12 @@ extension VkBufferUsageFlagBits {
     static func | (lhs: VkBufferUsageFlagBits, rhs: VkBufferUsageFlagBits) -> VkBufferUsageFlagBits
     {
         VkBufferUsageFlagBits(lhs.rawValue | rhs.rawValue)
+    }
+}
+
+
+extension VkExtent2D {
+    var simd2: SIMD2<UInt32> {
+        SIMD2(self.width, self.height)
     }
 }

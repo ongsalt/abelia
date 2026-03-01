@@ -1,5 +1,5 @@
 ```bash
-swift run -c release && ffmpeg -i ./ppm/%d.ppm ./out/%04d.png -y
+glslc Sources/graphics-101/Resources/Shaders/texture.frag -o Sources/graphics-101/Resources/Compiled/texture.frag.spv
 ```
 
 # Note

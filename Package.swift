@@ -17,7 +17,7 @@ let package = Package(
                 .interoperabilityMode(.C)
             ]
         ),
-        
+
         .systemLibrary(name: "CPango", pkgConfig: "pangoft2"),
 
         // Everything vulkan is in here
@@ -27,6 +27,11 @@ let package = Package(
                 .define("VK_USE_PLATFORM_WAYLAND_KHR", .when(platforms: [.linux]))  // i should fucking put these 2 together
             ],
         ),
+
+        // .plugin(
+        //     name: "ShaderCompilation",
+        //     capability: .buildTool(),
+        // ),
 
         .executableTarget(
             name: "graphics-101",
@@ -38,7 +43,7 @@ let package = Package(
                 "CPango",
             ],
             resources: [
-                .copy("Resources/Compiled/")
+               .copy("Resources/Compiled")
             ],
             cSettings: [
                 .define("VK_USE_PLATFORM_WAYLAND_KHR", .when(platforms: [.linux]))

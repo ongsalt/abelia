@@ -105,7 +105,7 @@ final class SwapChain {
         }
 
         if let format {
-            Logger.info(.vulkan, "Picked \(format)")
+            Log.info(.vulkan, "Picked \(format)")
         }
 
         return format ?? availableFormats[0]

@@ -2,7 +2,12 @@
 
 // This is only the api not actual object managed by the framework
 class _Layer {
-    var scale: Float = 1
+    private(set) var parent: _Layer?
+    var scale: Float = 1 {
+        didSet {
+            // invalidate()
+        }
+    }
     var rotation: Float = 0
     var opacity: Float = 1
     var isHidden: Bool = false
@@ -11,14 +16,26 @@ class _Layer {
     var affine: AffineMatrix = .identity
 
     var drawBackface: Bool = true
-
     var shouldRasterize: Bool = false
 
     // will be set when doing opacity/animation
     // the framework might decide if it is a dependency of foreground effect
     package var _shouldRasterize: Bool = false
-    private var shouldActuallyRasterize: Bool {
-        shouldRasterize || _shouldRasterize
+    package var shouldActuallyRasterize: Bool {
+        shouldRasterize || _shouldRasterize || (opacity != 1 && opacity != 0) 
+        // we can actually keep the rasterrized texture for a while for fade animation
+    }
+}
+
+extension _Layer {
+    var rasterizationRoot: _Layer {
+        guard let parent else {
+            return self // this wont happen
+        }
+        if self.shouldActuallyRasterize {
+            return self
+        }
+        return parent.rasterizationRoot
     }
 }
 
@@ -42,29 +59,28 @@ class RectLayer: ContainerLayer {
 
     var fillColor: Color = .transparent
     // var scalingMode:
+
+    var contents: Surface?
+    var ninegrid: SIMD4<Float> = .zero
+
+    func invalidateContents() {}
 }
 // this one must have its own shader type
-// Its SDF rect tho 
+// Its SDF rect tho
 // 7. cornerRadius.{x,y,z,w}
 // 8. cornerDegree, borderWidth, [8 bytes]
 // 9-11. Colors: shadow, fill, border
 // 12. shadow: offset.{x.y}, blur, spread
+// 13. hasContent, contentIndex: u32, 
+// 14. ninegrid (rect.{top, left, bottom, right})
+// always clip contents but child??? -> never?
+// 
+// Shadow should be in seperated mode (so we can sort it)
+// how do we expose this api tho shadowZ: [normal|bottom]
 
-class SurfaceLayer {
-    var contents: Surface?
-    var ninegrid: SIMD4<Float> = .zero
-
-    func invalidate() {}
-}
-// for other complicate shi pls use skia
-// TODO:
-// in simpler case we can just put this into Rect shader
-// 7. hasContent, contentIndex: u32,
-// 8. ninegrid (rect.{top, left, bottom, right})
-
-
-class EffectLayer: ContainerLayer {
+class EffectLayer: _Layer {
     let filters: [ImageFilter] = []
+    override var shouldActuallyRasterize: Bool { true }
 }
 // this might be dispatch to multiple shader
 // one thing all of these have in common is that they require layer underneath to be rasterized
@@ -73,11 +89,11 @@ class EffectLayer: ContainerLayer {
 enum ImageFilter {
     case blendMode(BlendMode)
     case gaussianBlur(radius: Float, edgeSampling: EdgeSamplingMethod = .repeat)
-    case material(MaterialType) // very opinionate
+    case material(MaterialType)  // very opinionate
     case dither
 }
 
-enum EdgeSamplingMethod  {
+enum EdgeSamplingMethod {
     case `repeat`
     case transparent
 }
@@ -96,26 +112,7 @@ enum BlendMode {
 protocol Surface {}
 
 class ContainerLayer: _Layer {
+    private var _children: [Layer] = []
+    // shuold be linked list ?
 }
 
-// most ui is rect anyway
-
-
-// So final part of pipeline is always composite phase
-/// Render pipeline
-/// - someone request redraw (wayland frame timing?) with damaged layers list
-/// proc raster(root):
-///   get render surface
-///   group child by dependencies: need to be cached
-///     - non overlapping EffectLayer can be in the same pipeline
-///     - 
-///   walk layer tree starting from root
-///     - root layer must always be raster
-///     - skip every shouldRaster layer that is not damaged
-///     - if damaged -> raster(said node)
-/// should we still do damaged rect at this point
-/// 
-/// TODO: just test compositing speed in vulkan-rust
-/// 
-/// https://nothings.org/gamedev/compositing_tree/
-/// 

@@ -116,6 +116,8 @@ class GPUBuffer<BufferData> {
 
 }
 
+
+// TODO: gpu local buffer
 class RawGPUBuffer {
     let mapped: UnsafeMutableRawPointer
     let deviceAddress: VkDeviceAddress

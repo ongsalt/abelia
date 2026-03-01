@@ -100,28 +100,31 @@ private func createWaylandSurface(
 }
 
 // TODO: device picking logic: checkDeviceExtensionSupport
-private func pickPhysicalDevice(instance: VkInstance) -> VkPhysicalDevice {
+private func pickPhysicalDevice(instance: VkInstance) -> (
+    device: VkPhysicalDevice, properties: VkPhysicalDeviceProperties,
+    features: VkPhysicalDeviceFeatures
+) {
     var count: UInt32 = 0
-    vkEnumeratePhysicalDevices(instance, &count, nil)
+    vkEnumeratePhysicalDevices(instance, &count, nil).unwrap()
 
     var devices: [VkPhysicalDevice?] = Array(
         repeating: nil, count: Int(count))
-    vkEnumeratePhysicalDevices(instance, &count, &devices)
+    vkEnumeratePhysicalDevices(instance, &count, &devices).unwrap()
 
-    for device in devices {
+    let properties = devices.map { device in
         var properties = VkPhysicalDeviceProperties()
         vkGetPhysicalDeviceProperties(device, &properties)
 
         var deviceFeatures = VkPhysicalDeviceFeatures()
-
         vkGetPhysicalDeviceFeatures(device, &deviceFeatures)
 
         // let name = String(cStringPointer: &properties.deviceName)
         // print(name)
         // print(deviceFeatures)
+        return (device: device!, properties: properties, features: deviceFeatures)
     }
 
-    return devices[0]!
+    return properties[0]
 
 }
 
@@ -152,7 +155,8 @@ private func findQueueFamilies(device: VkPhysicalDevice, surface: VkSurfaceKHR)
     var presentFamily: Int? = nil
     var supportPresentation: VkBool32 = false
     vkGetPhysicalDeviceSurfaceSupportKHR(
-        device, UInt32(graphicsFamily), surface, &supportPresentation)
+        device, UInt32(graphicsFamily), surface, &supportPresentation
+    ).unwrap()
     if supportPresentation.isTrue() {
         presentFamily = graphicsFamily
     }
@@ -189,6 +193,7 @@ private func createLogicalDevice(families: SelectedQueuesIndices, physicalDevice
         enabledVk12Features[].sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES
         enabledVk12Features[].descriptorIndexing = true
         enabledVk12Features[].descriptorBindingVariableDescriptorCount = true
+        // enabledVk12Features[].descriptorBindingPartiallyBound = true
         enabledVk12Features[].runtimeDescriptorArray = true
         enabledVk12Features[].bufferDeviceAddress = true
 
@@ -273,6 +278,9 @@ class VulkanState: @unchecked Sendable {
     let physicalDevice: VkPhysicalDevice
     let device: VkDevice
 
+    let physicalDeviceProperties: VkPhysicalDeviceProperties
+    let physicalDeviceFeatures: VkPhysicalDeviceFeatures
+
     let families: SelectedQueuesIndices
     let graphicsQueue: VkQueue
     let presentQueue: VkQueue
@@ -291,7 +299,10 @@ class VulkanState: @unchecked Sendable {
         surface = createWaylandSurface(
             instance: instance, waylandDisplay: waylandDisplay, waylandSurface: waylandSurface)
 
-        physicalDevice = pickPhysicalDevice(instance: instance)
+        let selectedDeviceInfo = pickPhysicalDevice(instance: instance)
+        self.physicalDevice = selectedDeviceInfo.device
+        self.physicalDeviceProperties = selectedDeviceInfo.properties
+        self.physicalDeviceFeatures = selectedDeviceInfo.features
 
         // no VK_EXT_blend_operation_advanced
         // Vulkan.printAvailableDeviceExtension(physicalDevice: physicalDevice)
@@ -362,6 +373,40 @@ class VulkanState: @unchecked Sendable {
         vkAllocateCommandBuffers(device, cbAllocCI.ptr, &commandBuffers).unwrap()
 
         return (commandPool, commandBuffers.unwrapPointer())
+    }
+
+    /// Warning: this do blocks
+    func command<T>(_ block: (VkCommandBuffer) -> T) -> T {
+        var commandBuffers = Array(
+            repeating: VkCommandBuffer(bitPattern: 0), count: 1)
+        let cbAllocCI = Box(VkCommandBufferAllocateInfo()) {
+            $0.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO
+            $0.commandPool = self.commandPool
+            $0.commandBufferCount = 1
+        }
+        vkAllocateCommandBuffers(device, cbAllocCI.ptr, &commandBuffers).unwrap()
+
+        var commandBufferCI = with(VkCommandBufferBeginInfo()) {
+            $0.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO
+            $0.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT.rawValue
+        }
+        vkBeginCommandBuffer(commandBuffers[0], &commandBufferCI).unwrap()
+
+        let result = block(commandBuffers[0]!)
+
+        vkEndCommandBuffer(commandBuffers[0]).unwrap()
+
+        let p = Pin(commandBuffers)
+        var submitInfo = with(VkSubmitInfo()) {
+            $0.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO
+            $0.commandBufferCount = 1
+            $0.pCommandBuffers = p.readonly
+        }
+        vkQueueSubmit(graphicsQueue, 1, &submitInfo, nil).unwrap()
+        vkQueueWaitIdle(graphicsQueue).unwrap()
+        vkFreeCommandBuffers(device, commandPool, 1, p.readonly)
+
+        return result
     }
 
     deinit {
