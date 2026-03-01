@@ -40,14 +40,15 @@ public class TextRenderer {
 
     public func render(
         _ text: String,
-        to rawBuffer: UnsafeMutableRawPointer,  // TODO: UnsafeMutableRawBufferPointer
-        width: Int,
-        height: Int,
+        to buffer: UnsafeMutableBufferPointer<UInt8>,  // TODO: UnsafeMutableRawBufferPointer
+        width: Int32,
+        height: Int32,
         fontDescription: String = "Noto Sans 20",
         offsetX: Int32 = 0,
         offsetY: Int32 = 0
     ) -> Bool {
         guard width > 0, height > 0 else { return false }
+        guard buffer.count >= width * height else { return false } // its in byte so...
 
         pango_layout_set_text(layout, text, -1)
 
@@ -56,13 +57,12 @@ public class TextRenderer {
         pango_layout_set_font_description(layout, desc.desc)
 
         // TODO: bound check
-        let buffer = rawBuffer.assumingMemoryBound(to: UInt8.self)
 
         var bitmap = FT_Bitmap()
         bitmap.width = numericCast(width)
         bitmap.rows = numericCast(height)
         bitmap.pitch = numericCast(width)
-        bitmap.buffer = buffer
+        bitmap.buffer = buffer.baseAddress
         bitmap.num_grays = 256
         bitmap.pixel_mode = numericCast(FT_PIXEL_MODE_GRAY.rawValue)
 

@@ -30,9 +30,11 @@ struct Graphics101 {
             waylandSurface: window.surface.surface
         )
 
-        let renderer = Renderer2(state: vulkanState)
         Task {
+            let renderer = await Renderer2(state: vulkanState)
             await renderer.perform()
+
+            _ = Unmanaged.passRetained(renderer) // for now
         }
 
         RunLoop.main.run()

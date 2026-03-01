@@ -2,7 +2,6 @@
 import Foundation
 import Wayland  // for pointers
 
-@MainActor
 class Renderer2 {
     let state: VulkanState
     let pipeline: TexturePipeline
@@ -10,8 +9,9 @@ class Renderer2 {
     let buffer: RawGPUBuffer
     let indexOffset: Int
     let textureRegistry: RenderTextureRegistry
+    let uniformBuffer: GPUBuffer<(Float32, Float32)>
 
-    init(state: VulkanState) {
+    init(state: VulkanState) async {
         self.state = state
         self.textureRegistry = RenderTextureRegistry(vulkan: state)
         self.renderTexture = textureRegistry.newRenderTarget(size: state.swapChain.extent.simd2)
@@ -19,17 +19,53 @@ class Renderer2 {
         self.pipeline = TexturePipeline(state: state, textureRegistry: textureRegistry)
 
         self.buffer = RawGPUBuffer(allocator: state.allocator, device: state.device)
+        self.uniformBuffer = GPUBuffer(
+            data: [(800, 600)],
+            allocator: state.allocator,
+            device: state.device,
+            count: 1,
+            usages: VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT
+        )
+
+        let textRenderer = TextRenderer()
+        let t = "Hi hi kroos desu yo"
+        let (_, ink) = textRenderer.measure(text: t)
+        let ww = ink.width * 2
+        let hh = ink.height * 2
+        let buffer = UnsafeMutableBufferPointer<UInt8>.allocate(
+            capacity: Int(hh * ww))
+        buffer.initialize(repeating: 0)
+        _ = textRenderer.render(t, to: buffer, width: ww, height: hh)
+        Log.debug(.vulkan, "Text dimension: \(ink)")
+
+        // for byte in buffer {
+        //     print(byte, terminator: " ")
+        // }
+        // print()
+
+        // TODO: properly map coord, i should just use normal coord everywhere and transform it later in the shader
+        // 0..800 map to -1..1
+        let w = Float(ww)
+        let h = Float(hh)
 
         let indexes: [UInt32] = [0, 1, 2, 0, 3, 2]
         let vertexData: [TextureVertexData] = [
-            .init(sizing: [0, 0, 0.5, 0.5], textureData: .zero, position: [0, 0]),
-            .init(sizing: [0, 0, 0.5, 0.5], textureData: .zero, position: [0, 0.5]),
-            .init(sizing: [0, 0, 0.5, 0.5], textureData: .zero, position: [0.5, 0.5]),
-            .init(sizing: [0, 0, 0.5, 0.5], textureData: .zero, position: [0.5, 0]),
+            .init(sizing: [0, 0, w, h], textureData: [1, 0, 0, 0], position: [0, 0]),
+            .init(sizing: [0, 0, w, h], textureData: [1, 0, 0, 0], position: [0, h]),
+            .init(sizing: [0, 0, w, h], textureData: [1, 0, 0, 0], position: [w, h]),
+            .init(sizing: [0, 0, w, h], textureData: [1, 0, 0, 0], position: [w, 0]),
         ]
-        self.indexOffset = self.buffer.write(vertexData)
-        _ = self.buffer.write(indexes, offset: self.indexOffset)
+        var offset = self.buffer.write(vertexData)
+        self.indexOffset = offset
+        offset += self.buffer.write(indexes, offset: offset)
 
+        let textTexture = await textureRegistry.createStaticTexture(
+            from: buffer,
+            size: [UInt32(ww), UInt32(hh)],
+            format: VK_FORMAT_R8_UNORM
+        )
+
+        Log.debug(.vulkan, "\(textureRegistry.textures)")
     }
 
     private func waitForImage(offThread: Bool = true) async {
@@ -166,12 +202,13 @@ class Renderer2 {
         vkCmdBindIndexBuffer(
             commandBuffer, buffer.buffer, UInt64(indexOffset), VK_INDEX_TYPE_UINT32)
 
-        // var address = uniformBuffer.deviceAddress
-        // vkCmdPushConstants(
-        //     commandBuffer, pipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT.rawValue,
-        //     0,
-        //     UInt32(MemoryLayout<VkDeviceAddress>.size), &address
-        // )
+        var address: SIMD2<UInt32> = [800, 600]
+        vkCmdPushConstants(
+            commandBuffer, pipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT.rawValue | VK_SHADER_STAGE_FRAGMENT_BIT.rawValue,
+            0,
+            UInt32(MemoryLayout<SIMD2<UInt32>>.size),
+            &address
+        )
 
         var descriptorSet: VkDescriptorSet? = textureRegistry.descriptorSet
         vkCmdBindDescriptorSets(
@@ -258,8 +295,11 @@ class Renderer2 {
         return true
     }
 
+    private func render(to target: RenderTexture, commandBuffer: VkCommandBuffer) {
+
+    }
+
     private func setViewport(_ size: SIMD2<UInt32>, commandBuffer: VkCommandBuffer) {
-        Log.debug(.vulkan, "viewport size: \(size)")
         var viewport = VkViewport(
             x: 0,
             y: 0,

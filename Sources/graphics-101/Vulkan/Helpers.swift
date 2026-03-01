@@ -187,9 +187,18 @@ extension VkBufferUsageFlagBits {
     }
 }
 
-
 extension VkExtent2D {
     var simd2: SIMD2<UInt32> {
         SIMD2(self.width, self.height)
+    }
+}
+
+extension SIMD2 where Scalar == UInt32 {
+    var extent2d: VkExtent2D {
+        VkExtent2D(width: x, height: y)
+    }
+    
+    var extent3d: VkExtent3D {
+        VkExtent3D(width: x, height: y, depth: 1)
     }
 }

@@ -1,4 +1,5 @@
 @preconcurrency import CVMA
+import Foundation
 import Glibc
 import Wayland
 
@@ -375,8 +376,16 @@ class VulkanState: @unchecked Sendable {
         return (commandPool, commandBuffers.unwrapPointer())
     }
 
+    deinit {
+        // TODO: wait for idle
+        destroy()
+    }
+}
+
+extension VulkanState {
     /// Warning: this do blocks
-    func command<T>(_ block: (VkCommandBuffer) -> T) -> T {
+    // TODO: async
+    func runCommands<T>(_ block: (VkCommandBuffer) -> T) async -> T {
         var commandBuffers = Array(
             repeating: VkCommandBuffer(bitPattern: 0), count: 1)
         let cbAllocCI = Box(VkCommandBufferAllocateInfo()) {
@@ -402,15 +411,32 @@ class VulkanState: @unchecked Sendable {
             $0.commandBufferCount = 1
             $0.pCommandBuffers = p.readonly
         }
-        vkQueueSubmit(graphicsQueue, 1, &submitInfo, nil).unwrap()
-        vkQueueWaitIdle(graphicsQueue).unwrap()
-        vkFreeCommandBuffers(device, commandPool, 1, p.readonly)
 
+        var fenceCI = VkFenceCreateInfo(
+            sType: VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+            pNext: nil,
+            flags: 0
+        )
+        var fence = VkFence(bitPattern: 0)
+        vkCreateFence(device, &fenceCI, nil, &fence).expect("Cannot create fence")
+        vkQueueSubmit(graphicsQueue, 1, &submitInfo, fence).unwrap()
+
+        let c = TrustMeBro(fence: fence, device: device)
+        await withUnsafeContinuation { continuation in
+            DispatchQueue.global().async { [c] in
+                var c = c
+                vkWaitForFences(c.device, 1, &c.fence, true, UInt64.max).unwrap()
+                continuation.resume()
+            }
+        }
+
+        vkFreeCommandBuffers(device, commandPool, 1, p.readonly)
         return result
     }
 
-    deinit {
-        // TODO: wait for idle
-        destroy()
-    }
+}
+
+private struct TrustMeBro: @unchecked Sendable {
+    var fence: VkFence?
+    var device: VkDevice
 }

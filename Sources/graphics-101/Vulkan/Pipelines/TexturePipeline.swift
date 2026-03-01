@@ -168,18 +168,40 @@ class TexturePipeline {
         }
 
         // TODO: come back to this once we want to do pushConstantRange
-        // let pushConstantRange = Box(VkPushConstantRange()) {
-        //     $0.stageFlags = VK_SHADER_STAGE_VERTEX_BIT.rawValue
-        //     $0.size = UInt32(MemoryLayout<VkDeviceAddress>.size)
+
+        // This one for screen size
+        let pushConstantRange = Box(VkPushConstantRange()) {
+            $0.stageFlags = VK_SHADER_STAGE_VERTEX_BIT.rawValue | VK_SHADER_STAGE_FRAGMENT_BIT.rawValue
+            $0.size = UInt32(MemoryLayout<SIMD2<UInt32>>.size)
+        }
+
+        // let layoutBinding = Box(VkDescriptorSetLayoutBinding()) {
+        //     $0.binding = 0
+        //     $0.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
+        //     $0.descriptorCount = 1  // how tf would i know,
+        //     $0.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT.rawValue | VK_SHADER_STAGE_VERTEX_BIT.rawValue
+        // }
+        // var descriptorSetLayoutCI = with(VkDescriptorSetLayoutCreateInfo()) {
+        //     $0.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO
+        //     $0.bindingCount = 1
+        //     $0.pBindings = layoutBinding.readonly
+        //     $0.pNext = bindingFlags.raw
         // }
 
-        let setLayouts: Box<VkDescriptorSetLayout?> = Box(textureRegistry.descriptorSetLayout)
+        // let descriptorSetLayout = Box(VkDescriptorSetLayout(bitPattern: 0)) {
+        //     vkCreateDescriptorSetLayout(vulkan.device, &descriptorSetLayoutCI, nil, &$0).unwrap()
+        // }
+
+        let setLayouts: Pin<VkDescriptorSetLayout?> = Pin([
+            textureRegistry.descriptorSetLayout,
+            // VkDescriptorSetLayout(),
+        ])
         var pipelineLayoutCI = with(VkPipelineLayoutCreateInfo()) {
             $0.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO
             $0.setLayoutCount = 1
             $0.pSetLayouts = setLayouts.readonly
-            // $0.pushConstantRangeCount = 1
-            // $0.pPushConstantRanges = pushConstantRange.readonly
+            $0.pushConstantRangeCount = 1
+            $0.pPushConstantRanges = pushConstantRange.readonly
         }
 
         let pipelineLayout = with(VkPipelineLayout(bitPattern: 0)) {

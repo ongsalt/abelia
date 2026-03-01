@@ -7,7 +7,7 @@ class RenderTextureRegistry {
     let descriptorPool: VkDescriptorPool
     let descriptorSetLayout: VkDescriptorSetLayout
     let descriptorSet: VkDescriptorSet
-    private var textures: [RenderTexture] = []
+    private(set) var textures: [RenderTexture] = []
     private let maxSize: UInt32
 
     init(vulkan: VulkanState) {
@@ -21,110 +21,102 @@ class RenderTextureRegistry {
             descriptorSetLayout: descriptorSetLayout,
             maxSize: maxSize
         )
-
     }
 
     func newRenderTarget(
         size: SIMD2<UInt32>,
+        actualSize: SIMD2<UInt32>? = nil,
         edgeSampling: VkSamplerAddressMode = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT
     ) -> RenderTexture {
-        var image = VkImage(bitPattern: 0)
-        let format = vulkan.swapChain.surfaceFormat.format
-
-        let imageCreateInfo = Box(VkImageCreateInfo()) {
-            $0.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO
-            $0.imageType = VK_IMAGE_TYPE_2D
-            $0.format = format  // TODO: why this
-            $0.extent = VkExtent3D(width: size.x, height: size.y, depth: 1)
-            $0.mipLevels = 1
-            $0.arrayLayers = 1
-            $0.samples = VK_SAMPLE_COUNT_4_BIT
-            $0.tiling = VK_IMAGE_TILING_OPTIMAL
-            $0.usage =
-                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT.rawValue | VK_IMAGE_USAGE_SAMPLED_BIT.rawValue
-            $0.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED
-        }
-
-        var bufferAllocCI = VmaAllocationCreateInfo(
-            flags: VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT.rawValue,
-            usage: VMA_MEMORY_USAGE_AUTO,
-            requiredFlags: 0,
-            preferredFlags: 0,
-            memoryTypeBits: 0,
-            pool: nil,
-            pUserData: nil,
-            priority: 0
-        )
-
-        var allocation = VmaAllocation(bitPattern: 0)
-        vmaCreateImage(
-            vulkan.allocator,
-            imageCreateInfo.ptr,
-            &bufferAllocCI,
-            &image,
-            &allocation,
-            nil
-        ).expect("Cannot create image")
-
-        let imageViewCI = Box(VkImageViewCreateInfo()) {
-            $0.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO
-            $0.image = image
-            $0.viewType = VK_IMAGE_VIEW_TYPE_2D
-            $0.format = format
-            $0.subresourceRange = VkImageSubresourceRange(
-                aspectMask: VK_IMAGE_ASPECT_COLOR_BIT.rawValue,
-                baseMipLevel: 0,
-                levelCount: 1,
-                baseArrayLayer: 0,
-                layerCount: 1
-            )
-        }
-        var imageView = VkImageView(bitPattern: 0)
-        vkCreateImageView(vulkan.device, imageViewCI.ptr, nil, &imageView)
-            .expect("Cannot create image view")
-
-        var ci = with(VkSamplerCreateInfo()) {
-            $0.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO
-            $0.magFilter = VK_FILTER_LINEAR
-            $0.minFilter = VK_FILTER_LINEAR
-            $0.addressModeU = edgeSampling
-            $0.addressModeV = edgeSampling
-            $0.addressModeW = edgeSampling
-            // $0.anisotropyEnable = false // no use in 2d??
-        }
-        var sampler = VkSampler(bitPattern: 0)
-        vkCreateSampler(
-            vulkan.device,
-            &ci,
-            nil,
-            &sampler
-        ).expect("Cannot create sampler")
-
         // TODO: get index
         let texture = RenderTexture(
             registry: self,
-            image: image!,
-            view: imageView!,
-            allocation: allocation!,
-            sampler: sampler!,
-            layout: VK_IMAGE_LAYOUT_UNDEFINED,
-            index: numericCast(textures.count)
+            size: size,
+            actualSize: actualSize ?? size,
+            index: numericCast(textures.count),
+            edgeSampling: edgeSampling
         )
         self.textures.append(texture)
+        self.updateDescriptorSet()
+        //     await texture.transition(
+        //     from: VK_IMAGE_LAYOUT_UNDEFINED,
+        //     to: VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+        //     waitFor: VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+        //     blocking: VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+        //     srcAccessMask: 0,
+        //     dstAccessMask: VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT
+        //         | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT
+        // )
+        return texture
+    }
 
+    // pango shit
+    func createStaticTexture(
+        from buffer: UnsafeMutableBufferPointer<UInt8>, 
+        size: SIMD2<UInt32>, 
+        format: VkFormat,
+        
+    )
+        async -> RenderTexture
+    {
+        let texture = RenderTexture(
+            registry: self,
+            size: size,
+            index: numericCast(textures.count),
+            edgeSampling: VK_SAMPLER_ADDRESS_MODE_REPEAT,
+            // edgeSampling: VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+            usages: VK_IMAGE_USAGE_TRANSFER_DST_BIT.rawValue | VK_IMAGE_USAGE_SAMPLED_BIT.rawValue,
+            samples: VK_SAMPLE_COUNT_1_BIT,
+            format: format,
+        )
+        self.textures.append(texture)
         self.updateDescriptorSet()
 
-        texture.transition(
-            from: VK_IMAGE_LAYOUT_UNDEFINED,
-            to: VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
-            waitFor: VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-            blocking: VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-            srcAccessMask: 0,
-            dstAccessMask: VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT
-                | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT
+        let stagingBuffer = RawGPUBuffer(
+            allocator: vulkan.allocator,
+            device: vulkan.device,
+            size: buffer.count * MemoryLayout<UInt8>.stride,
+            usages: VK_BUFFER_USAGE_TRANSFER_SRC_BIT  // fuck, TODO: buffer usage v2
         )
+        _ = stagingBuffer.write(UnsafeBufferPointer(buffer))
+
+        await vulkan.runCommands { cb in
+            texture.transitionCommand(
+                from: VK_IMAGE_LAYOUT_UNDEFINED,
+                to: VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                dstStageMask: VK_PIPELINE_STAGE_2_COPY_BIT,
+                srcAccessMask: 0,
+                dstAccessMask: VK_ACCESS_2_TRANSFER_WRITE_BIT,
+                cb: cb
+            )
+
+            var region = VkBufferImageCopy()
+            region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT.rawValue
+            region.imageSubresource.layerCount = 1
+            region.imageExtent = size.extent3d  // Set to your image dimensions
+
+            vkCmdCopyBufferToImage(
+                cb, stagingBuffer.buffer, texture.image,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region)
+
+            texture.transitionCommand(
+                from: VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                to: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                srcStageMask: VK_PIPELINE_STAGE_2_COPY_BIT,
+                dstStageMask: VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                srcAccessMask: VK_ACCESS_2_TRANSFER_WRITE_BIT,
+                dstAccessMask: VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
+                cb: cb
+            )
+
+        }
+        // Log.debug(.vulkan, "stagingBuffer.buffer: \(stagingBuffer.buffer)")
 
         return texture
+    }
+
+    func destroy(_ texture: consuming RenderTexture) {
+        textures.removeAll(where: { $0 == texture })
     }
 
     // once per frame
@@ -132,14 +124,10 @@ class RenderTextureRegistry {
         for (index, t) in textures.enumerated() {
             t.index = UInt32(index)
         }
-        // now add actual data to it
-        // TODO: we need to update this. a lot
+
         let imageInfo = Pin(
-            textures.map {
-                var info = $0.descriptorImageInfo
-                info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL  // lieeee
-                return info
-            })
+            textures.map(\.descriptorImageInfo)
+        )
         var writeDescSet = with(VkWriteDescriptorSet()) {
             $0.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET
             $0.dstSet = descriptorSet
@@ -148,8 +136,7 @@ class RenderTextureRegistry {
             $0.descriptorCount = UInt32(textures.count)
             $0.pImageInfo = imageInfo.readonly
         }
-        // Log.debug(.vulkan, "writeDescSet: \(writeDescSet)")
-        // VkDescriptorImageInfo(sampler: VkSampler!, imageView: VkImageView!, imageLayout: VK_IMAGE_LAYOUT_VIDEO_ENCODE_DPB_KHR)
+
         vkUpdateDescriptorSets(vulkan.device, 1, &writeDescSet, 0, nil)
     }
 

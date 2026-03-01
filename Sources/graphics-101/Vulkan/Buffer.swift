@@ -116,9 +116,8 @@ class GPUBuffer<BufferData> {
 
 }
 
-
 // TODO: gpu local buffer
-class RawGPUBuffer {
+final class RawGPUBuffer {
     let mapped: UnsafeMutableRawPointer
     let deviceAddress: VkDeviceAddress
     private let vmaAllocator: VmaAllocator
@@ -131,7 +130,9 @@ class RawGPUBuffer {
         allocator: VmaAllocator,
         device: VkDevice,
         size: Int = 1024 * 1024,
-        usages: VkBufferUsageFlagBits? = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT
+        usages: VkBufferUsageFlagBits? = VK_BUFFER_USAGE_INDEX_BUFFER_BIT
+            | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+        hostAccess: Bool = true
     ) {
         capacity = size
 
@@ -148,9 +149,11 @@ class RawGPUBuffer {
         )
 
         var bufferAllocCI = VmaAllocationCreateInfo(
-            flags: VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT.rawValue
-                | VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT.rawValue
-                | VMA_ALLOCATION_CREATE_MAPPED_BIT.rawValue,
+            flags: hostAccess
+                ? (VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT.rawValue
+                    | VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT.rawValue
+                    | VMA_ALLOCATION_CREATE_MAPPED_BIT.rawValue)
+                : 0,
             usage: VMA_MEMORY_USAGE_AUTO,
             requiredFlags: 0,
             preferredFlags: 0,
@@ -189,6 +192,14 @@ class RawGPUBuffer {
 
         (mapped + offset).initializeMemory(as: BufferData.self, from: data, count: data.count)
 
+        return data.count * MemoryLayout<BufferData>.stride
+    }
+
+    func write<BufferData>(_ data: UnsafeBufferPointer<BufferData>, offset: Int = 0) -> Int {
+        if offset + data.count * MemoryLayout<BufferData>.stride > capacity {
+            fatalError("data is larger than allocated buffer")
+        }
+        (mapped + offset).initializeMemory(as: BufferData.self, from: data.baseAddress!, count: data.count)
         return data.count * MemoryLayout<BufferData>.stride
     }
 
