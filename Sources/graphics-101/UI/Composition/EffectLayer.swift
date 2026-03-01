@@ -1,3 +1,0 @@
-class EffectLayer: Layer {
-    
-}
