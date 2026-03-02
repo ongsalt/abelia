@@ -29,13 +29,11 @@ class Renderer2 {
 
         let textRenderer = TextRenderer()
         let t = "Hi hi kroos desu yo"
-        let (_, ink) = textRenderer.measure(text: t)
-        let ww = ink.width * 2
-        let hh = ink.height * 2
+        let (ink, logical) = textRenderer.measure(text: t)
         let buffer = UnsafeMutableBufferPointer<UInt8>.allocate(
-            capacity: Int(hh * ww))
+            capacity: Int(logical.height * logical.width))
         buffer.initialize(repeating: 0)
-        _ = textRenderer.render(t, to: buffer, width: ww, height: hh)
+        _ = textRenderer.render(t, to: buffer, width: logical.width, height: logical.height)
         Log.debug(.vulkan, "Text dimension: \(ink)")
 
         // for byte in buffer {
@@ -45,8 +43,8 @@ class Renderer2 {
 
         // TODO: properly map coord, i should just use normal coord everywhere and transform it later in the shader
         // 0..800 map to -1..1
-        let w = Float(ww)
-        let h = Float(hh)
+        let w = Float(logical.width)
+        let h = Float(logical.height)
 
         let indexes: [UInt32] = [0, 1, 2, 0, 3, 2]
         let vertexData: [TextureVertexData] = [
@@ -61,7 +59,7 @@ class Renderer2 {
 
         let textTexture = await textureRegistry.createStaticTexture(
             from: buffer,
-            size: [UInt32(ww), UInt32(hh)],
+            size: [UInt32(logical.width), UInt32(logical.height)],
             format: VK_FORMAT_R8_UNORM
         )
 

@@ -25,10 +25,13 @@ public class TextRenderer {
         height: Int? = nil,
         wrap: PangoWrapMode = PANGO_WRAP_NONE
     ) -> (ink: PangoRectangle, logical: PangoRectangle) {
+        let desc = PangoFontDescription(fontDescription)
+        pango_layout_set_font_description(layout, desc.desc)
+
         pango_layout_set_text(layout, text, -1)
 
-        pango_layout_set_width(layout, width.map { Int32($0) * PANGO_SCALE } ?? -1)
-        pango_layout_set_height(layout, height.map { Int32($0) * PANGO_SCALE } ?? -1)
+        // pango_layout_set_width(layout, width.map { Int32($0) * PANGO_SCALE } ?? -1)
+        // pango_layout_set_height(layout, height.map { Int32($0) * PANGO_SCALE } ?? -1)
         pango_layout_set_wrap(layout, wrap)
 
         var ink = PangoRectangle()
@@ -48,7 +51,7 @@ public class TextRenderer {
         offsetY: Int32 = 0
     ) -> Bool {
         guard width > 0, height > 0 else { return false }
-        guard buffer.count >= width * height else { return false } // its in byte so...
+        guard buffer.count >= width * height else { return false }  // its in byte so...
 
         pango_layout_set_text(layout, text, -1)
 
