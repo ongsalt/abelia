@@ -11,6 +11,11 @@ protocol Source<T>: Identifiable, AnyObject {
         get
     }
 
+    var peek: T {
+        get
+    }
+
+
     func addSubscriber(_ subscriber: any Subscriber)
     func removeSubscriber(_ subscriber: any Subscriber)
 }
@@ -23,5 +28,4 @@ extension Source {
     func removeSubscriber(_ subscriber: any Subscriber) {
         subscribers.removeValue(forKey: subscriber.id.hashValue)
     }
-
 }

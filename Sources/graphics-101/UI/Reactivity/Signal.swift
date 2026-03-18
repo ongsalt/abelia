@@ -15,6 +15,10 @@ public class Signal<T>: Source {
         }
     }
 
+    public var peek: T {
+        innerValue
+    }
+
     public init(_ value: T) {
         // self.innerValue = Box(value)
         self.innerValue = value

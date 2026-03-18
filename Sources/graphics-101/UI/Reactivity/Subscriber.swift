@@ -18,5 +18,4 @@ extension Subscriber {
     func removeDependency(_ dep: any Source) {
         self.dependencies.removeValue(forKey: dep.id.hashValue)
     }
-
 }

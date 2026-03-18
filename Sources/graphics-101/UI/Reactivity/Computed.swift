@@ -16,6 +16,10 @@ public class Computed<T>: EffectScope, Source, Subscriber {
         return innerValue
     }
 
+    public var peek: T {
+        innerValue
+    }
+
     public init(tags: [String]? = nil, _ fn: @escaping () -> T) {
         self.tags = tags
         self.fn = fn
@@ -64,4 +68,3 @@ public class Computed<T>: EffectScope, Source, Subscriber {
         return self.fn()
     }
 }
-
