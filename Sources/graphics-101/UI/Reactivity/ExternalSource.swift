@@ -11,7 +11,7 @@ public class ObservationSource<T> where T: Sendable {
 
     private var observationTask: Task<Void, any Error>!
 
-    init(emit: @Sendable @escaping () -> T) {
+    init(emit: @escaping () -> T) {
         signal = Signal(emit())
         let observations = Observations {
             emit()

@@ -174,7 +174,7 @@ class Renderer2 {
             $0.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL
             $0.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR
             $0.storeOp = VK_ATTACHMENT_STORE_OP_STORE
-            $0.clearValue.color.float32 = (0.1, 0.0, 0.0, 1.0)
+            $0.clearValue.color.float32 = (0.0, 0.0, 0.0, 0.0)
 
             $0.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT
             $0.resolveImageView = imageView

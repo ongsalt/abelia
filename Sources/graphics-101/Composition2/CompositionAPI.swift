@@ -22,7 +22,7 @@ class _Layer {
     // the framework might decide if it is a dependency of foreground effect
     package var _shouldRasterize: Bool = false
     package var shouldActuallyRasterize: Bool {
-        shouldRasterize || _shouldRasterize || (opacity != 1 && opacity != 0) 
+        shouldRasterize || _shouldRasterize || (opacity != 1 && opacity != 0)
         // we can actually keep the rasterrized texture for a while for fade animation
     }
 }
@@ -30,7 +30,7 @@ class _Layer {
 extension _Layer {
     var rasterizationRoot: _Layer {
         guard let parent else {
-            return self // this wont happen
+            return self  // this wont happen
         }
         if self.shouldActuallyRasterize {
             return self
@@ -40,10 +40,10 @@ extension _Layer {
 }
 
 // we have 16 vertex attr * 16 bytes -> 256 bytes -> 64 float
-// 1. opacity, screenSize.{w,h}
+// 0. opacity, screenSize.{w,h}
 //  should we move this into affine matrix
-// 2. position.{x,y}, size.{w,h}
-// 3-6. Affine matrix (16 float)
+// 1. position.{x,y}, size.{w,h}
+// 2-5. Affine matrix (16 float)
 
 class RectLayer: ContainerLayer {
     var cornerRadius: Float = 0
@@ -67,16 +67,34 @@ class RectLayer: ContainerLayer {
 }
 // this one must have its own shader type
 // Its SDF rect tho
-// 7. cornerRadius.{x,y,z,w}
-// 8. cornerDegree, borderWidth, [8 bytes]
-// 9-11. Colors: shadow, fill, border
-// 12. shadow: offset.{x.y}, blur, spread
-// 13. hasContent, contentIndex: u32, 
-// 14. ninegrid (rect.{top, left, bottom, right})
-// always clip contents but child??? -> never?
-// 
-// Shadow should be in seperated mode (so we can sort it)
-// how do we expose this api tho shadowZ: [normal|bottom]
+// 6. cornerRadius.{x,y,z,w}
+// 7. cornerDegree, borderWidth, [8 bytes]
+// 8-10. Colors: fill, shadow, border
+// 11. shadow: offset.{x.y}, blur, spread
+// 12. hasContent, contentIndex: u32, hasMask, maskIndex: u32
+// 13. ninegrid (rect.{top, left, bottom, right})
+// 14. layer mask
+// always clip immediate contents, clip chlid contents only when rasterize: true
+//
+
+/// TODO: mode
+/// Shadow should be in seperated mode (so we can sort it)
+/// how do we expose this api tho shadowZ: [normal|bottom]
+/// Mode, 1 layer -> >1 draw commmands
+/// - sampling: ninegrid, contentIndex
+///     - colored
+///     - tinted (text)
+/// - rect: fill, stroke, shadow
+/// shadow will be excluded when drawing to self-owned layer
+///  -> so shuold fill and stroke?
+///
+/// Shared options
+/// - clipping
+///     - sizing
+///     - corner
+///     - border width
+///
+/// Shadow of arbitrary shape -> fucking blur it
 
 class EffectLayer: _Layer {
     let filters: [ImageFilter] = []
@@ -89,6 +107,7 @@ class EffectLayer: _Layer {
 enum ImageFilter {
     case blendMode(BlendMode)
     case gaussianBlur(radius: Float, edgeSampling: EdgeSamplingMethod = .repeat)
+    case toneMap
     case material(MaterialType)  // very opinionate
     case dither
 }
@@ -112,7 +131,8 @@ enum BlendMode {
 protocol Surface {}
 
 class ContainerLayer: _Layer {
-    private var _children: [Layer] = []
+    // private var _children: [Layer] = []
+
+    var _children: [_Layer] = []
     // shuold be linked list ?
 }
-

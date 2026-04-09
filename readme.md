@@ -1,11 +1,7 @@
 ```bash
-glslc Sources/graphics-101/Resources/Shaders/texture.frag -o Sources/graphics-101/Resources/Compiled/texture.frag.spv
+glslc Sources/graphics-101/Resources/Shaders/composite.frag -o Sources/graphics-101/Resources/Compiled/composite.frag.spv
+glslc Sources/graphics-101/Resources/Shaders/composite.vert -o Sources/graphics-101/Resources/Compiled/composite.vert.spv
 ```
-
-# Note
-- update pipeline to include new descriptor set layout
-- create texture registry
-- bind it (when render)
 
 # Dependencies not included
 - wayland devel stuff
@@ -38,9 +34,4 @@ ok, it doesnt support push constant, use glslc instead
 ## Note
 - query required gpu features (and optionally provide fallback)
     - VK_EXT_blend_operation_advanced is not supported on my machine (or any amd card) 
-- shaders: so we gonna have shit ton of shader
-    - roundedrect
-    - roundedrect (superellipse)
-    - roundedrect (squircle)
-
 

@@ -26,12 +26,21 @@ public class TextRenderer {
         wrap: PangoWrapMode = PANGO_WRAP_NONE
     ) -> (ink: PangoRectangle, logical: PangoRectangle) {
         let desc = PangoFontDescription(fontDescription)
-        pango_layout_set_font_description(layout, desc.desc)
+        return measure(text: text, fontDescription: desc, width: width, height: height, wrap: wrap)
+    }
 
+    public func measure(
+        text: String,
+        fontDescription: PangoFontDescription,
+        width: Int? = nil,
+        height: Int? = nil,
+        wrap: PangoWrapMode = PANGO_WRAP_NONE
+    ) -> (ink: PangoRectangle, logical: PangoRectangle) {
+        pango_layout_set_font_description(layout, fontDescription.desc)
         pango_layout_set_text(layout, text, -1)
 
-        // pango_layout_set_width(layout, width.map { Int32($0) * PANGO_SCALE } ?? -1)
-        // pango_layout_set_height(layout, height.map { Int32($0) * PANGO_SCALE } ?? -1)
+        pango_layout_set_width(layout, width.map { Int32($0) * PANGO_SCALE } ?? -1)
+        pango_layout_set_height(layout, height.map { Int32($0) * PANGO_SCALE } ?? -1)
         pango_layout_set_wrap(layout, wrap)
 
         var ink = PangoRectangle()

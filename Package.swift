@@ -5,6 +5,10 @@ import PackageDescription
 
 let package = Package(
     name: "graphics-101",
+    // products: [
+    //     .executable(name: "Signal", targets: ["Signal"]),
+    //     .executable(name: "App", targets: ["graphics-101"]),
+    // ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-numerics", from: "1.0.0")
     ],
@@ -27,6 +31,9 @@ let package = Package(
                 .define("VK_USE_PLATFORM_WAYLAND_KHR", .when(platforms: [.linux]))  // i should fucking put these 2 together
             ],
         ),
+
+        .target(name: "Signal"),
+        // .executableTarget(name: "Signal"),
 
         // .plugin(
         //     name: "ShaderCompilation",

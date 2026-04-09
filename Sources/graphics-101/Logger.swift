@@ -8,20 +8,21 @@ struct Log {
     }
 
     static func info(_ tag: Tag, _ message: String) {
-        print("\u{001B}[32m[i] \(Date.now.formatFr()) [\(tag)] \(message)\u{001B}[0m")
+        print("\u{001B}[32m   INFO\u{001B}[0m \(Date.now.formatFr()) [\(tag)] \(message)")
     }
 
+    // 7
     static func warn(_ tag: Tag, _ message: String) {
-        print("\u{001B}[33m[w] \(Date.now.formatFr()) [\(tag)] \(message)\u{001B}[0m")
+        print("\u{001B}[33mWARNING\u{001B}[0m \(Date.now.formatFr()) [\(tag)] \(message)")
     }
 
     static func error(_ tag: Tag, _ message: String) {
-        print("\u{001B}[31m[e] \(Date.now.formatFr()) [\(tag)] \(message)\u{001B}[0m")
+        print("\u{001B}[31m  ERROR\u{001B}[0m \(Date.now.formatFr()) [\(tag)] \(message)")
     }
 
     static func debug(_ tag: Tag, _ message: String) {
         #if DEBUG
-            print("[d] \(Date.now.formatFr()) [\(tag)] \(message)")
+            print("\u{001B}[34m  DEBUG\u{001B}[0m \(Date.now.formatFr()) [\(tag)] \(message)")
 
         #endif
     }

@@ -39,6 +39,38 @@ enum LayerGrouping {
     }
 }
 
+// list significant point along an axis
+// [(x, isStart)]
+func asdshu() {
+    let xs = [(1, true)]
+    var layerCount = 0
+    var effectLayerCount = 0
+    for (x, isStart) in xs {
+        if isStart {
+            layerCount += 1 
+        } else {
+            layerCount -= 1
+        }
+    }
+}
+
+// TODO: better algorithm
+func sortLayers(root: ContainerLayer) -> [LayerGrouping] {
+    // get all child
+    var layers: [_Layer] = []
+    func walk(_ node: _Layer) {
+        if let container = node as? ContainerLayer {
+            for c in container._children {
+                walk(c)
+            }
+        }
+        layers.append(node)
+    }
+
+    walk(root)
+    return sortLayers(layers)
+}
+
 // TODO: write a test for this
 func sortLayers(_ layers: [_Layer]) -> [LayerGrouping] {
     // TODO: better algorithm
@@ -66,7 +98,6 @@ func sortLayers(_ layers: [_Layer]) -> [LayerGrouping] {
     return out
 }
 
-
 func drawLayers(_ grouping: [LayerGrouping]) {
-    
+
 }

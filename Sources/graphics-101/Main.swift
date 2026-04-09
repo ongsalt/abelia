@@ -29,13 +29,17 @@ struct Graphics101 {
             waylandDisplay: display.display,
             waylandSurface: window.surface.surface
         )
+        
+        let textureRegistry = RenderTextureRegistry(vulkan: vulkanState)
+        let pipeline = CompositePipeline(state: vulkanState, textureRegistry: textureRegistry)
 
-        Task {
-            let renderer = await Renderer2(state: vulkanState)
-            await renderer.perform()
 
-            _ = Unmanaged.passRetained(renderer) // for now
-        }
+        // Task {
+        //     let renderer = await Renderer2(state: vulkanState)
+        //     await renderer.perform()
+
+        //     _ = Unmanaged.passRetained(renderer) // for now
+        // }
 
         RunLoop.main.run()
         drop(token)

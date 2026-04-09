@@ -1,3 +1,11 @@
+// TODO: oklch color
+struct OklchColor {
+    let l: Float
+    let c: Float
+    let h: Float
+    let a: Float
+}
+
 struct Color {
     let r: Float
     let g: Float
