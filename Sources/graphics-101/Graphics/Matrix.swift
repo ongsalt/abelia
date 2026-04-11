@@ -51,6 +51,10 @@ struct AffineMatrix {
         )
     }
 
+    func then(_ other: AffineMatrix) -> AffineMatrix {
+        other * self
+    }
+ 
     func inverse() -> AffineMatrix {
         let val0 = c1.x * c2.y - c1.y * c2.x
         let val1 = c1.x * c2.z - c1.z * c2.x

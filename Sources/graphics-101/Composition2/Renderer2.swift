@@ -103,7 +103,7 @@ class Renderer2 {
     }
 
     func perform(
-        _ commands: [LayerGrouping] = []
+        // commands
     ) async -> Bool {
         let swapChain = state.swapChain
         let frameIndex = swapChain.frameIndex
@@ -202,7 +202,8 @@ class Renderer2 {
 
         var address: SIMD2<UInt32> = [800, 600]
         vkCmdPushConstants(
-            commandBuffer, pipeline.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT.rawValue | VK_SHADER_STAGE_FRAGMENT_BIT.rawValue,
+            commandBuffer, pipeline.pipelineLayout,
+            VK_SHADER_STAGE_VERTEX_BIT.rawValue | VK_SHADER_STAGE_FRAGMENT_BIT.rawValue,
             0,
             UInt32(MemoryLayout<SIMD2<UInt32>>.size),
             &address

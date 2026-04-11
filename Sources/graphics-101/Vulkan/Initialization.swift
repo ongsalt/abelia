@@ -198,6 +198,8 @@ private func createLogicalDevice(families: SelectedQueuesIndices, physicalDevice
         enabledVk12Features[].runtimeDescriptorArray = true
         enabledVk12Features[].bufferDeviceAddress = true
 
+        enabledVk12Features[].shaderSampledImageArrayNonUniformIndexing = true
+
         let enabledVk13Features = Box(VkPhysicalDeviceVulkan13Features())
         enabledVk13Features[].sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES
         enabledVk13Features[].pNext = UnsafeMutableRawPointer(enabledVk12Features.opaque)

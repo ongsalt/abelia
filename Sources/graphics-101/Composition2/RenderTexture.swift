@@ -1,6 +1,7 @@
 @preconcurrency import CVMA
 import Wayland
 
+// TODO: resize??? -> just realloc?
 class RenderTexture {
     unowned let registry: RenderTextureRegistry
     let image: VkImage

@@ -96,4 +96,13 @@ struct Rect {
         let (x, y) = position
         return x >= left && x <= left + width && y >= top && y <= top + height
     }
+
+    func overlap(with other: borrowing Rect) -> Bool {
+        let b = other.bottom
+        let t = other.top
+        let l = other.left
+
+        return (self.left < other.right || self.right < l)
+            && (self.top < b || self.bottom < t)
+    }
 }
