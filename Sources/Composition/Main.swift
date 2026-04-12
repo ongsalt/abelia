@@ -32,8 +32,15 @@ struct Graphics101 {
         )
 
         let renderer = Compositor(state: vulkanState)
-        renderer.recomposite()
 
+        let rect = CompositionNode()
+        rect.size = [100, 100]
+        rect.fillColor = .red
+        renderer.root.children.append(rect)
+
+        Task {
+            await renderer.recomposite()
+        }
         // Task {
         //     let renderer = await Renderer2(state: vulkanState)
         //     await renderer.perform()

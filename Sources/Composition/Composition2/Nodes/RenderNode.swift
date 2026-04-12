@@ -1,5 +1,5 @@
 // this doesnt actually exist in shader, only
-class RenderNode {
+class RenderNode: Identifiable {
     private(set) var parent: RenderNode?
     var children: [RenderNode] = []
 

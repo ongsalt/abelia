@@ -33,7 +33,7 @@ let package = Package(
             ],
         ),
 
-        .target(name: "Signal"),
+        // .target(name: "Signal"),
         .target(name: "UI", dependencies: ["Composition", "DSLMacro"]),
         // .executableTarget(name: "Signal"),
 
@@ -71,7 +71,8 @@ let package = Package(
         .executableTarget(
             name: "Playground",
             dependencies: [
-                "UI"
+                "UI",
+                "Composition"
             ],
             // cSettings: [
             //     .define("VK_USE_PLATFORM_WAYLAND_KHR", .when(platforms: [.linux]))

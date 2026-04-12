@@ -40,5 +40,25 @@
             "configuration": "release",
             "preLaunchTask": "swift: Build Release Playground"
         },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:graphics-101}",
+            "name": "Debug Composition",
+            "target": "Composition",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug Composition"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:graphics-101}",
+            "name": "Release Composition",
+            "target": "Composition",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release Composition"
+        }
     ]
 }

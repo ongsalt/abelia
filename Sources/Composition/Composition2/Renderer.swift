@@ -19,7 +19,8 @@ class Renderer {
 
         self.renderTexture = textureRegistry.newRenderTarget(size: state.swapChain.extent.simd2)
 
-        self.inputBuffer = RawGPUBuffer(allocator: state.allocator, device: state.device, size: 16 * 1024 * 1024)
+        self.inputBuffer = RawGPUBuffer(
+            allocator: state.allocator, device: state.device, size: 16 * 1024 * 1024)
 
     }
 
@@ -59,9 +60,7 @@ class Renderer {
         }
     }
 
-    func perform(  // commands
-        ) async -> Bool
-    {
+    func perform(fn: (VkCommandBuffer, VkImageView) -> Void) async {
         let swapChain = state.swapChain
         let frameIndex = swapChain.frameIndex
 
@@ -125,27 +124,28 @@ class Renderer {
 
         vkCmdPipelineBarrier2(commandBuffer, dependencyInfo.ptr)
 
-        // Setup rendering attachment, this should be per Batch
-        let colorAttachmentInfo = Box(VkRenderingAttachmentInfo()) {
-            $0.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO
-            $0.imageView = self.renderTexture.view
-            $0.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL
-            $0.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR
-            $0.storeOp = VK_ATTACHMENT_STORE_OP_STORE
-            $0.clearValue.color.float32 = (0.0, 0.0, 0.0, 0.0)
+        // Setup rendering attachment, root layer shuold resolve tho
 
-            $0.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT
-            $0.resolveImageView = imageView
-            $0.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-        }
+        // let colorAttachmentInfo = Box(VkRenderingAttachmentInfo()) {
+        //     $0.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO
+        //     $0.imageView = self.renderTexture.view
+        //     $0.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL
+        //     $0.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR
+        //     $0.storeOp = VK_ATTACHMENT_STORE_OP_STORE
+        //     $0.clearValue.color.float32 = (0.0, 0.0, 0.0, 0.0)
 
-        let renderingInfo = Box(VkRenderingInfo()) {
-            $0.sType = VK_STRUCTURE_TYPE_RENDERING_INFO
-            $0.renderArea.extent = swapChain.extent
-            $0.layerCount = 1
-            $0.colorAttachmentCount = 1
-            $0.pColorAttachments = colorAttachmentInfo.readonly
-        }
+        //     $0.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT
+        //     $0.resolveImageView = imageView
+        //     $0.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+        // }
+
+        // let renderingInfo = Box(VkRenderingInfo()) {
+        //     $0.sType = VK_STRUCTURE_TYPE_RENDERING_INFO
+        //     $0.renderArea.extent = swapChain.extent
+        //     $0.layerCount = 1
+        //     $0.colorAttachmentCount = 1
+        //     $0.pColorAttachments = colorAttachmentInfo.readonly
+        // }
 
         // // actual rendering
         // vkCmdBeginRendering(commandBuffer, renderingInfo.ptr)
@@ -179,8 +179,9 @@ class Renderer {
         //     nil
         // )
 
-        vkCmdDrawIndexed(commandBuffer, 6, 1, 0, 0, 0)
-        vkCmdEndRendering(commandBuffer)
+        // vkCmdDrawIndexed(commandBuffer, 6, 1, 0, 0, 0)
+        // vkCmdEndRendering(commandBuffer)
+        fn(commandBuffer, imageView)
 
         // Transition image to present
         let barrierPresent = Box(VkImageMemoryBarrier2()) {
@@ -248,56 +249,7 @@ class Renderer {
         // should this be in the main queue tho
         vkQueuePresentKHR(state.presentQueue, presentInfo.ptr).unwrap()
         swapChain.frameIndex = (swapChain.frameIndex + 1) % swapChain.framesInFlightCount
-
-        return true
     }
-
-    // private func render(to target: RenderTexture, commandBuffer: VkCommandBuffer) {
-
-    // }
 
     // this wont be dynamic anymore
-    private func setViewport(_ size: SIMD2<UInt32>, commandBuffer: VkCommandBuffer) {
-        var viewport = VkViewport(
-            x: 0,
-            y: 0,
-            width: Float(size.x),
-            height: Float(size.y),
-            minDepth: 0.0,
-            maxDepth: 1.0
-        )
-        vkCmdSetViewport(commandBuffer, 0, 1, &viewport)
-
-        var scissor = VkRect2D(
-            offset: VkOffset2D(x: 0, y: 0),
-            extent: .init(width: size.x, height: size.y)
-        )
-        vkCmdSetScissor(commandBuffer, 0, 1, &scissor)
-    }
-
-    private func cmdWaitLayerRendereing(commandBuffer: VkCommandBuffer, image: VkImage) {
-        let imageBarrier = Box(VkImageMemoryBarrier2()) {
-            $0.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2
-            $0.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT
-            $0.srcAccessMask = 0
-            $0.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT
-            $0.dstAccessMask =
-                VK_ACCESS_2_SHADER_SAMPLED_READ_BIT
-            $0.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED
-            $0.newLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL
-            $0.image = image
-            $0.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT.rawValue
-            $0.subresourceRange.levelCount = 1
-            $0.subresourceRange.layerCount = 1
-        }
-
-        let dependencyInfo = Box(VkDependencyInfo()) {
-            $0.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO
-            $0.imageMemoryBarrierCount = 1
-            $0.pImageMemoryBarriers = imageBarrier.readonly
-        }
-
-        vkCmdPipelineBarrier2(commandBuffer, dependencyInfo.ptr)
-    }
-
 }

@@ -127,7 +127,7 @@ class CompositePipeline {
             $0.blendConstants.3 = 0.0
         }
 
-        // TODO: come back to this once we want to do pushConstantRange
+        // TODO: come back to this once we want more pushConstantRange
 
         // This one for screen size
         let pushConstantRange = Box(VkPushConstantRange()) {

@@ -25,7 +25,9 @@ class CompositionNode: RenderNode {
 
 extension CompositionNode {
     func swapBackingStore() {
-        swap(&backingStore, &backingStore2)
+        if backingStore2 != nil {
+            swap(&backingStore, &backingStore2)
+        }
     }
 
     func toVertexData() -> [CompositeNodeVertexData] {
