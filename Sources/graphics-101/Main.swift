@@ -25,21 +25,21 @@ struct Graphics101 {
             display.flush()
         }
 
+        // TODO: mova wl stuff out
         let vulkanState = VulkanState(
             waylandDisplay: display.display,
             waylandSurface: window.surface.surface
         )
-        
 
         let renderer = Compositor(state: vulkanState)
+        renderer.recomposite()
 
+        // Task {
+        //     let renderer = await Renderer2(state: vulkanState)
+        //     await renderer.perform()
 
-        Task {
-            let renderer = await Renderer2(state: vulkanState)
-            await renderer.perform()
-
-            _ = Unmanaged.passRetained(renderer) // for now
-        }
+        //     _ = Unmanaged.passRetained(renderer)  // for now
+        // }
 
         RunLoop.main.run()
         drop(token)

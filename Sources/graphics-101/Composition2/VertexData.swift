@@ -2,7 +2,7 @@
 import Foundation
 import Wayland
 
-struct CompositeRectVertexData {
+struct CompositeNodeVertexData {
 	let opacityAndScreenSize: SIMD4<Float>
 	let sizing: SIMD4<Float>
 

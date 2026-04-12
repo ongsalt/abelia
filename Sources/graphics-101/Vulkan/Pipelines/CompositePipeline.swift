@@ -38,9 +38,9 @@ class CompositePipeline {
         let shaderStages = [vertCi, fragCi]
 
         let bindingDescriptions = Pin([
-            CompositeRectVertexData.bindingDescriptions
+            CompositeNodeVertexData.bindingDescriptions
         ])
-        let attributeDescriptions = Pin(CompositeRectVertexData.attributeDescriptions)
+        let attributeDescriptions = Pin(CompositeNodeVertexData.attributeDescriptions)
 
         let vertexInputCI = Box(VkPipelineVertexInputStateCreateInfo()) {
             $0.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO

@@ -116,7 +116,8 @@ class GPUBuffer<BufferData> {
 
 }
 
-// TODO: gpu local buffer
+// TODO: gpu local buffer for data that doesnt change much (static texture)
+// this thing must be pre frame in flight
 final class RawGPUBuffer {
     let mapped: UnsafeMutableRawPointer
     let deviceAddress: VkDeviceAddress

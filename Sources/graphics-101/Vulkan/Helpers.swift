@@ -28,7 +28,7 @@ extension VkResult {
     func expect(_ message: String) {
         if self.rawValue < 0 {
             let m = "\(message), code: \(self.rawValue)"
-            Log.debug(.vulkan, "error code: \(self.rawValue)")
+            Log.error(.vulkan, "error code: \(self.rawValue)")
             fatalError(m)
         }
         if self != VK_SUCCESS {

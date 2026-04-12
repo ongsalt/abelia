@@ -33,6 +33,7 @@ let package = Package(
         ),
 
         .target(name: "Signal"),
+        .target(name: "UI", dependencies: ["graphics-101"]),
         // .executableTarget(name: "Signal"),
 
         // .plugin(
@@ -50,7 +51,7 @@ let package = Package(
                 "CPango",
             ],
             resources: [
-               .copy("Resources/Compiled")
+                .copy("Resources/Compiled")
             ],
             cSettings: [
                 .define("VK_USE_PLATFORM_WAYLAND_KHR", .when(platforms: [.linux]))

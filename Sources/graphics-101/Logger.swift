@@ -5,6 +5,7 @@ struct Log {
         case vulkan
         case renderLoop
         case ui
+        case compositor
     }
 
     static func info(_ tag: Tag, _ message: String) {

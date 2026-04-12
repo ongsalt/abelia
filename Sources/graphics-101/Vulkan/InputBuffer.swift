@@ -1,0 +1,3 @@
+class InputBuffer {
+    // RawGPUBuffer
+}

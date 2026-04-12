@@ -36,7 +36,6 @@ func duplicated<T>(_ value: T) -> [2 of T] {
     [value, value]
 }
 
-
 extension Result {
     func unwrap() -> Success {
         expect("Unwrap failed")

@@ -1,3 +1,6 @@
+@MainActor
+class Element: Identifiable {}
+
 // // box and text
 // @MainActor
 // class UIElement: Identifiable {
