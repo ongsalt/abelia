@@ -1,25 +1,57 @@
 // this doesnt actually exist in shader, only
 class RenderNode: Identifiable {
-    private(set) var parent: RenderNode?
+    var parent: RenderNode?
     var children: [RenderNode] = []
 
     public var scale: SIMD2<Float> = .one {
         didSet {
-            // invalidate()
+            markDirty()
         }
     }
-    public var rotation: Float = 0
-    public var opacity: Float = 1
-    public var isHidden: Bool = false
-    public var position: SIMD2<Float> = .zero
-    public var size: SIMD2<Float> = .zero
-    public var affine: AffineMatrix = .identity
+    public var rotation: Float = 0 {
+        didSet {
+            markDirty()
+        }
+    }
+    public var opacity: Float = 1 {
+        didSet {
+            markDirty()
+        }
+    }
+    public var isHidden: Bool = false {
+        didSet {
+            markDirty()
+        }
+    }
+    public var position: SIMD2<Float> = .zero {
+        didSet {
+            markDirty()
+        }
+    }
+    public var size: SIMD2<Float> = .zero {
+        didSet {
+            markDirty()
+        }
+    }
+    public var affine: AffineMatrix = .identity {
+        didSet {
+            markDirty()
+        }
+    }
     // public var drawBackface: Bool = true
 
-    public var shouldRasterize: Bool = false
+    public var shouldRasterize: Bool = false {
+        didSet {
+            markDirty()
+        }
+    }
     // will be set when doing opacity/animation
     // the framework might decide if it is a dependency of foreground effect
-    package var _shouldRasterize: Bool = false
+    package var _shouldRasterize: Bool = false {
+        didSet {
+            markDirty()
+        }
+    }
     package var isRasterizationRoot: Bool {
         shouldRasterize || _shouldRasterize || (opacity != 1 && opacity != 0)
         // we can actually keep the rasterrized texture for a while for fade animation
@@ -28,6 +60,18 @@ class RenderNode: Identifiable {
     package var dirty: Bool = true
     public func markDirty() {
         dirty = true
+        if let parent {
+            // if !parent.dirty {
+            parent.markDirty()
+            // }
+        }
+    }
+
+    public func markClean() {
+        dirty = false
+        for c in children {
+            c.markClean()
+        }
     }
 
     public func addChild(_ children: RenderNode...) {
@@ -36,13 +80,14 @@ class RenderNode: Identifiable {
         }
 
         self.children.append(contentsOf: children)
+        markDirty()
     }
 
     public func removeChild(child: RenderNode) {
         self.children.removeAll { $0.id == child.id }
         child.parent = nil
+        markDirty()
     }
-
 }
 
 extension RenderNode {
