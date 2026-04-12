@@ -20,10 +20,11 @@ layout(location = 6) in vec4 inCornerRadius;
 layout(location = 7) in vec4 inCornerDegreeAndBorderWidthAndVertexPos; // 2 float left
 layout(location = 8) in vec4 inColor;
 layout(location = 9) in vec4 inBorderColor;
-layout(location = 10) in vec4 inShadow; // offset (why tho), blur, spread (why)
+layout(location = 10) in vec4 inTintColor;
+layout(location = 11) in vec4 inShadow; // offset (why tho), blur, spread (why)
 
-layout(location = 11) in uvec4 inContents; // hasContent, contentIndex
-layout(location = 12) in vec4 inNineGrid; // normalized??? (uv coord)
+layout(location = 12) in uvec4 inContents; // hasContent, contentIndex
+layout(location = 13) in vec4 inNineGrid; // normalized??? (uv coord)
 
 
 layout(location = 0) flat out vec4 outOpacityScreenSizeAndMode;
@@ -38,10 +39,11 @@ layout(location = 6) out vec4 outCornerRadius;
 layout(location = 7) out vec4 outCornerDegreeAndBorderWidthAndVertexPos;
 layout(location = 8) out vec4 outColor;
 layout(location = 9) out vec4 outBorderColor;
-layout(location = 10) out vec4 outShadow; // TODO: normalized this from the cpu
+layout(location = 10) out vec4 outTintColor;
+layout(location = 11) out vec4 outShadow; // TODO: normalized this from the cpu
 
-layout(location = 11) out uvec4 outContents;
-layout(location = 12) out vec4 outNineGrid;
+layout(location = 12) flat out uvec4 outContents;
+layout(location = 13) out vec4 outNineGrid;
 
 
 void main() {
@@ -57,6 +59,7 @@ void main() {
     outCornerDegreeAndBorderWidthAndVertexPos = inCornerDegreeAndBorderWidthAndVertexPos;
     outColor = inColor;
     outBorderColor = inBorderColor;
+    outTintColor = inTintColor;
     outShadow = inShadow;
 
     outContents = inContents;

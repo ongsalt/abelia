@@ -1,6 +1,7 @@
 // import CFreeType
 import CPango
 
+// we need to nuke this 
 public class TextRenderer {
     let fontmap: UnsafeMutablePointer<PangoFontMap>
     let context: OpaquePointer

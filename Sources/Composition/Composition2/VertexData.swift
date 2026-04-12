@@ -20,6 +20,7 @@ struct CompositeNodeVertexData {
 
 	let color: SIMD4<Float>
 	let borderColor: SIMD4<Float>
+	let tintColor: SIMD4<Float>
 	let shadow: SIMD4<Float>
 
 	let contents: SIMD4<UInt32>
@@ -37,6 +38,7 @@ struct CompositeNodeVertexData {
 		borderWidth: Float = 0,
 		color: Color = .transparent,
 		borderColor: Color = .transparent,
+		tintColor: Color = .white,
 		shadowOffset: SIMD2<Float> = .zero,
 		shadowBlur: Float = 0,
 		shadowSpread: Float = 0,
@@ -73,6 +75,7 @@ struct CompositeNodeVertexData {
 
 		self.color = SIMD4(color.r, color.g, color.b, color.a)
 		self.borderColor = SIMD4(borderColor.r, borderColor.g, borderColor.b, borderColor.a)
+		self.tintColor = SIMD4(tintColor.r, tintColor.g, tintColor.b, tintColor.a)
 		self.shadow = [shadowOffset.x, shadowOffset.y, shadowBlur.max(0), shadowSpread]
 
 		self.contents = [hasContent ? 1 : 0, contentIndex, contentAux0, contentAux1]
@@ -91,6 +94,7 @@ struct CompositeNodeVertexData {
 		borderWidth: Float = 0,
 		color: Color = .transparent,
 		borderColor: Color = .transparent,
+		tintColor: Color = .white,
 		shadowOffset: SIMD2<Float> = .zero,
 		shadowBlur: Float = 0,
 		shadowSpread: Float = 0,
@@ -114,6 +118,7 @@ struct CompositeNodeVertexData {
 			borderWidth: borderWidth,
 			color: color,
 			borderColor: borderColor,
+			tintColor: tintColor,
 			shadowOffset: shadowOffset,
 			shadowBlur: shadowBlur,
 			shadowSpread: shadowSpread,
@@ -197,16 +202,22 @@ struct CompositeNodeVertexData {
 			location: 10,
 			binding: 0,
 			format: VK_FORMAT_R32G32B32A32_SFLOAT,
-			offset: UInt32(MemoryLayout<Self>.offset(of: \.shadow)!)
+			offset: UInt32(MemoryLayout<Self>.offset(of: \.tintColor)!)
 		),
 		.init(
 			location: 11,
+			binding: 0,
+			format: VK_FORMAT_R32G32B32A32_SFLOAT,
+			offset: UInt32(MemoryLayout<Self>.offset(of: \.shadow)!)
+		),
+		.init(
+			location: 12,
 			binding: 0,
 			format: VK_FORMAT_R32G32B32A32_UINT,
 			offset: UInt32(MemoryLayout<Self>.offset(of: \.contents)!)
 		),
 		.init(
-			location: 12,
+			location: 13,
 			binding: 0,
 			format: VK_FORMAT_R32G32B32A32_SFLOAT,
 			offset: UInt32(MemoryLayout<Self>.offset(of: \.nineGrid)!)

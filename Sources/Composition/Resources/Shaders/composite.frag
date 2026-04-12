@@ -21,10 +21,11 @@ layout(location = 6) in vec4 inCornerRadius;
 layout(location = 7) in vec4 inCornerDegreeAndBorderWidthAndVertexPos; // 2 float left
 layout(location = 8) in vec4 inColor;
 layout(location = 9) in vec4 inBorderColor;
-layout(location = 10) in vec4 inShadow; // offset (why tho), blur, spread (why)
+layout(location = 10) in vec4 inTintColor;
+layout(location = 11) in vec4 inShadow; // offset (why tho), blur, spread (why)
 
-layout(location = 11) flat in uvec4 inContentsAndMask; // hasContent, contentIndex: u32, hasMask, maskIndex: u32
-layout(location = 12) in vec4 inNineGrid; // normalized??? (uv coord)
+layout(location = 12) flat in uvec4 inContentsAndMask; // hasContent, contentIndex: u32, hasMask, maskIndex: u32
+layout(location = 13) in vec4 inNineGrid; // normalized??? (uv coord)
 
 
 layout(location = 0) out vec4 outFragColor;
@@ -124,12 +125,11 @@ void main() {
 
             float shadowCoverage;
             if (shadowBlur > 0.0) {
-                if (ds <= 0.0) {
-                    shadowCoverage = 1.0;
-                } else {
-                    float t = ds / max(shadowBlur, 1e-4);
-                    shadowCoverage = 1.0 - (0.5 + 0.5 * erfApprox(t * 1.41421356));
-                }
+                float t = ds / max(shadowBlur, 1e-4);
+                // erfApprox(0) = 0 -> 0.5
+                // erfApprox(-inf) = -1 -> 1.0
+                // erfApprox(inf) = 1 -> 0.0
+                shadowCoverage = 0.5 - 0.5 * erfApprox(t);
             } else {
                 shadowCoverage = ds <= 0.0 ? 1.0 : 0.0;
             }
@@ -162,7 +162,9 @@ void main() {
                 && abs(texel.g) < 1e-5
                 && abs(texel.b) < 1e-5;
             if (looksSingleChannel) {
-                contentColor = vec4(vec3(1.0), texel.r);
+                contentColor = vec4(inTintColor.rgb, texel.r * inTintColor.a);
+            } else {
+                contentColor *= inTintColor;
             }
 
             interior = over(contentColor, interior);

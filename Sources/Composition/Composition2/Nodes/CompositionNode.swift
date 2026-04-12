@@ -11,6 +11,7 @@ class CompositionNode: RenderNode {
     var borderWidth: Float = 0
 
     var fillColor: Color = .transparent
+    var tintColor: Color = .white // For text tinting
     // var scalingMode:
 
     var contents: LayerContents?
@@ -41,7 +42,7 @@ extension CompositionNode {
         let nodeSize = size
 
         let hasContent = contents != nil
-        let contentIndex: UInt32 = 0
+        let contentIndex: UInt32 = contents?.renderTexture.index ?? 0
 
         let transform = totalAffine.fastInverse()
 
@@ -49,7 +50,7 @@ extension CompositionNode {
         let bottomLeft = nodePosition + SIMD2(0, nodeSize.y)
         let bottomRight = nodePosition + nodeSize
         let topRight = nodePosition + SIMD2(nodeSize.x, 0)
-        
+
         let shadowExpand = shadowSpread.max(0) + shadowBlur * 3.0
         let sTopLeft = topLeft + shadowOffset - SIMD2(repeating: shadowExpand)
         let sBottomLeft = bottomLeft + shadowOffset + SIMD2(-shadowExpand, shadowExpand)
@@ -65,7 +66,9 @@ extension CompositionNode {
             cornerRadius: cornerRadius,
             cornerDegree: cornerDegree,
             borderWidth: borderWidth,
+            color: fillColor,
             borderColor: borderColor,
+            tintColor: tintColor,
             shadowOffset: shadowOffset,
             shadowBlur: shadowBlur,
             shadowSpread: shadowSpread,
@@ -89,15 +92,14 @@ extension CompositionNode {
                     cornerRadius: commonArgs.cornerRadius,
                     cornerDegree: commonArgs.cornerDegree,
                     borderWidth: commonArgs.borderWidth,
-                    color: shadowColor, // Use shadowColor for color field
-                    borderColor: .transparent,
-                    shadowOffset: commonArgs.shadowOffset,
+                    color: shadowColor,  // Use shadowColor for color field
+                    borderColor: .transparent,                    tintColor: .transparent,                    shadowOffset: commonArgs.shadowOffset,
                     shadowBlur: commonArgs.shadowBlur,
                     shadowSpread: commonArgs.shadowSpread,
-                    hasContent: false, // Shadows typically don't have content/textures
+                    hasContent: false,  // Shadows typically don't have content/textures
                     contentIndex: 0,
                     nineGrid: commonArgs.nineGrid,
-                    mode: 1.0 // Shadow Mode
+                    mode: 1.0  // Shadow Mode
                 ),
                 CompositeNodeVertexData(
                     opacity: commonArgs.opacity,
@@ -111,6 +113,7 @@ extension CompositionNode {
                     borderWidth: commonArgs.borderWidth,
                     color: shadowColor,
                     borderColor: .transparent,
+                    tintColor: .transparent,
                     shadowOffset: commonArgs.shadowOffset,
                     shadowBlur: commonArgs.shadowBlur,
                     shadowSpread: commonArgs.shadowSpread,
@@ -131,6 +134,7 @@ extension CompositionNode {
                     borderWidth: commonArgs.borderWidth,
                     color: shadowColor,
                     borderColor: .transparent,
+                    tintColor: .transparent,
                     shadowOffset: commonArgs.shadowOffset,
                     shadowBlur: commonArgs.shadowBlur,
                     shadowSpread: commonArgs.shadowSpread,
@@ -151,6 +155,7 @@ extension CompositionNode {
                     borderWidth: commonArgs.borderWidth,
                     color: shadowColor,
                     borderColor: .transparent,
+                    tintColor: .transparent,
                     shadowOffset: commonArgs.shadowOffset,
                     shadowBlur: commonArgs.shadowBlur,
                     shadowSpread: commonArgs.shadowSpread,
@@ -174,15 +179,14 @@ extension CompositionNode {
                 cornerRadius: commonArgs.cornerRadius,
                 cornerDegree: commonArgs.cornerDegree,
                 borderWidth: commonArgs.borderWidth,
-                color: fillColor, // Normal fill color
-                borderColor: commonArgs.borderColor,
-                shadowOffset: .zero,
+                color: fillColor,  // Normal fill color
+                borderColor: commonArgs.borderColor,                tintColor: commonArgs.tintColor,                shadowOffset: .zero,
                 shadowBlur: 0,
                 shadowSpread: 0,
                 hasContent: commonArgs.hasContent,
                 contentIndex: commonArgs.contentIndex,
                 nineGrid: commonArgs.nineGrid,
-                mode: 0.0 // Shape Mode
+                mode: 0.0  // Shape Mode
             ),
             CompositeNodeVertexData(
                 opacity: commonArgs.opacity,
@@ -196,6 +200,7 @@ extension CompositionNode {
                 borderWidth: commonArgs.borderWidth,
                 color: fillColor,
                 borderColor: commonArgs.borderColor,
+                tintColor: commonArgs.tintColor,
                 shadowOffset: .zero,
                 shadowBlur: 0,
                 shadowSpread: 0,
@@ -216,6 +221,7 @@ extension CompositionNode {
                 borderWidth: commonArgs.borderWidth,
                 color: fillColor,
                 borderColor: commonArgs.borderColor,
+                tintColor: commonArgs.tintColor,
                 shadowOffset: .zero,
                 shadowBlur: 0,
                 shadowSpread: 0,
@@ -236,6 +242,7 @@ extension CompositionNode {
                 borderWidth: commonArgs.borderWidth,
                 color: fillColor,
                 borderColor: commonArgs.borderColor,
+                tintColor: commonArgs.tintColor,
                 shadowOffset: .zero,
                 shadowBlur: 0,
                 shadowSpread: 0,

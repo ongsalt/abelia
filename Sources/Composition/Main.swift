@@ -31,17 +31,51 @@ struct Graphics101 {
             waylandSurface: window.surface.surface
         )
 
-        let renderer = Compositor(state: vulkanState)
-
-        setupScene(root: renderer.root)
-        renderer.root.print()
-        // let rect = CompositionNode()
-        // rect.size = [100, 100]
-        // rect.fillColor = Color(r: 1, g: 0, b: 0, a: 1)
-        // renderer.root.children.append(rect)
+        let compositor = Compositor(state: vulkanState)
+        setupScene(root: compositor.root)
 
         Task {
-            await renderer.recomposite()
+            func drawText(text: String) async -> RenderTexture {
+                let (ink, logical) = compositor.textRenderer.measure(text: text)
+                // TODO: transfer this to gpu
+                let buffer = UnsafeMutableBufferPointer<UInt8>.allocate(
+                    capacity: Int(logical.height * logical.width))
+                buffer.initialize(repeating: 0)
+                _ = compositor.textRenderer.render(
+                    text, to: buffer, width: logical.width, height: logical.height)
+
+                let texture = await compositor.textureRegistry.createStaticTexture(
+                    from: buffer,
+                    size: [UInt32(logical.width), UInt32(logical.height)],
+                    format: VK_FORMAT_R8_UNORM
+                )
+
+                return texture
+            }
+
+            // Complex Profile Card UI
+            let card = CompositionNode()
+            card.size = [360, 480]
+            card.fillColor = .white
+            card.position = [220, 60]  // Centered-ish in the window
+            card.cornerRadius = 32
+            card.shadowBlur = 28
+            card.shadowOffset = [0, 16]
+            card.shadowColor = .black.multiply(opacity: 0.15)
+            compositor.root.addChild(card)
+
+
+            // Name
+            let nameTex = await drawText(text: "Jane Swift")
+            let nameNode = CompositionNode()
+            nameNode.contents = nameTex
+            nameNode.size = SIMD2(nameTex.size)
+            nameNode.position = [(360 - Float(nameTex.size.x)) / 2, 175]  // Centered text
+            nameNode.tintColor = .black
+            card.addChild(nameNode)
+
+            compositor.root.print()
+            await compositor.recomposite()
         }
         // Task {
         //     let renderer = await Renderer2(state: vulkanState)
@@ -57,11 +91,13 @@ struct Graphics101 {
 
 func setupScene(root: CompositionNode) {
     let colors: [Color] = [
-        .red, .orange, .yellow, .green, .mint, .teal, .cyan, .blue, .indigo, .purple, .pink, .brown,
+        .red, .orange,
+        // .red, .orange, .yellow, .green, .mint, .teal, .cyan, .blue, .indigo, .purple, .pink, .brown,
     ]
 
     for (offset, c) in colors.enumerated() {
         let node = CompositionNode()
+        node.shouldRasterize = true
         node.size = [96, 96]
         node.fillColor = c
         node.position = [18 * Float(offset), 18 * Float(offset)]

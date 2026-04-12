@@ -148,6 +148,8 @@ class RenderTexture {
 
         vkCmdPipelineBarrier2(cb, barrierPresentDependencyInfo.ptr)
     }
+
+    // TODO: cleanup this on deinit?
 }
 
 extension RenderTexture: Equatable {

@@ -7,6 +7,7 @@ class Compositor {
     let renderer: Renderer
     let textureRegistry: RenderTextureRegistry
     let inputBuffer: InputBuffer  // this should be per frame in flight
+    let textRenderer = TextRenderer()
     var size: SIMD2<UInt32>
 
     // use the root layer with caution, some property should not be touch
@@ -195,7 +196,7 @@ class Compositor {
                 $0.clearValue.color.float32 = (0.0, 0.0, 0.0, 0.0)
 
                 if let swapChainImageView {
-                    Log.debug(.compositor, "has swapChainImageView: \(swapChainImageView)")
+                    // Log.debug(.compositor, "has swapChainImageView: \(swapChainImageView)")
 
                     $0.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT
                     $0.resolveImageView = swapChainImageView
@@ -224,7 +225,7 @@ class Compositor {
                 renderer.pipeline.bind(commandBuffer: cmdBuffer)  // its composition pipeline
 
                 let vertexData = nodes.flatMap { $0.toVertexData() }
-                
+
                 let quadCount = vertexData.count / 4
                 let indices = (0..<quadCount).flatMap { i -> [UInt32] in
                     let o = UInt32(i) * 4

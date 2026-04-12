@@ -91,7 +91,7 @@ extension RenderNode {
 }
 
 // we have 16 vertex attr * 16 bytes -> 256 bytes -> 64 float
-// 0. opacity, screenSize.{w,h}
+// 0. opacity, screenSize.{w,h}, mode (0=shape, 1=shadow)
 // 1. position.{x,y}, size.{w,h}
 //  - should we move this into affine matrix
 // 2-5. Affine matrix (16 float)
@@ -99,13 +99,13 @@ extension RenderNode {
 // this one must have its own shader type
 // Its SDF rect tho
 // 6. cornerRadius.{x,y,z,w}
-// 7. cornerDegree, borderWidth, [8 bytes]
-// 8. Colors: fill/shadow
-// 9. Colors: border
-// 11. shadow: offset.{x.y}, blur, spread
-// 12. hasContent, contentIndex: u32, hasMask, maskIndex: u32
-// 13. ninegrid (rect.{top, left, bottom, right})
-// 14. layer mask
+// 7. cornerDegree, borderWidth, vertexLocalPos.{x,y}
+// 8. Colors: color (shape fill or shadow color)
+// 9. Colors: border color
+// 10. shadow: offset.{x,y}, blur, spread
+// 11. contents: hasContent, contentIndex: u32, contentAux0, contentAux1
+// 12. ninegrid (rect.{top, left, bottom, right})
+//
 // always clip immediate contents, clip chlid contents only when rasterize: true
 //
 
