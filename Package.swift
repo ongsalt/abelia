@@ -7,8 +7,7 @@ import PackageDescription
 let package = Package(
     name: "graphics-101",
     // products: [
-    //     .executable(name: "Signal", targets: ["Signal"]),
-    //     .executable(name: "App", targets: ["graphics-101"]),
+    //     .executable(name: "Composition", targets: ["Composition"]),
     // ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-numerics", from: "1.0.0"),
@@ -35,7 +34,7 @@ let package = Package(
         ),
 
         .target(name: "Signal"),
-        .target(name: "UI", dependencies: ["graphics-101", "DSLMacro"]),
+        .target(name: "UI", dependencies: ["Composition", "DSLMacro"]),
         // .executableTarget(name: "Signal"),
 
         .macro(
@@ -53,7 +52,7 @@ let package = Package(
         // ),
 
         .target(
-            name: "graphics-101",
+            name: "Composition",
             dependencies: [
                 .product(name: "Numerics", package: "swift-numerics"),
                 .target(name: "Wayland", condition: .when(platforms: [.linux])),
