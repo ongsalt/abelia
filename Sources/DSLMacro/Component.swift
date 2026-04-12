@@ -13,6 +13,7 @@ struct ComponentMacro: MemberMacro {
         conformingTo protocols: [TypeSyntax],
         in context: some MacroExpansionContext
     ) throws(ComponentMacroErrorReport) -> [DeclSyntax] {
+        let isClass = declaration.as(ClassDeclSyntax.self) != nil
         let (functions, initializers) = findFunctionsAndInit(declaration)
 
         var out: [DeclSyntax] = []
@@ -31,7 +32,7 @@ struct ComponentMacro: MemberMacro {
         }
 
         for initializer in initializers {
-            let res = transformInit(initializer)
+            let res = transformInit(initializer, isClass: isClass)
             switch res {
             case .success(let decl):
                 if let decl {
@@ -106,9 +107,11 @@ struct ComponentMacro: MemberMacro {
         return .success(out)
     }
 
-    private static func transformInit(_ decl: InitializerDeclSyntax) -> Result<
-        InitializerDeclSyntax?, ComponentMacroError
-    > {
+    private static func transformInit(_ decl: InitializerDeclSyntax, isClass: Bool = false)
+        -> Result<
+            InitializerDeclSyntax?, ComponentMacroError
+        >
+    {
         let res = transformSignature(signature: decl.signature)
         guard
             case .success((let newSignature, let bindIndices)) = res
@@ -125,7 +128,11 @@ struct ComponentMacro: MemberMacro {
 
         let out = InitializerDeclSyntax(
             modifiers: DeclModifierListSyntax {
-                DeclModifierSyntax(name: "convenience")
+                DeclModifierSyntax(name: "public")
+                if isClass {
+                    DeclModifierSyntax(name: "convenience")
+                }
+                // TODO: visibility
             },
             genericParameterClause: decl.genericParameterClause,
             signature: newSignature,
@@ -155,23 +162,35 @@ struct ComponentMacro: MemberMacro {
             callee: ExprSyntax("\(raw: name)")
         ) {
             for (index, p) in signature.parameterClause.parameters.enumerated() {
-                if bindIndices.contains(index) {
-                    LabeledExprSyntax(
-                        label: p.firstName,
-                        colon: p.colon,
-                        expression: ExprSyntax("Bind(getter: \(p.secondName ?? p.firstName))")
-                    )
-                } else {
-                    LabeledExprSyntax(
-                        label: p.firstName,
-                        colon: p.colon,
-                        expression: ExprSyntax("\(p.secondName ?? p.firstName)")
-                    )
-                }
+                let label = getOuterName(p)
+                let expr =
+                    if bindIndices.contains(index) {
+                        ExprSyntax("Bind(getter: \(getInnerName(p)))")
+                    } else {
+                        ExprSyntax("\(getInnerName(p))")
+                    }
+
+                LabeledExprSyntax(
+                    label: label,
+                    colon: label != nil ? p.colon : nil,
+                    expression: expr
+                )
             }
         }
 
         return callExpr
+    }
+
+    private static func getInnerName(_ p: FunctionParameterListSyntax.Element) -> TokenSyntax {
+        p.secondName ?? p.firstName
+    }
+
+    private static func getOuterName(_ p: FunctionParameterListSyntax.Element) -> TokenSyntax? {
+        if "\(p.firstName.trimmed)" == "_" {
+            nil
+        } else {
+            p.firstName
+        }
     }
 
     private static func transformSignature(signature: FunctionSignatureSyntax)

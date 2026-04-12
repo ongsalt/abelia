@@ -4,25 +4,23 @@ protocol Primitive: View {
 
 // those inherit view should manage it own backing element
 // provide macro for auto conforming and generate constructor? also markshit as state?
-struct Text: Primitive {
-    // @Props
-    // var text: String
+@Autobind
+public struct Text: Primitive {
+    var text: Bind<String>
 
-    @Props
-    var text: String
     // this is by the component macro
-}
+    public init(_ text: Bind<String>) {
+        self.text = text
 
-extension Text {
-    init(_ text: @escaping @autoclosure () -> String) {
-        self.$text = ReadOnlyBinding(getter: text)
+        Effect {
+            print("updating text: \(text.value)")
+        }
     }
 }
+public struct Container<T: View>: Primitive {
+    let children: T
 
-struct Container: Primitive {
-    let children: any View
-
-    init(@ViewBuilder body: () -> some View) {
+    public init(@ViewBuilder body: () -> T) {
         children = body()
     }
 }

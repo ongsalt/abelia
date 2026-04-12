@@ -1,3 +1,4 @@
+@MainActor
 protocol ReadOnlySignal<T> {
     associatedtype T
 

@@ -1,3 +1,4 @@
+@MainActor
 open class EffectScope {
     weak var parent: (EffectScope)?
     var children: [EffectScope] = []

@@ -1,4 +1,5 @@
-@attached(member, names: overloaded, conformances: Component)
+@attached(member, names: arbitrary)
 // @attached(member, conformances: Component)
-public macro Component() =
+// TODO: think of better name
+public macro Autobind() =
         #externalMacro(module: "DSLMacro", type: "ComponentMacro")

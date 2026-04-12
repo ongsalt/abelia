@@ -1,4 +1,4 @@
-class ReadOnlyBinding<T> {
+public class ReadOnlyBinding<T> {
     var value: T {
         getter()
     }
@@ -18,7 +18,7 @@ class ReadOnlyBinding<T> {
     }
 }
 
-class Binding<T> {
+public class Binding<T> {
     var value: T {
         get { getter() }
         set { setter(newValue) }
@@ -37,6 +37,6 @@ class Binding<T> {
     }
 }
 
-typealias Bind<T> = ReadOnlyBinding<T>
-typealias Writable<T> = Binding<T>
+public typealias Bind<T> = ReadOnlyBinding<T>
+public typealias Writable<T> = Binding<T>
 

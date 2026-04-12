@@ -1,21 +1,16 @@
-protocol View: ~Copyable {
+@MainActor
+public protocol View: ~Copyable {
 
 }
 
-protocol Component: View {
+public protocol Component: View {
     associatedtype Body: View
 
-    // @ViewBuilder
+    @ViewBuilder
     var body: Body { get }
-
-    func setup()
 }
 
-extension View {
-    func setup() {}
-}
-
-struct Fragment: View {
+public struct Fragment: View {
     let views: [any View]
 }
 
@@ -25,7 +20,7 @@ struct Shit: Component {
     var body: some View {
         Container {
             Container {
-                Text("Hello")
+                Text("String")
             }
 
             Text("count \(count.value)")
@@ -35,16 +30,21 @@ struct Shit: Component {
 
 // TODO: Variadic Generics
 @resultBuilder
-struct ViewBuilder {
-    typealias Component = View
-
-    // public static func buildBlock() -> [Component] {
-    //     []
-    // }
+@MainActor
+public struct ViewBuilder {
+    public static func buildBlock() -> Fragment {
+        Fragment(views: [])
+    }
 
     // just in case we need this (if block?)
-    public static func buildBlock(_ components: Component...) -> Fragment {
-        Fragment(views: components)
+    public static func buildBlock(_ components: View...) -> Fragment {
+        for c in components {
+            if let c = c as? any Component {
+                c.body //  bruhhhh
+            }
+        }
+
+        return Fragment(views: components)
     }
 }
 

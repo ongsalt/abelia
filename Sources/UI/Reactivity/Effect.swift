@@ -1,3 +1,5 @@
+import Foundation
+
 // effect scope own it
 
 // this shi is not thread safe
@@ -6,7 +8,7 @@ public class Effect: EffectScope, Subscriber {
     private let tags: [String]?
     let fn: () -> Void
 
-    // TODO: effect priority / batching / auto flush (ui)  
+    // TODO: effect priority / batching / auto flush (ui)
     @discardableResult
     public init(priority: Int = 0, tags: [String]? = nil, _ fn: @escaping () -> Void) {
         self.tags = tags
@@ -37,14 +39,16 @@ public class Effect: EffectScope, Subscriber {
     }
 
     func update() {
-        let pop = TrackingContext.shared.push(scope: self, subscriber: self)
-        defer {
-            pop()
+        // we need to batch this and run its nextTick or smth, to prevent exclusivity check
+        DispatchQueue.main.async {
+            let pop = TrackingContext.shared.push(scope: self, subscriber: self)
+            defer {
+                pop()
+            }
+
+            self.dependencies = [:]
+            self.fn()
         }
-
-        dependencies = [:]
-
-        self.fn()
     }
 }
 

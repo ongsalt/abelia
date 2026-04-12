@@ -1,3 +1,4 @@
+@MainActor
 protocol Subscriber: Identifiable, AnyObject {
     var dependencies: [Int: any Source] {
         get

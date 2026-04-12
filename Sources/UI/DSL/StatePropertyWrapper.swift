@@ -1,24 +1,25 @@
+// @propertyWrapper
+// public struct Props<T> {
+//     var projectedValue: ReadOnlyBinding<T>?
+
+//     var wrappedValue: T {
+//         projectedValue!.value
+//     }
+
+//     init(externalName: String? = nil) {}
+
+//     // default value
+//     init(externalName: String? = nil, wrappedValue: T) {
+//         self.projectedValue = ReadOnlyBinding { wrappedValue }
+//     }
+// }
+
 @propertyWrapper
-struct Props<T> {
-    var projectedValue: ReadOnlyBinding<T>?
+@MainActor
+public struct State<T> {
+    public var projectedValue: Signal<T>
 
-    var wrappedValue: T {
-        projectedValue!.value
-    }
-
-    init(externalName: String? = nil) {}
-
-    // default value
-    init(externalName: String? = nil, wrappedValue: T) {
-        self.projectedValue = ReadOnlyBinding { wrappedValue }
-    }
-}
-
-@propertyWrapper
-struct State<T> {
-    var projectedValue: Signal<T>
-
-    var wrappedValue: T {
+    public var wrappedValue: T {
         get {
             projectedValue.value
         }
@@ -27,13 +28,13 @@ struct State<T> {
         }
     }
 
-    init(wrappedValue: T) {
+    public init(wrappedValue: T) {
         self.projectedValue = Signal(wrappedValue)
     }
 }
 
-@Component
-private class Test1 {
+@Autobind
+private class Test1: Component {
     let text: Bind<String>
 
     @State
@@ -42,7 +43,7 @@ private class Test1 {
     var a: Int
 
     var body: some View {
-        Text("fty \(self.count)")
+        // Text()
     }
 
     func shti() {  // ehhhhh
