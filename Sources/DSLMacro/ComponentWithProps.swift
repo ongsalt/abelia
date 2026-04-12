@@ -74,4 +74,11 @@ struct ComponentWithPropsMacro: MemberMacro {
 
 enum ComponentMacroError: Error {
     case propsNoType(names: [String])
+    case ellipsisFound
 }
+
+struct ComponentMacroErrorReport: Error {
+    let errors: [ComponentMacroError]
+}
+
+

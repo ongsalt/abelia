@@ -34,8 +34,7 @@ struct State<T> {
 
 @Component
 private class Test1 {
-    @Props
-    var text: String
+    let text: Bind<String>
 
     @State
     var count: Int = 8
@@ -50,7 +49,7 @@ private class Test1 {
         count += 1
     }
 
-    public func geh(text: Bind<String>) async throws -> Int {
+    public func geh<T>(text: Bind<String>, hehe: T) async throws -> Int where T: AnyObject {
         self.a = 12
 
         return 1212
@@ -87,6 +86,6 @@ private class Test1 {
 
     public init(text: Bind<String>) {
         self.a = 12
+        self.text = text
     }
-
 }
