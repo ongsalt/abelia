@@ -240,5 +240,6 @@ extension Batch {
 
         // i wont transition image back, if you want to read it, transition it back yourself
 
+        return 0
     }
 }

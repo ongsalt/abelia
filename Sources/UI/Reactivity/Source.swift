@@ -1,11 +1,5 @@
-// @MainActor
-protocol Source<T>: Identifiable, AnyObject {
+protocol ReadOnlySignal<T> {
     associatedtype T
-
-    var subscribers: [Int: any Subscriber] {
-        get
-        set
-    }
 
     var value: T {
         get
@@ -14,7 +8,16 @@ protocol Source<T>: Identifiable, AnyObject {
     var peek: T {
         get
     }
+}
 
+// @MainActor
+protocol Source<T>: Identifiable, AnyObject, ReadOnlySignal {
+    associatedtype T
+
+    var subscribers: [Int: any Subscriber] {
+        get
+        set
+    }
 
     func addSubscriber(_ subscriber: any Subscriber)
     func removeSubscriber(_ subscriber: any Subscriber)

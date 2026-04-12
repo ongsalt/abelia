@@ -37,6 +37,6 @@ class Binding<T> {
     }
 }
 
-
 typealias Bind<T> = ReadOnlyBinding<T>
 typealias Writable<T> = Binding<T>
+

@@ -147,37 +147,37 @@ class Renderer {
             $0.pColorAttachments = colorAttachmentInfo.readonly
         }
 
-        // actual rendering
-        vkCmdBeginRendering(commandBuffer, renderingInfo.ptr)
+        // // actual rendering
+        // vkCmdBeginRendering(commandBuffer, renderingInfo.ptr)
 
-        setViewport(swapChain.extent.simd2, commandBuffer: commandBuffer)
-        pipeline.bind(commandBuffer: commandBuffer)
+        // setViewport(swapChain.extent.simd2, commandBuffer: commandBuffer)
+        // pipeline.bind(commandBuffer: commandBuffer)
 
-        var offsets: UInt64 = 0
-        vkCmdBindVertexBuffers(commandBuffer, 0, 1, &buffer.buffer, &offsets)
-        vkCmdBindIndexBuffer(
-            commandBuffer, buffer.buffer, UInt64(indexOffset), VK_INDEX_TYPE_UINT32)
+        // var offsets: UInt64 = 0
+        // vkCmdBindVertexBuffers(commandBuffer, 0, 1, &buffer.buffer, &offsets)
+        // vkCmdBindIndexBuffer(
+        //     commandBuffer, buffer.buffer, UInt64(indexOffset), VK_INDEX_TYPE_UINT32)
 
-        var address: SIMD2<UInt32> = [800, 600]
-        vkCmdPushConstants(
-            commandBuffer, pipeline.pipelineLayout,
-            VK_SHADER_STAGE_VERTEX_BIT.rawValue | VK_SHADER_STAGE_FRAGMENT_BIT.rawValue,
-            0,
-            UInt32(MemoryLayout<SIMD2<UInt32>>.size),
-            &address
-        )
+        // var address: SIMD2<UInt32> = [800, 600]
+        // vkCmdPushConstants(
+        //     commandBuffer, pipeline.pipelineLayout,
+        //     VK_SHADER_STAGE_VERTEX_BIT.rawValue | VK_SHADER_STAGE_FRAGMENT_BIT.rawValue,
+        //     0,
+        //     UInt32(MemoryLayout<SIMD2<UInt32>>.size),
+        //     &address
+        // )
 
-        var descriptorSet: VkDescriptorSet? = textureRegistry.descriptorSet
-        vkCmdBindDescriptorSets(
-            commandBuffer,
-            VK_PIPELINE_BIND_POINT_GRAPHICS,
-            pipeline.pipelineLayout,
-            0,
-            1,
-            &descriptorSet,
-            0,
-            nil
-        )
+        // var descriptorSet: VkDescriptorSet? = textureRegistry.descriptorSet
+        // vkCmdBindDescriptorSets(
+        //     commandBuffer,
+        //     VK_PIPELINE_BIND_POINT_GRAPHICS,
+        //     pipeline.pipelineLayout,
+        //     0,
+        //     1,
+        //     &descriptorSet,
+        //     0,
+        //     nil
+        // )
 
         vkCmdDrawIndexed(commandBuffer, 6, 1, 0, 0, 0)
         vkCmdEndRendering(commandBuffer)

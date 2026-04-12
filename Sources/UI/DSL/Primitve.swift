@@ -20,9 +20,9 @@ extension Text {
 }
 
 struct Container: Primitive {
-    let children: [any View]
+    let children: any View
 
-    init(@ViewBuilder body: () -> [any View]) {
+    init(@ViewBuilder body: () -> some View) {
         children = body()
     }
 }

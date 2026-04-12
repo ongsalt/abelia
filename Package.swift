@@ -43,6 +43,7 @@ let package = Package(
             dependencies: [
                 .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
                 .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
+                .product(name: "SwiftSyntaxBuilder", package: "swift-syntax"),
             ]
         ),
 
@@ -51,7 +52,7 @@ let package = Package(
         //     capability: .buildTool(),
         // ),
 
-        .executableTarget(
+        .target(
             name: "graphics-101",
             dependencies: [
                 .product(name: "Numerics", package: "swift-numerics"),
@@ -67,5 +68,16 @@ let package = Package(
                 .define("VK_USE_PLATFORM_WAYLAND_KHR", .when(platforms: [.linux]))
             ],
         ),
+
+        .executableTarget(
+            name: "Playground",
+            dependencies: [
+                "UI"
+            ],
+            // cSettings: [
+            //     .define("VK_USE_PLATFORM_WAYLAND_KHR", .when(platforms: [.linux]))
+            // ],
+        ),
+
     ]
 )

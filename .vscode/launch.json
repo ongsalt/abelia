@@ -59,6 +59,26 @@
             "target": "App",
             "configuration": "release",
             "preLaunchTask": "swift: Build Release App"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:graphics-101}",
+            "name": "Debug Playground",
+            "target": "Playground",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug Playground"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:graphics-101}",
+            "name": "Release Playground",
+            "target": "Playground",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release Playground"
         }
     ]
 }

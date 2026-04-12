@@ -7,8 +7,17 @@ protocol Component: View {
 
     // @ViewBuilder
     var body: Body { get }
+
+    func setup()
 }
 
+extension View {
+    func setup() {}
+}
+
+struct Fragment: View {
+    let views: [any View]
+}
 
 struct Shit: Component {
     let count = Signal(0)
@@ -34,8 +43,8 @@ struct ViewBuilder {
     // }
 
     // just in case we need this (if block?)
-    public static func buildBlock(_ components: Component...) -> [Component] {
-        components
+    public static func buildBlock(_ components: Component...) -> Fragment {
+        Fragment(views: components)
     }
 }
 
