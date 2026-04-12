@@ -49,7 +49,7 @@ private class Test1 {
         count += 1
     }
 
-    public func geh<T>(text: Bind<String>, hehe: T) async throws -> Int where T: AnyObject {
+    public func geh<T>(text: Bind<String>, hehe innernigga: T) async throws -> Int where T: AnyObject {
         self.a = 12
 
         return 1212

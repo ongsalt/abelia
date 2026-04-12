@@ -71,27 +71,17 @@ struct ComponentMacro: MemberMacro {
     > {
         let res = transformSignature(signature: decl.signature)
         guard
-            case .success((let newSignature, let changed)) = res
+            case .success((let newSignature, let bindIndices)) = res
         else {
             return .failure(res.error!)
         }
 
-        if !changed {
+        if bindIndices.isEmpty {
             return .success(nil)
         }
 
-        let callExpr: FunctionCallExprSyntax = FunctionCallExprSyntax(
-            callee: ExprSyntax("\(decl.name)")
-        ) {
-            for p in decl.signature.parameterClause.parameters {
-                LabeledExprSyntax(
-                    label: p.firstName,
-                    colon: p.colon,
-                    expression: ExprSyntax("Bind(getter: \(p.secondName ?? p.firstName))")
-                )
-            }
-
-        }
+        let callExpr = createCallExpression(
+            name: decl.name.text, signature: decl.signature, bindIndices: bindIndices)
 
         // external name must be the same
         let out = FunctionDeclSyntax(
@@ -121,25 +111,17 @@ struct ComponentMacro: MemberMacro {
     > {
         let res = transformSignature(signature: decl.signature)
         guard
-            case .success((let newSignature, let changed)) = res
+            case .success((let newSignature, let bindIndices)) = res
         else {
             return .failure(res.error!)
         }
 
-        if !changed {
+        if bindIndices.isEmpty {
             return .success(nil)
         }
 
-        let callExpr = FunctionCallExprSyntax(callee: ExprSyntax("self.init")) {
-            for p in decl.signature.parameterClause.parameters {
-                LabeledExprSyntax(
-                    label: p.firstName,
-                    colon: p.colon,
-                    expression: ExprSyntax("Bind(getter: \(p.secondName ?? p.firstName))")
-                )
-            }
-
-        }
+        let callExpr = createCallExpression(
+            name: "self.init", signature: decl.signature, bindIndices: bindIndices)
 
         let out = InitializerDeclSyntax(
             modifiers: DeclModifierListSyntax {
@@ -164,12 +146,40 @@ struct ComponentMacro: MemberMacro {
         return .success(out)
     }
 
-    private static func transformSignature(signature: FunctionSignatureSyntax)
-        -> Result<(FunctionSignatureSyntax, changed: Bool), ComponentMacroError>
+    private static func createCallExpression(
+        name: String, signature: FunctionSignatureSyntax, bindIndices: Set<Int>
+    )
+        -> FunctionCallExprSyntax
     {
+        let callExpr: FunctionCallExprSyntax = FunctionCallExprSyntax(
+            callee: ExprSyntax("\(raw: name)")
+        ) {
+            for (index, p) in signature.parameterClause.parameters.enumerated() {
+                if bindIndices.contains(index) {
+                    LabeledExprSyntax(
+                        label: p.firstName,
+                        colon: p.colon,
+                        expression: ExprSyntax("Bind(getter: \(p.secondName ?? p.firstName))")
+                    )
+                } else {
+                    LabeledExprSyntax(
+                        label: p.firstName,
+                        colon: p.colon,
+                        expression: ExprSyntax("\(p.secondName ?? p.firstName)")
+                    )
+                }
+            }
+        }
+
+        return callExpr
+    }
+
+    private static func transformSignature(signature: FunctionSignatureSyntax)
+        -> Result<(FunctionSignatureSyntax, bindIndices: Set<Int>), ComponentMacroError>
+    {
+        var bindIndices: Set<Int> = []
         var parameters: [FunctionParameterSyntax] = []
-        var shouldEmit = false
-        for p in signature.parameterClause.parameters {
+        for (index, p) in signature.parameterClause.parameters.enumerated() {
             // only if its bind
             guard let identifierType = p.type.as(IdentifierTypeSyntax.self),
                 "\(identifierType.name)" == "Bind",
@@ -180,7 +190,7 @@ struct ComponentMacro: MemberMacro {
                 continue
             }
 
-            shouldEmit = true
+            bindIndices.insert(index)
 
             if p.ellipsis != nil {
                 // wtfffff
@@ -212,7 +222,7 @@ struct ComponentMacro: MemberMacro {
             returnClause: signature.returnClause
         )
 
-        return .success((out, changed: shouldEmit))
+        return .success((out, bindIndices))
     }
 
     private static func createBody(
