@@ -1,6 +1,7 @@
 // swift-tools-version: 6.2
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
+import CompilerPluginSupport
 import PackageDescription
 
 let package = Package(
@@ -10,7 +11,8 @@ let package = Package(
     //     .executable(name: "App", targets: ["graphics-101"]),
     // ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-numerics", from: "1.0.0")
+        .package(url: "https://github.com/apple/swift-numerics", from: "1.0.0"),
+        .package(url: "https://github.com/swiftlang/swift-syntax", from: "602.0.0"),
     ],
     targets: [
         .target(name: "CWayland"),
@@ -33,8 +35,16 @@ let package = Package(
         ),
 
         .target(name: "Signal"),
-        .target(name: "UI", dependencies: ["graphics-101"]),
+        .target(name: "UI", dependencies: ["graphics-101", "DSLMacro"]),
         // .executableTarget(name: "Signal"),
+
+        .macro(
+            name: "DSLMacro",
+            dependencies: [
+                .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
+                .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
+            ]
+        ),
 
         // .plugin(
         //     name: "ShaderCompilation",

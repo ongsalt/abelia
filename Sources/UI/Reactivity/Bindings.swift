@@ -3,7 +3,7 @@ class ReadOnlyBinding<T> {
         getter()
     }
 
-    let getter: () -> T
+    var getter: () -> T
 
     init(getter: @escaping () -> T) {
         self.getter = getter

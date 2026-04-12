@@ -9,30 +9,6 @@ protocol Component: View {
     var body: Body { get }
 }
 
-// those inherit view should manage it own backing element
-// provide macro for auto conforming and generate constructor? also markshit as state?
-struct Text: View {
-    // @Props
-    // var text: String
-
-    var text: String {
-        self._text.value
-    }
-
-    // generated
-    let _text: ReadOnlyBinding<String>
-    init(_ text: @escaping @autoclosure () -> String) {
-        self._text = ReadOnlyBinding(getter: text)
-    }
-}
-
-struct Container: View {
-    let children: [any View]
-
-    init(@ViewBuilder body: () -> [any View]) {
-        children = body()
-    }
-}
 
 struct Shit: Component {
     let count = Signal(0)
@@ -48,6 +24,7 @@ struct Shit: Component {
     }
 }
 
+// TODO: Variadic Generics
 @resultBuilder
 struct ViewBuilder {
     typealias Component = View

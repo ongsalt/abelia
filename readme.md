@@ -8,6 +8,7 @@ glslc Sources/graphics-101/Resources/Shaders/composite.vert -o Sources/graphics-
 - freetype
 
 ## Wayland stuff
+this will be nuke later in favor of `SwiftWayland` after libwayland backend is completed
 ```bash
 cd Sources/CWayland
 
