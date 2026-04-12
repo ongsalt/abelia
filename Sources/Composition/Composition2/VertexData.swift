@@ -2,7 +2,7 @@
 import Foundation
 import Wayland
 
-struct CompositeNodeVertexData {
+struct CompositeNodeVertexData: Hashable {
 	/// X: Opacity (0.0 to 1.0)
 	/// Y: Screen Width
 	/// Z: Screen Height

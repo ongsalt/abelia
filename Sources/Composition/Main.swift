@@ -32,7 +32,6 @@ struct Graphics101 {
         )
 
         let compositor = Compositor(state: vulkanState)
-        setupScene(root: compositor.root)
 
         Task {
             func drawText(text: String) async -> RenderTexture {
@@ -55,7 +54,7 @@ struct Graphics101 {
 
             // Complex Profile Card UI
             let card = CompositionNode()
-            card.size = [360, 480]
+            card.size = [240, 240]
             card.fillColor = .white
             card.position = [220, 60]  // Centered-ish in the window
             card.cornerRadius = 32
@@ -64,15 +63,16 @@ struct Graphics101 {
             card.shadowColor = .black.multiply(opacity: 0.15)
             compositor.root.addChild(card)
 
-
             // Name
             let nameTex = await drawText(text: "Jane Swift")
             let nameNode = CompositionNode()
             nameNode.contents = nameTex
             nameNode.size = SIMD2(nameTex.size)
-            nameNode.position = [(360 - Float(nameTex.size.x)) / 2, 175]  // Centered text
+            nameNode.position = [(240 - Float(nameTex.size.x)) / 2, 100]  // Centered text
             nameNode.tintColor = .black
             card.addChild(nameNode)
+
+            setupScene(root: compositor.root)
 
             compositor.root.print()
             await compositor.recomposite()
@@ -91,8 +91,8 @@ struct Graphics101 {
 
 func setupScene(root: CompositionNode) {
     let colors: [Color] = [
-        .red, .orange,
-        // .red, .orange, .yellow, .green, .mint, .teal, .cyan, .blue, .indigo, .purple, .pink, .brown,
+        // .red, .orange,
+        .red, .orange, .yellow, .green, .mint, .teal, .cyan, .blue, .indigo, .purple, .pink, .brown,
     ]
 
     for (offset, c) in colors.enumerated() {
@@ -100,14 +100,14 @@ func setupScene(root: CompositionNode) {
         node.shouldRasterize = true
         node.size = [96, 96]
         node.fillColor = c
-        node.position = [18 * Float(offset), 18 * Float(offset)]
+        node.position = [24 * Float(offset), 24 * Float(offset)]
         node.cornerRadius = 24
 
-        node.shadowBlur = 12
-        node.shadowColor = .black
+        node.shadowBlur = 18
+        node.shadowColor = .black.multiply(opacity: 0.4)
 
-        node.borderWidth = 0.5
-        node.borderColor = .black
+        // node.borderWidth = 0.5
+        // node.borderColor = .black
 
         root.addChild(node)
     }

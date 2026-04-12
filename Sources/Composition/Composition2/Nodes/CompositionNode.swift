@@ -32,7 +32,7 @@ extension CompositionNode {
     }
 
     func toVertexData() -> [CompositeNodeVertexData] {
-        let rootSize = rasterizationRoot.size
+        let rootSize = parent!.rasterizationRoot.size
         let screenSize = SIMD2<UInt32>(
             UInt32(rootSize.x.max(1)),
             UInt32(rootSize.y.max(1))
