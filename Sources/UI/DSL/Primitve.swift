@@ -13,10 +13,11 @@ public struct Text: Primitive {
         self.text = text
 
         Effect {
-            print("updating text: \(text.value)")
+            print("text: \(text.value)")
         }
     }
 }
+
 public struct Container<T: View>: Primitive {
     let children: T
 

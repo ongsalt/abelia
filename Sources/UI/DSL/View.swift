@@ -12,6 +12,10 @@ public protocol Component: View {
 
 public struct Fragment: View {
     let views: [any View]
+
+    static var empty: Fragment {
+        Fragment(views: [])
+    }
 }
 
 struct Shit: Component {

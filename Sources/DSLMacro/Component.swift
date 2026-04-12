@@ -6,13 +6,13 @@ import SwiftSyntaxMacros
 // just generate an @autoclosure overload
 // can be attach to a function or a entire DeclBlock member
 // TODO: provide a way to escape it
-struct ComponentMacro: MemberMacro {
+struct AutobindMacro: MemberMacro {
     public static func expansion(
         of node: AttributeSyntax,
         providingMembersOf declaration: some DeclGroupSyntax,
         conformingTo protocols: [TypeSyntax],
         in context: some MacroExpansionContext
-    ) throws(ComponentMacroErrorReport) -> [DeclSyntax] {
+    ) throws(AutobindMacroErrorReport) -> [DeclSyntax] {
         let isClass = declaration.as(ClassDeclSyntax.self) != nil
         let (functions, initializers) = findFunctionsAndInit(declaration)
 
@@ -44,7 +44,7 @@ struct ComponentMacro: MemberMacro {
         }
 
         if !errors.isEmpty {
-            throw ComponentMacroErrorReport(errors: errors)
+            throw AutobindMacroErrorReport(errors: errors)
         }
 
         return out

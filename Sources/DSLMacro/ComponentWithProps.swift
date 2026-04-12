@@ -77,7 +77,7 @@ enum ComponentMacroError: Error {
     case ellipsisFound
 }
 
-struct ComponentMacroErrorReport: Error {
+struct AutobindMacroErrorReport: Error {
     let errors: [ComponentMacroError]
 }
 

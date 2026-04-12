@@ -20,16 +20,39 @@ class Counter: Component {
     }
 }
 
-@Autobind
-struct App: Component {
+class TransientComponent: Component {
     var body: some View {
-        // Text("sdfnhudki")
-        Counter()
+        Text("hehe")
+    }
+
+    deinit {
+        print("----------Done")
     }
 }
 
-let app = App()
-app.body
+func drop<T>(_ value: consuming T) {}
 
+@Autobind
+struct App: Component {
+    var body: some View {
+        Text("sdfnhudki")
+        Counter()
+        TransientComponent()
+    }
+}
+
+do {
+    let app = App()
+    let b = app.body
+
+    Task { [b] in
+        try await Task.sleep(for: .seconds(3))
+        // print(Swift._getRetainCount(b))
+        drop(b)
+        // consume b
+    }
+}
 
 RunLoop.main.run()
+
+// print(b)

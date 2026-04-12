@@ -5,6 +5,6 @@ import SwiftSyntaxMacros
 @main
 struct DSLMacroPlugin: CompilerPlugin {
     var providingMacros: [Macro.Type] = [
-        ComponentMacro.self,
+        AutobindMacro.self,
     ]
 }

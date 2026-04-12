@@ -1,29 +1,47 @@
-// class If: UI2 {
-//     let condition: () -> Bool
-//     let _then: () -> Void
-//     let _else: (() -> Void)?
+class If<Then: View, Else: View>: Component {
+    let condition: Bind<Bool>
+    let then: () -> Then
+    let fallback: () -> Else
 
-//     init(_ condition: @escaping @autoclosure () -> Bool, then: @escaping () -> Void, else _else: (() -> Void)? = nil) {
-//         self.condition = condition
-//         self._then = then
-//         self._else = _else
-//     }
+    init(
+        _ condition: Bind<Bool>, @ViewBuilder then: @escaping () -> Then,
+        @ViewBuilder else fallback: @escaping () -> Else = { Fragment.empty }
+    ) {
+        self.condition = condition
+        self.then = then
+        self.fallback = fallback
+    }
 
-//     func mount(context: Context2) {
-//         Effect {
-//             let show = self.condition()
+    var body: some View {
+        Container {
+            
+        }   
+    }
+    // let condition: () -> Bool
+    // let _then: () -> Void
+    // let _else: (() -> Void)?
 
-//             untrack {
-//                 if show {
+    // init(_ condition: @escaping @autoclosure () -> Bool, then: @escaping () -> Void, else _else: (() -> Void)? = nil) {
+    //     self.condition = condition
+    //     self._then = then
+    //     self._else = _else
+    // }
 
-//                 } else {
+    // func mount(context: Context2) {
+    //     Effect {
+    //         let show = self.condition()
 
-//                 }
-//             }
+    //         untrack {
+    //             if show {
 
-//             // onDestroy {
-//             //     root.unmount()
-//             // }
-//         }
-//     }
-// }
+    //             } else {
+
+    //             }
+    //         }
+
+    //         // onDestroy {
+    //         //     root.unmount()
+    //         // }
+    //     }
+    // }
+}
