@@ -33,10 +33,12 @@ struct Graphics101 {
 
         let renderer = Compositor(state: vulkanState)
 
-        let rect = CompositionNode()
-        rect.size = [100, 100]
-        rect.fillColor = .red
-        renderer.root.children.append(rect)
+        setupScene(root: renderer.root)
+        renderer.root.print()
+        // let rect = CompositionNode()
+        // rect.size = [100, 100]
+        // rect.fillColor = Color(r: 1, g: 0, b: 0, a: 1)
+        // renderer.root.children.append(rect)
 
         Task {
             await renderer.recomposite()
@@ -50,5 +52,27 @@ struct Graphics101 {
 
         RunLoop.main.run()
         drop(token)
+    }
+}
+
+func setupScene(root: CompositionNode) {
+    let colors: [Color] = [
+        .red, .orange, .yellow, .green, .mint, .teal, .cyan, .blue, .indigo, .purple, .pink, .brown,
+    ]
+
+    for (offset, c) in colors.enumerated() {
+        let node = CompositionNode()
+        node.size = [96, 96]
+        node.fillColor = c
+        node.position = [18 * Float(offset), 18 * Float(offset)]
+        node.cornerRadius = 24
+
+        node.shadowBlur = 12
+        node.shadowColor = .black
+
+        node.borderWidth = 0.5
+        node.borderColor = .black
+
+        root.addChild(node)
     }
 }

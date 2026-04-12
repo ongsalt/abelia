@@ -1,6 +1,6 @@
 ```bash
-glslc Sources/graphics-101/Resources/Shaders/composite.frag -o Sources/graphics-101/Resources/Compiled/composite.frag.spv
-glslc Sources/graphics-101/Resources/Shaders/composite.vert -o Sources/graphics-101/Resources/Compiled/composite.vert.spv
+glslc Sources/Composition/Resources/Shaders/composite.frag -o Sources/Composition/Resources/Compiled/composite.frag.spv
+glslc Sources/Composition/Resources/Shaders/composite.vert -o Sources/Composition/Resources/Compiled/composite.vert.spv
 ```
 
 # Dependencies not included

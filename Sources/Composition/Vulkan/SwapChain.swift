@@ -99,8 +99,10 @@ final class SwapChain {
     private static func chooseSwapSurfaceFormat(from availableFormats: [VkSurfaceFormatKHR])
         -> VkSurfaceFormatKHR
     {
+        // Use UNORM format instead of SRGB so the GPU doesn't auto-apply an additional SRGB gamma curve 
+        // to our already calculated (or manually passed) linear / un-gamma-corrected color values.
         let format = availableFormats.first {
-            $0.format == VK_FORMAT_B8G8R8A8_SRGB
+            $0.format == VK_FORMAT_B8G8R8A8_UNORM
                 && $0.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR
         }
 

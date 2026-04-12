@@ -224,14 +224,15 @@ class Compositor {
                 renderer.pipeline.bind(commandBuffer: cmdBuffer)  // its composition pipeline
 
                 let vertexData = nodes.flatMap { $0.toVertexData() }
-                let indexBuffer = (0..<nodes.count).flatMap { index in
-                    let o = UInt32(index) * 4
-                    return [o, o + 1, o + 2, o , o + 3, o + 2]
+                
+                let quadCount = vertexData.count / 4
+                let indices = (0..<quadCount).flatMap { i -> [UInt32] in
+                    let o = UInt32(i) * 4
+                    return [o, o + 1, o + 2, o, o + 3, o + 2]
                 }
 
                 var pos = inputBuffer.write(vertexData)
-                let pos2 = inputBuffer.write(indexBuffer)
-                // 1 2 3 2 3 4 and repeat
+                let pos2 = inputBuffer.write(indices)
 
                 vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &inputBuffer.raw.buffer, &pos)
                 vkCmdBindIndexBuffer(cmdBuffer, inputBuffer.raw.buffer, pos2, VK_INDEX_TYPE_UINT32)
@@ -258,7 +259,7 @@ class Compositor {
                     nil
                 )
 
-                vkCmdDrawIndexed(cmdBuffer, UInt32(indexBuffer.count), 1, 0, 0, 0)
+                vkCmdDrawIndexed(cmdBuffer, UInt32(indices.count), 1, 0, 0, 0)
             case .effect(let nodes):
                 Log.debug(.compositor, "ignoring effect group: \(nodes)")
 

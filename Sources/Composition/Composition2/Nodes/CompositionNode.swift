@@ -1,6 +1,6 @@
 class CompositionNode: RenderNode {
     var cornerRadius: Float = 0
-    var cornerDegree: Float = 0
+    var cornerDegree: Float = 4
 
     var shadowColor: Color = .transparent
     var shadowBlur: Float = 0
@@ -40,14 +40,8 @@ extension CompositionNode {
         let nodePosition = absolutePosition
         let nodeSize = size
 
-        // TODO: layer contents
         let hasContent = contents != nil
         let contentIndex: UInt32 = 0
-        // if let renderTexture = contents as? RenderTexture {
-        //     contentIndex = renderTexture.index
-        // } else {
-        //     contentIndex = 0
-        // }
 
         let transform = totalAffine.fastInverse()
 
@@ -55,6 +49,12 @@ extension CompositionNode {
         let bottomLeft = nodePosition + SIMD2(0, nodeSize.y)
         let bottomRight = nodePosition + nodeSize
         let topRight = nodePosition + SIMD2(nodeSize.x, 0)
+        
+        let shadowExpand = shadowSpread.max(0) + shadowBlur * 3.0
+        let sTopLeft = topLeft + shadowOffset - SIMD2(repeating: shadowExpand)
+        let sBottomLeft = bottomLeft + shadowOffset + SIMD2(-shadowExpand, shadowExpand)
+        let sBottomRight = bottomRight + shadowOffset + SIMD2(repeating: shadowExpand)
+        let sTopRight = topRight + shadowOffset + SIMD2(shadowExpand, -shadowExpand)
 
         let commonArgs = (
             opacity: opacity,
@@ -65,9 +65,7 @@ extension CompositionNode {
             cornerRadius: cornerRadius,
             cornerDegree: cornerDegree,
             borderWidth: borderWidth,
-            fillColor: fillColor,
             borderColor: borderColor,
-            shadowColor: shadowColor,
             shadowOffset: shadowOffset,
             shadowBlur: shadowBlur,
             shadowSpread: shadowSpread,
@@ -76,7 +74,96 @@ extension CompositionNode {
             nineGrid: ninegrid
         )
 
-        return [
+        var vertices: [CompositeNodeVertexData] = []
+
+        // 1. Shadow Pass (drawn first, below shape)
+        if shadowColor.a > 0 {
+            vertices.append(contentsOf: [
+                CompositeNodeVertexData(
+                    opacity: commonArgs.opacity,
+                    screenSize: commonArgs.screenSize,
+                    position: commonArgs.position,
+                    size: commonArgs.size,
+                    vertexPos: sTopLeft,
+                    transform: commonArgs.transform,
+                    cornerRadius: commonArgs.cornerRadius,
+                    cornerDegree: commonArgs.cornerDegree,
+                    borderWidth: commonArgs.borderWidth,
+                    color: shadowColor, // Use shadowColor for color field
+                    borderColor: .transparent,
+                    shadowOffset: commonArgs.shadowOffset,
+                    shadowBlur: commonArgs.shadowBlur,
+                    shadowSpread: commonArgs.shadowSpread,
+                    hasContent: false, // Shadows typically don't have content/textures
+                    contentIndex: 0,
+                    nineGrid: commonArgs.nineGrid,
+                    mode: 1.0 // Shadow Mode
+                ),
+                CompositeNodeVertexData(
+                    opacity: commonArgs.opacity,
+                    screenSize: commonArgs.screenSize,
+                    position: commonArgs.position,
+                    size: commonArgs.size,
+                    vertexPos: sBottomLeft,
+                    transform: commonArgs.transform,
+                    cornerRadius: commonArgs.cornerRadius,
+                    cornerDegree: commonArgs.cornerDegree,
+                    borderWidth: commonArgs.borderWidth,
+                    color: shadowColor,
+                    borderColor: .transparent,
+                    shadowOffset: commonArgs.shadowOffset,
+                    shadowBlur: commonArgs.shadowBlur,
+                    shadowSpread: commonArgs.shadowSpread,
+                    hasContent: false,
+                    contentIndex: 0,
+                    nineGrid: commonArgs.nineGrid,
+                    mode: 1.0
+                ),
+                CompositeNodeVertexData(
+                    opacity: commonArgs.opacity,
+                    screenSize: commonArgs.screenSize,
+                    position: commonArgs.position,
+                    size: commonArgs.size,
+                    vertexPos: sBottomRight,
+                    transform: commonArgs.transform,
+                    cornerRadius: commonArgs.cornerRadius,
+                    cornerDegree: commonArgs.cornerDegree,
+                    borderWidth: commonArgs.borderWidth,
+                    color: shadowColor,
+                    borderColor: .transparent,
+                    shadowOffset: commonArgs.shadowOffset,
+                    shadowBlur: commonArgs.shadowBlur,
+                    shadowSpread: commonArgs.shadowSpread,
+                    hasContent: false,
+                    contentIndex: 0,
+                    nineGrid: commonArgs.nineGrid,
+                    mode: 1.0
+                ),
+                CompositeNodeVertexData(
+                    opacity: commonArgs.opacity,
+                    screenSize: commonArgs.screenSize,
+                    position: commonArgs.position,
+                    size: commonArgs.size,
+                    vertexPos: sTopRight,
+                    transform: commonArgs.transform,
+                    cornerRadius: commonArgs.cornerRadius,
+                    cornerDegree: commonArgs.cornerDegree,
+                    borderWidth: commonArgs.borderWidth,
+                    color: shadowColor,
+                    borderColor: .transparent,
+                    shadowOffset: commonArgs.shadowOffset,
+                    shadowBlur: commonArgs.shadowBlur,
+                    shadowSpread: commonArgs.shadowSpread,
+                    hasContent: false,
+                    contentIndex: 0,
+                    nineGrid: commonArgs.nineGrid,
+                    mode: 1.0
+                ),
+            ])
+        }
+
+        // 2. Shape/Content Pass (drawn on top)
+        vertices.append(contentsOf: [
             CompositeNodeVertexData(
                 opacity: commonArgs.opacity,
                 screenSize: commonArgs.screenSize,
@@ -87,15 +174,15 @@ extension CompositionNode {
                 cornerRadius: commonArgs.cornerRadius,
                 cornerDegree: commonArgs.cornerDegree,
                 borderWidth: commonArgs.borderWidth,
-                fillColor: commonArgs.fillColor,
+                color: fillColor, // Normal fill color
                 borderColor: commonArgs.borderColor,
-                shadowColor: commonArgs.shadowColor,
-                shadowOffset: commonArgs.shadowOffset,
-                shadowBlur: commonArgs.shadowBlur,
-                shadowSpread: commonArgs.shadowSpread,
+                shadowOffset: .zero,
+                shadowBlur: 0,
+                shadowSpread: 0,
                 hasContent: commonArgs.hasContent,
                 contentIndex: commonArgs.contentIndex,
-                nineGrid: commonArgs.nineGrid
+                nineGrid: commonArgs.nineGrid,
+                mode: 0.0 // Shape Mode
             ),
             CompositeNodeVertexData(
                 opacity: commonArgs.opacity,
@@ -107,15 +194,15 @@ extension CompositionNode {
                 cornerRadius: commonArgs.cornerRadius,
                 cornerDegree: commonArgs.cornerDegree,
                 borderWidth: commonArgs.borderWidth,
-                fillColor: commonArgs.fillColor,
+                color: fillColor,
                 borderColor: commonArgs.borderColor,
-                shadowColor: commonArgs.shadowColor,
-                shadowOffset: commonArgs.shadowOffset,
-                shadowBlur: commonArgs.shadowBlur,
-                shadowSpread: commonArgs.shadowSpread,
+                shadowOffset: .zero,
+                shadowBlur: 0,
+                shadowSpread: 0,
                 hasContent: commonArgs.hasContent,
                 contentIndex: commonArgs.contentIndex,
-                nineGrid: commonArgs.nineGrid
+                nineGrid: commonArgs.nineGrid,
+                mode: 0.0
             ),
             CompositeNodeVertexData(
                 opacity: commonArgs.opacity,
@@ -127,15 +214,15 @@ extension CompositionNode {
                 cornerRadius: commonArgs.cornerRadius,
                 cornerDegree: commonArgs.cornerDegree,
                 borderWidth: commonArgs.borderWidth,
-                fillColor: commonArgs.fillColor,
+                color: fillColor,
                 borderColor: commonArgs.borderColor,
-                shadowColor: commonArgs.shadowColor,
-                shadowOffset: commonArgs.shadowOffset,
-                shadowBlur: commonArgs.shadowBlur,
-                shadowSpread: commonArgs.shadowSpread,
+                shadowOffset: .zero,
+                shadowBlur: 0,
+                shadowSpread: 0,
                 hasContent: commonArgs.hasContent,
                 contentIndex: commonArgs.contentIndex,
-                nineGrid: commonArgs.nineGrid
+                nineGrid: commonArgs.nineGrid,
+                mode: 0.0
             ),
             CompositeNodeVertexData(
                 opacity: commonArgs.opacity,
@@ -147,16 +234,18 @@ extension CompositionNode {
                 cornerRadius: commonArgs.cornerRadius,
                 cornerDegree: commonArgs.cornerDegree,
                 borderWidth: commonArgs.borderWidth,
-                fillColor: commonArgs.fillColor,
+                color: fillColor,
                 borderColor: commonArgs.borderColor,
-                shadowColor: commonArgs.shadowColor,
-                shadowOffset: commonArgs.shadowOffset,
-                shadowBlur: commonArgs.shadowBlur,
-                shadowSpread: commonArgs.shadowSpread,
+                shadowOffset: .zero,
+                shadowBlur: 0,
+                shadowSpread: 0,
                 hasContent: commonArgs.hasContent,
                 contentIndex: commonArgs.contentIndex,
-                nineGrid: commonArgs.nineGrid
+                nineGrid: commonArgs.nineGrid,
+                mode: 0.0
             ),
-        ]
+        ])
+
+        return vertices
     }
 }

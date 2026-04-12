@@ -31,7 +31,7 @@ class GPUImage {
             $0.initialLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
             $0.usage =
                 VK_IMAGE_USAGE_TRANSFER_DST_BIT.rawValue | VK_IMAGE_USAGE_SAMPLED_BIT.rawValue
-            // $0.format = VK_FORMAT_R8G8B8A8_SRGB
+            $0.format = VK_FORMAT_R8G8B8A8_SRGB
             // $0.tiling = VK_IMAGE_TILING_LINEAR
 
             // this was probably dealt with by pango already

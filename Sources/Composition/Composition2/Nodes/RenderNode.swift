@@ -30,6 +30,19 @@ class RenderNode: Identifiable {
         dirty = true
     }
 
+    public func addChild(_ children: RenderNode...) {
+        for c in children {
+            c.parent = self
+        }
+
+        self.children.append(contentsOf: children)
+    }
+
+    public func removeChild(child: RenderNode) {
+        self.children.removeAll { $0.id == child.id }
+        child.parent = nil
+    }
+
 }
 
 extension RenderNode {
@@ -67,6 +80,14 @@ extension RenderNode {
     package var absoluteRect: Rect {
         Rect(topLeft: absolutePosition, size: size * scale)
     }
+
+    func print(indentation: Int = 0) {
+        let i = String(repeating: " ", count: indentation)
+        Swift.print(i + "- \(Self.self): \(self.absoluteRect)")
+        for c in self.children {
+            c.print(indentation: indentation + 2)
+        }
+    }
 }
 
 // we have 16 vertex attr * 16 bytes -> 256 bytes -> 64 float
@@ -79,7 +100,8 @@ extension RenderNode {
 // Its SDF rect tho
 // 6. cornerRadius.{x,y,z,w}
 // 7. cornerDegree, borderWidth, [8 bytes]
-// 8-10. Colors: fill, shadow, border
+// 8. Colors: fill/shadow
+// 9. Colors: border
 // 11. shadow: offset.{x.y}, blur, spread
 // 12. hasContent, contentIndex: u32, hasMask, maskIndex: u32
 // 13. ninegrid (rect.{top, left, bottom, right})

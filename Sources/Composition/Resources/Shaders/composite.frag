@@ -8,7 +8,7 @@ layout(push_constant) uniform PushConstants {
 
 layout(set = 0, binding = 0) uniform sampler2D renderTextures[];
 
-layout(location = 0) flat in vec4 inOpacityAndScreenSize;
+layout(location = 0) flat in vec4 inOpacityScreenSizeAndMode;
 layout(location = 1) flat in vec4 inSizing; // position.{x,y}, size.{w,h}
 // this shuold be top left???
 
@@ -19,13 +19,12 @@ layout(location = 5) in vec4 inTransformC4;
 
 layout(location = 6) in vec4 inCornerRadius;
 layout(location = 7) in vec4 inCornerDegreeAndBorderWidthAndVertexPos; // 2 float left
-layout(location = 8) in vec4 inFillColor;
+layout(location = 8) in vec4 inColor;
 layout(location = 9) in vec4 inBorderColor;
-layout(location = 10) in vec4 inShadowColor;
-layout(location = 11) in vec4 inShadow; // offset (why tho), blur, spread (why)
+layout(location = 10) in vec4 inShadow; // offset (why tho), blur, spread (why)
 
-layout(location = 12) flat in uvec4 inContentsAndMask; // hasContent, contentIndex: u32, hasMask, maskIndex: u32
-layout(location = 13) in vec4 inNineGrid; // normalized??? (uv coord)
+layout(location = 11) flat in uvec4 inContentsAndMask; // hasContent, contentIndex: u32, hasMask, maskIndex: u32
+layout(location = 12) in vec4 inNineGrid; // normalized??? (uv coord)
 
 
 layout(location = 0) out vec4 outFragColor;
@@ -107,65 +106,74 @@ void main() {
     float cornerDegree = inCornerDegreeAndBorderWidthAndVertexPos.x;
     float borderWidth = max(inCornerDegreeAndBorderWidthAndVertexPos.y, 0.0);
 
-    float d = sdRoundedRectSuperellipse(relativeOffset, box, inCornerRadius, cornerDegree);
-    float outerCoverage = sdfCoverage(d);
-
-    float fillCoverage = outerCoverage;
-    float borderCoverage = 0.0;
-    if (borderWidth > 0.0) {
-        float innerCoverage = sdfCoverage(d + borderWidth);
-        fillCoverage = innerCoverage;
-        borderCoverage = max(outerCoverage - innerCoverage, 0.0);
-    }
+    float mode = inOpacityScreenSizeAndMode.w;
+    vec4 result;
 
     vec2 rectUV = clamp((relativeOffset + box) / max(inSizing.zw, vec2(1e-4)), 0.0, 1.0);
 
-    vec4 interior = inFillColor;
-    bool hasContent = inContentsAndMask.x != 0u;
-    if (hasContent) {
-        vec2 uv = contentUVFromRectUV(rectUV);
-        vec4 texel = texture(renderTextures[nonuniformEXT(inContentsAndMask.y)], uv);
-        vec4 contentColor = texel;
+    if (mode > 0.5) {
+        // Shadow mode
+        vec4 shadowLayer = vec4(0.0);
+        float shadowBlur = max(inShadow.z, 0.0);
+        if (inColor.a > 0.0) {
+            vec2 ps = relativeOffset - inShadow.xy;
+            float spread = inShadow.w;
+            vec2 shadowHalfBox = max(box + vec2(spread), vec2(0.0));
+            vec4 shadowRadii = max(inCornerRadius + vec4(spread), vec4(0.0));
+            float ds = sdRoundedRectSuperellipse(ps, shadowHalfBox, shadowRadii, cornerDegree);
 
-        bool looksSingleChannel =
-            texel.a > 0.999
-            && abs(texel.g) < 1e-5
-            && abs(texel.b) < 1e-5;
-        if (looksSingleChannel) {
-            contentColor = vec4(vec3(1.0), texel.r);
-        }
-
-        interior = over(contentColor, interior);
-    }
-
-    vec4 fillLayer = vec4(interior.rgb, interior.a * fillCoverage);
-    vec4 borderLayer = vec4(inBorderColor.rgb, inBorderColor.a * borderCoverage);
-    vec4 shapeLayer = over(borderLayer, fillLayer);
-
-    vec4 shadowLayer = vec4(0.0);
-    float shadowBlur = max(inShadow.z, 0.0);
-    if (inShadowColor.a > 0.0) {
-        vec2 ps = relativeOffset - inShadow.xy;
-        float spread = inShadow.w;
-        vec2 shadowHalfBox = max(box + vec2(spread), vec2(0.0));
-        vec4 shadowRadii = max(inCornerRadius + vec4(spread), vec4(0.0));
-        float ds = sdRoundedRectSuperellipse(ps, shadowHalfBox, shadowRadii, cornerDegree);
-
-        float shadowCoverage;
-        if (shadowBlur > 0.0) {
-            if (ds <= 0.0) {
-                shadowCoverage = 1.0;
+            float shadowCoverage;
+            if (shadowBlur > 0.0) {
+                if (ds <= 0.0) {
+                    shadowCoverage = 1.0;
+                } else {
+                    float t = ds / max(shadowBlur, 1e-4);
+                    shadowCoverage = 1.0 - (0.5 + 0.5 * erfApprox(t * 1.41421356));
+                }
             } else {
-                float t = ds / max(shadowBlur, 1e-4);
-                shadowCoverage = 1.0 - (0.5 + 0.5 * erfApprox(t * 1.41421356));
+                shadowCoverage = ds <= 0.0 ? 1.0 : 0.0;
             }
-        } else {
-            shadowCoverage = ds <= 0.0 ? 1.0 : 0.0;
+            shadowLayer = vec4(inColor.rgb, inColor.a * clamp(shadowCoverage, 0.0, 1.0));
         }
-        shadowLayer = vec4(inShadowColor.rgb, inShadowColor.a * clamp(shadowCoverage, 0.0, 1.0));
-    }
+        result = shadowLayer;
 
-    vec4 result = over(shapeLayer, shadowLayer);
+    } else {
+        // Shape mode
+        float d = sdRoundedRectSuperellipse(relativeOffset, box, inCornerRadius, cornerDegree);
+        float outerCoverage = sdfCoverage(d);
+
+        float fillCoverage = outerCoverage;
+        float borderCoverage = 0.0;
+        if (borderWidth > 0.0) {
+            float innerCoverage = sdfCoverage(d + borderWidth);
+            fillCoverage = innerCoverage;
+            borderCoverage = max(outerCoverage - innerCoverage, 0.0);
+        }
+
+        vec4 interior = inColor;
+        bool hasContent = inContentsAndMask.x != 0u;
+        if (hasContent) {
+            vec2 uv = contentUVFromRectUV(rectUV);
+            vec4 texel = texture(renderTextures[nonuniformEXT(inContentsAndMask.y)], uv);
+            vec4 contentColor = texel;
+
+            bool looksSingleChannel =
+                texel.a > 0.999
+                && abs(texel.g) < 1e-5
+                && abs(texel.b) < 1e-5;
+            if (looksSingleChannel) {
+                contentColor = vec4(vec3(1.0), texel.r);
+            }
+
+            interior = over(contentColor, interior);
+        }
+
+        vec4 fillLayer = vec4(interior.rgb, interior.a * fillCoverage);
+        vec4 borderLayer = vec4(inBorderColor.rgb, inBorderColor.a * borderCoverage);
+        vec4 shapeLayer = over(borderLayer, fillLayer);
+        
+        result = shapeLayer;
+    }
 
     bool hasMask = inContentsAndMask.z != 0u;
     if (hasMask) {
@@ -174,7 +182,7 @@ void main() {
         result.a *= maskAlpha;
     }
 
-    float opacity = clamp(inOpacityAndScreenSize.x, 0.0, 1.0);
+    float opacity = clamp(inOpacityScreenSizeAndMode.x, 0.0, 1.0);
     result.a *= opacity;
     outFragColor = result;
 
