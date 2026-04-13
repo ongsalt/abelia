@@ -124,7 +124,31 @@ class RenderTexture {
         dstAccessMask: VkAccessFlags2,
         cb: VkCommandBuffer
     ) {
-        let barrier = Box(VkImageMemoryBarrier2()) {
+        let barrier = Box(
+            barrier(
+                from: oldLayout, to: targetLayout, srcStageMask: srcStageMask,
+                dstStageMask: dstStageMask, srcAccessMask: srcAccessMask,
+                dstAccessMask: dstStageMask)
+        )
+
+        let barrierPresentDependencyInfo = Box(VkDependencyInfo()) {
+            $0.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO
+            $0.imageMemoryBarrierCount = 1
+            $0.pImageMemoryBarriers = barrier.readonly
+        }
+
+        vkCmdPipelineBarrier2(cb, barrierPresentDependencyInfo.ptr)
+    }
+
+    func barrier(
+        from oldLayout: VkImageLayout,
+        to targetLayout: VkImageLayout,
+        srcStageMask: VkPipelineStageFlags2 = 0,
+        dstStageMask: VkPipelineStageFlags2 = 0,
+        srcAccessMask: VkAccessFlags2,
+        dstAccessMask: VkAccessFlags2,
+    ) -> VkImageMemoryBarrier2 {
+        with(VkImageMemoryBarrier2()) {
             $0.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2
             $0.srcStageMask = srcStageMask
             $0.srcAccessMask = srcAccessMask
@@ -139,14 +163,6 @@ class RenderTexture {
             $0.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED
             $0.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED
         }
-
-        let barrierPresentDependencyInfo = Box(VkDependencyInfo()) {
-            $0.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO
-            $0.imageMemoryBarrierCount = 1
-            $0.pImageMemoryBarriers = barrier.readonly
-        }
-
-        vkCmdPipelineBarrier2(cb, barrierPresentDependencyInfo.ptr)
     }
 
     // TODO: cleanup this on deinit?

@@ -13,9 +13,9 @@
 # TODO
 - stop doing descriptor indexing
     - schedule phase 0 node simulteneously
-    - optmize root grouping
+<!-- - optmize root grouping -->
 - scrollNode
 - sampling rasterizationRoot
-- put some vertex data into unifirm buffer
+- put some vertex data into uniform buffer
 - effect shader
 - pixel snapping

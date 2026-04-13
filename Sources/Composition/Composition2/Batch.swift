@@ -19,11 +19,15 @@ import Wayland  // for pointers
 ///     this correspond to 2 Composite pass
 
 // Batch is per rasterization root?
+// we then can pararellize this by running phase 1 of every batch simulteneously unless its depends on each other
+//  - need to do per group deps not per batch
+
 struct Batch {
     let root: CompositionNode
     let hasEffectLayer: Bool  // TODO: (well if we have more than 1 group, we can we need 2 attachment)
     let groups: [Group]
 
+    let depth: Int
     let dependencies: [CompositionNode]
 
     // we need to put deps in here to? to wait it in render pipeline
@@ -75,11 +79,21 @@ struct Batch {
 
         groups = out
         self.dependencies = dependencies
+        self.depth = rootWithChildren.depth
     }
 
     static func compute(root: CompositionNode) -> [Batch] {
         let roots = RootWithChildren.group(root)
         return roots.map { Batch(rootWithChildren: $0) }
+    }
+
+    static func run(batches: [Batch]) {
+        var batchesByDepth: [[Batch]] = []
+        // lowest depth: batches with no deps
+        batchesByDepth.append(batches.filter { $0.dependencies.isEmpty })
+
+        // next is batch that only depends on lower level batch
+
     }
 }
 
@@ -110,6 +124,7 @@ struct RootWithChildren {
     var node: CompositionNode
     var children: [RenderNode]
     var hasEffectLayer: Bool
+    var depth: Int
 
     // TODO: optimize this
     static func group(_ node: CompositionNode) -> [RootWithChildren] {
@@ -131,7 +146,8 @@ struct RootWithChildren {
                 currentRoot = RootWithChildren(
                     node: node as! CompositionNode,
                     children: [],
-                    hasEffectLayer: false
+                    hasEffectLayer: false,
+                    depth: 0
                 )
             }
 

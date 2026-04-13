@@ -10,6 +10,8 @@ class RenderTextureRegistry {
     private(set) var textures: [RenderTexture] = []
     private let maxSize: UInt32
 
+    // private var pendingTransitionTasks: [(VkCommandBuffer) -> Void] = []
+
     init(vulkan: VulkanState) {
         self.maxSize = 128
         self.vulkan = vulkan
@@ -38,24 +40,15 @@ class RenderTextureRegistry {
         )
         self.textures.append(texture)
         self.updateDescriptorSet()
-        //     await texture.transition(
-        //     from: VK_IMAGE_LAYOUT_UNDEFINED,
-        //     to: VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
-        //     waitFor: VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-        //     blocking: VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-        //     srcAccessMask: 0,
-        //     dstAccessMask: VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT
-        //         | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT
-        // )
         return texture
     }
 
     // pango shit
     func createStaticTexture(
-        from buffer: UnsafeMutableBufferPointer<UInt8>, 
-        size: SIMD2<UInt32>, 
+        from buffer: UnsafeMutableBufferPointer<UInt8>,
+        size: SIMD2<UInt32>,
         format: VkFormat,
-        
+
     )
         async -> RenderTexture
     {

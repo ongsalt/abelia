@@ -7,16 +7,19 @@ final class SwapChain {
     var surfaceFormat: VkSurfaceFormatKHR
     var swapChain: VkSwapchainKHR
     var extent: VkExtent2D
-    var images: [VkImage]
-    var imageViews: [VkImageView]
 
-    var fences: [VkFence]
-    var presentSemaphores: [VkSemaphore]
-    var renderSemaphore: [VkSemaphore]
 
     // TODO: stop doing mailbox
-    let framesInFlightCount: Int = 1
+    // this is our frame in flight
+    var fences: [VkFence]
+    let framesInFlightCount: Int = 2
+    var renderSemaphore: [VkSemaphore]
+
+    // this is from the compositor
+    var images: [VkImage]
+    var imageViews: [VkImageView]
     var frameIndex: Int = 0
+    var presentSemaphores: [VkSemaphore]
 
     init(
         surface: VkSurfaceKHR,

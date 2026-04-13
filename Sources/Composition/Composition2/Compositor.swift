@@ -76,41 +76,75 @@ class Compositor: @unchecked Sendable {
     }
 
     private func recomposite() async {
+        inputBuffer.reset()
+        for controller in animationFrameControllers.values {
+            controller.run()
+        }
+        // just redraw everything ... rasterizationRoot
+        let batches = Batch.compute(root: root)
+
+        // try allocate backing store for each rasterization root
+        // how do i resize tho
+        var pendingTransition: [RenderTexture] = []
+        for batch in batches {
+            var n = 0
+            let root = batch.root
+            let size: SIMD2<UInt32> = [UInt32(root.size.x), UInt32(root.size.y)]
+            if size == .zero {
+                continue
+            }
+            if root.backingStore == nil {
+                n += 1
+                let t = textureRegistry.newRenderTarget(size: size)
+                root.backingStore = t
+                pendingTransition.append(t)
+            }
+            if batch.hasEffectLayer && root.backingStore2 == nil {
+                n += 1
+                let t = textureRegistry.newRenderTarget(size: size)
+                root.backingStore2 = t
+                pendingTransition.append(t)
+            }
+
+            if n > 0 {
+                Log.debug(
+                    .compositor,
+                    "allocated \(n) backing store for CompositeNode \(batch.root.id)")
+            }
+        }
+
+        // TODO: fix race condition
+        root.markClean()
+
         // Log.debug(.compositor, "\(root.backingStore?.image)")
         // present it somehow
 
         await renderer.perform { commandBuffer, swapChainImageView in
-            inputBuffer.reset()
-            for controller in animationFrameControllers.values {
-                controller.run()
-            }
-            // just redraw everything ... rasterizationRoot
-            let batches = Batch.compute(root: root)
 
-            // try allocate backing store for each rasterization root
-            // how do i resize tho
-            for batch in batches {
-                var n = 0
-                let root = batch.root
-                let size: SIMD2<UInt32> = [UInt32(root.size.x), UInt32(root.size.y)]
-                if size == .zero {
-                    continue
-                }
-                if root.backingStore == nil {
-                    n += 1
-                    root.backingStore = textureRegistry.newRenderTarget(size: size)
-                }
-                if batch.hasEffectLayer && root.backingStore2 == nil {
-                    n += 1
-                    root.backingStore2 = textureRegistry.newRenderTarget(size: size)
+            // actually transition those newly created images
+            let barriers = Pin(
+                pendingTransition.map {
+                    $0.barrier(
+                        from: VK_IMAGE_LAYOUT_UNDEFINED,
+                        to: VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+                        srcStageMask: VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        dstStageMask: VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        srcAccessMask: 0,
+                        dstAccessMask: VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT
+                            | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+                    )
+                })
+            if !batches.isEmpty {
+                let barrierPresentDependencyInfo = Box(VkDependencyInfo()) {
+                    $0.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO
+                    $0.imageMemoryBarrierCount = barriers.count
+                    $0.pImageMemoryBarriers = barriers.readonly
                 }
 
-                if n > 0 {
-                    Log.debug(
-                        .compositor,
-                        "allocated \(n) backing store for CompositeNode \(batch.root.id)")
-                }
+                vkCmdPipelineBarrier2(commandBuffer, barrierPresentDependencyInfo.ptr)
             }
+
+            // need to group this to phase
             for batch in batches {
                 let iv: VkImageView? =
                     if batch.root.id == self.root.id {
