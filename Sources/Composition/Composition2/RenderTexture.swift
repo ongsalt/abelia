@@ -12,6 +12,8 @@ class RenderTexture {
     var size: SIMD2<UInt32>
     let actualSize: SIMD2<UInt32>
 
+    package var hasUndefinedLayout: Bool = true
+
     var descriptorImageInfo: VkDescriptorImageInfo {
         VkDescriptorImageInfo(
             sampler: sampler,
@@ -128,7 +130,7 @@ class RenderTexture {
             barrier(
                 from: oldLayout, to: targetLayout, srcStageMask: srcStageMask,
                 dstStageMask: dstStageMask, srcAccessMask: srcAccessMask,
-                dstAccessMask: dstStageMask)
+                dstAccessMask: dstAccessMask)
         )
 
         let barrierPresentDependencyInfo = Box(VkDependencyInfo()) {

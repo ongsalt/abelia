@@ -11,7 +11,7 @@ class CompositionNode: RenderNode {
     var borderWidth: Float = 0
 
     var fillColor: Color = .transparent
-    var tintColor: Color = .white // For text tinting
+    var tintColor: Color = .white  // For text tinting
     // var scalingMode:
 
     var contents: LayerContents?
@@ -93,7 +93,8 @@ extension CompositionNode {
                     cornerDegree: commonArgs.cornerDegree,
                     borderWidth: commonArgs.borderWidth,
                     color: shadowColor,  // Use shadowColor for color field
-                    borderColor: .transparent,                    tintColor: .transparent,                    shadowOffset: commonArgs.shadowOffset,
+                    borderColor: .transparent, tintColor: .transparent,
+                    shadowOffset: commonArgs.shadowOffset,
                     shadowBlur: commonArgs.shadowBlur,
                     shadowSpread: commonArgs.shadowSpread,
                     hasContent: false,  // Shadows typically don't have content/textures
@@ -180,7 +181,8 @@ extension CompositionNode {
                 cornerDegree: commonArgs.cornerDegree,
                 borderWidth: commonArgs.borderWidth,
                 color: fillColor,  // Normal fill color
-                borderColor: commonArgs.borderColor,                tintColor: commonArgs.tintColor,                shadowOffset: .zero,
+                borderColor: commonArgs.borderColor, tintColor: commonArgs.tintColor,
+                shadowOffset: .zero,
                 shadowBlur: 0,
                 shadowSpread: 0,
                 hasContent: commonArgs.hasContent,

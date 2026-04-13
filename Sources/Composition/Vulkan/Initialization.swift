@@ -22,6 +22,8 @@ private let deviceExtensions: CStringArray = [
     "VK_KHR_external_fence_fd",
 ]
 
+// feature needs
+
 private func createInstance() -> VkInstance {
     volkInitialize()
     var instance: VkInstance! = VkInstance(bitPattern: 0)
@@ -101,6 +103,7 @@ private func createWaylandSurface(
 }
 
 // TODO: device picking logic: checkDeviceExtensionSupport
+// TODO: make this v2
 private func pickPhysicalDevice(instance: VkInstance) -> (
     device: VkPhysicalDevice, properties: VkPhysicalDeviceProperties,
     features: VkPhysicalDeviceFeatures
@@ -194,6 +197,7 @@ private func createLogicalDevice(families: SelectedQueuesIndices, physicalDevice
         enabledVk12Features[].sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES
         enabledVk12Features[].descriptorIndexing = true
         enabledVk12Features[].descriptorBindingVariableDescriptorCount = true
+        enabledVk12Features[].descriptorBindingSampledImageUpdateAfterBind = true
         // enabledVk12Features[].descriptorBindingPartiallyBound = true
         enabledVk12Features[].runtimeDescriptorArray = true
         enabledVk12Features[].bufferDeviceAddress = true

@@ -77,6 +77,7 @@ class RenderTextureRegistry {
             texture.transitionCommand(
                 from: VK_IMAGE_LAYOUT_UNDEFINED,
                 to: VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                srcStageMask: VK_PIPELINE_STAGE_2_NONE,
                 dstStageMask: VK_PIPELINE_STAGE_2_COPY_BIT,
                 srcAccessMask: 0,
                 dstAccessMask: VK_ACCESS_2_TRANSFER_WRITE_BIT,
@@ -101,8 +102,9 @@ class RenderTextureRegistry {
                 dstAccessMask: VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
                 cb: cb
             )
-
         }
+
+        texture.hasUndefinedLayout = false
         // Log.debug(.vulkan, "stagingBuffer.buffer: \(stagingBuffer.buffer)")
 
         return texture
@@ -217,6 +219,7 @@ class RenderTextureRegistry {
             $0.maxSets = 1
             $0.poolSizeCount = 1
             $0.pPoolSizes = poolSize.readonly
+            $0.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT.rawValue
         }
 
         var descriptorPool = VkDescriptorPool(bitPattern: 0)

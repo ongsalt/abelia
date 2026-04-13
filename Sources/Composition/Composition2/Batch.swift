@@ -165,7 +165,6 @@ struct RootWithChildren {
         }
 
         walk(node)
-        print("roots: \(roots)")
 
         return roots
     }

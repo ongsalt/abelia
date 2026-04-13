@@ -144,6 +144,13 @@ extension RenderNode {
     }
 }
 
+// now its vertex buffer not input, shuold this be HOST_COHERANT?? its gonna update a lot 
+// old vertex input -> perVertexData (localPos, dataIndex)
+//                  -> sharedVertexData
+// both of these can be in a InputBuffer
+
+// fragment shader input: push_constant, (current) texture list,
+ 
 
 // we have 16 vertex attr * 16 bytes -> 256 bytes -> 64 float
 // 0. opacity, screenSize.{w,h}, mode (0=shape, 1=shadow)

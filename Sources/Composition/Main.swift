@@ -64,14 +64,15 @@ struct Graphics101 {
             compositor.root.addChild(card)
 
             // Name
-            let nameTex = await drawText(text: "Jane Swift")
+            let nameTex = await drawText(text: "asfjhisdkfuh")
             let nameNode = CompositionNode()
             nameNode.contents = nameTex
             nameNode.size = SIMD2(nameTex.size)
             nameNode.position = [(240 - Float(nameTex.size.x)) / 2, 100]  // Centered text
             nameNode.tintColor = .black
-            card.addChild(nameNode)
+            // nameNode.fillColor = .black.multiply(opacity: 0.5)
 
+            card.addChild(nameNode)
             setupScene(root: compositor.root)
 
             compositor.root.print()
@@ -120,13 +121,13 @@ struct Graphics101 {
 
 func setupScene(root: CompositionNode) {
     let colors: [Color] = [
-        // .red, .orange,
-        .red, .orange, .yellow, .green, .mint, .teal, .cyan, .blue, .indigo, .purple, .pink, .brown,
+        .red, .orange,
+        // .red, .orange, .yellow, .green, .mint, .teal, .cyan, .blue, .indigo, .purple, .pink, .brown,
     ]
 
     for (offset, c) in colors.enumerated() {
         let node = CompositionNode()
-        node.shouldRasterize = true
+        // node.shouldRasterize = true
         node.size = [96, 96]
         node.fillColor = c
         node.position = [24 * Float(offset), 24 * Float(offset)]
