@@ -120,8 +120,8 @@ struct Graphics101 {
 
 func setupScene(root: CompositionNode) {
     let colors: [Color] = [
-        // .red, .orange,
-        .red, .orange, .yellow, .green, .mint, .teal, .cyan, .blue, .indigo, .purple, .pink, .brown,
+        .red, .orange,
+        // .red, .orange, .yellow, .green, .mint, .teal, .cyan, .blue, .indigo, .purple, .pink, .brown,
     ]
 
     for (offset, c) in colors.enumerated() {

@@ -106,3 +106,10 @@ struct Rect {
             && (self.top < b || self.bottom < t)
     }
 }
+
+
+extension Rect: CustomStringConvertible {
+    var description: String {
+        "Rect(\(top), \(left), \(width), \(height))"
+    }
+}

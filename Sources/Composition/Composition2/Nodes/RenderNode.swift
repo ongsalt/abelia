@@ -137,12 +137,13 @@ extension RenderNode {
 
     func print(indentation: Int = 0) {
         let i = String(repeating: " ", count: indentation)
-        Swift.print(i + "- \(Self.self): \(self.absoluteRect)")
+        Swift.print(i + "- \(Self.self) \(isRasterizationRoot ? "[root]" : ""): \(self.absoluteRect)")
         for c in self.children {
             c.print(indentation: indentation + 2)
         }
     }
 }
+
 
 // we have 16 vertex attr * 16 bytes -> 256 bytes -> 64 float
 // 0. opacity, screenSize.{w,h}, mode (0=shape, 1=shadow)

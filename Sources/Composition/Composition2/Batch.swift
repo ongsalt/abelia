@@ -114,35 +114,40 @@ struct RootWithChildren {
     // TODO: optimize this
     static func group(_ node: CompositionNode) -> [RootWithChildren] {
         // identify root
-        var roots: [CompositionNode] = []
-        do {
-            func walk(_ node: RenderNode) {
-                for c in node.children {
-                    walk(c)
-                }
-                if node.isRasterizationRoot {
-                    roots.append(node as! CompositionNode)
-                }
-            }
-            walk(node)
-        }
+        // var roots: [CompositionNode] = []
+        var roots: [RootWithChildren] = []
+        var currentRoot: RootWithChildren? = nil
+        func walk(_ node: RenderNode) {
+            // add self to current root
+            currentRoot?.children.append(node)
 
-        // for each root find a child
-        return roots.map { root in
-            var found = false
-            var children: [RenderNode] = []
-            func walk(_ node: RenderNode) {
-                for c in node.children {
-                    children.append(c)
-                    found = found || c is EffectNode
-                    if !c.isRasterizationRoot {
-                        walk(c)
-                    }
-                }
+            if node is EffectNode {
+                currentRoot?.hasEffectLayer = true
             }
 
-            walk(root)
-            return RootWithChildren(node: root, children: children, hasEffectLayer: found)
+            let prev = currentRoot
+            // set self as current root
+            if node.isRasterizationRoot {
+                currentRoot = RootWithChildren(
+                    node: node as! CompositionNode,
+                    children: [],
+                    hasEffectLayer: false
+                )
+            }
+
+            for c in node.children {
+                walk(c)
+            }
+
+            if node.isRasterizationRoot {
+                roots.append(currentRoot!)
+            }
+            currentRoot = prev
         }
+
+        walk(node)
+        print("roots: \(roots.count)")
+
+        return roots
     }
 }
