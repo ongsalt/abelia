@@ -131,24 +131,26 @@ struct RootWithChildren {
         // identify root
         // var roots: [CompositionNode] = []
         var roots: [RootWithChildren] = []
-        var currentRoot: RootWithChildren? = nil
+        var currentRoot: Box<RootWithChildren?> = Box(nil)
+
         func walk(_ node: RenderNode) {
             // add self to current root
-            currentRoot?.children.append(node)
-
+            currentRoot.value?.children.append(node)
             if node is EffectNode {
-                currentRoot?.hasEffectLayer = true
+                currentRoot.value?.hasEffectLayer = true
             }
 
             let prev = currentRoot
+
             // set self as current root
             if node.isRasterizationRoot {
-                currentRoot = RootWithChildren(
-                    node: node as! CompositionNode,
-                    children: [],
-                    hasEffectLayer: false,
-                    depth: 0
-                )
+                currentRoot = Box(
+                    RootWithChildren(
+                        node: node as! CompositionNode,
+                        children: [],
+                        hasEffectLayer: false,
+                        depth: 0
+                    ))
             }
 
             for c in node.children {
@@ -156,13 +158,14 @@ struct RootWithChildren {
             }
 
             if node.isRasterizationRoot {
-                roots.append(currentRoot!)
+                roots.append(currentRoot.value!)
             }
+
             currentRoot = prev
         }
 
         walk(node)
-        print("roots: \(roots.count)")
+        print("roots: \(roots)")
 
         return roots
     }
