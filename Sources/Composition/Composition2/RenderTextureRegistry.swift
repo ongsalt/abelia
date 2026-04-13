@@ -152,11 +152,11 @@ class RenderTextureRegistry {
         let flags = Box(
             VkDescriptorBindingFlags(
                 VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT.rawValue
-                    // | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT.rawValue
+                    | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT.rawValue
                     // | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT.rawValue
             )
         )
-        let bindingFlags = Box(
+        let bindingFlags: Box<VkDescriptorSetLayoutBindingFlagsCreateInfo> = Box(
             VkDescriptorSetLayoutBindingFlagsCreateInfo(
                 sType: VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
                 pNext: nil,
@@ -168,6 +168,7 @@ class RenderTextureRegistry {
             $0.bindingCount = 1
             $0.pBindings = layoutBinding.readonly
             $0.pNext = bindingFlags.raw
+            $0.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT.rawValue
         }
 
         let descriptorSetLayout = Box(VkDescriptorSetLayout(bitPattern: 0)) {

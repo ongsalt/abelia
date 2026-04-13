@@ -10,10 +10,11 @@ class Compositor: @unchecked Sendable {
     let textRenderer = TextRenderer()
     var size: SIMD2<UInt32>
 
+    var animationFrameControllers: [ObjectIdentifier: AnimationFrameController] = [:]
+
     // use the root layer with caution, some property should not be touch
     let root: CompositionNode
-
-    private let frameClock = FrameClock()
+    // private let frameClock = FrameClock()
 
     private let dirtyNotifier = DirtyNotifier()
     // var renderTexture: RenderTexture {
@@ -39,6 +40,8 @@ class Compositor: @unchecked Sendable {
             print("Invalidate")
             self.scheduleRecomposite()
         }
+
+        self.root.compositor = self
     }
 
     // TODO: frame sync, proper sending, most of the task is synchronous except waiting for frame
@@ -73,38 +76,41 @@ class Compositor: @unchecked Sendable {
     }
 
     private func recomposite() async {
-        // just redraw everything ... rasterizationRoot
-        let batches = Batch.compute(root: root)
-
-        // try allocate backing store for each rasterization root
-        // how do i resize tho
-        for batch in batches {
-            var n = 0
-            let root = batch.root
-            let size: SIMD2<UInt32> = [UInt32(root.size.x), UInt32(root.size.y)]
-            if size == .zero {
-                continue
-            }
-            if root.backingStore == nil {
-                n += 1
-                root.backingStore = textureRegistry.newRenderTarget(size: size)
-            }
-            if batch.hasEffectLayer && root.backingStore2 == nil {
-                n += 1
-                root.backingStore2 = textureRegistry.newRenderTarget(size: size)
-            }
-
-            if n > 0 {
-                Log.debug(
-                    .compositor, "allocated \(n) backing store for CompositeNode \(batch.root.id)")
-            }
-        }
-
         // Log.debug(.compositor, "\(root.backingStore?.image)")
-
         // present it somehow
 
         await renderer.perform { commandBuffer, swapChainImageView in
+            inputBuffer.reset()
+            for controller in animationFrameControllers.values {
+                controller.run()
+            }
+            // just redraw everything ... rasterizationRoot
+            let batches = Batch.compute(root: root)
+
+            // try allocate backing store for each rasterization root
+            // how do i resize tho
+            for batch in batches {
+                var n = 0
+                let root = batch.root
+                let size: SIMD2<UInt32> = [UInt32(root.size.x), UInt32(root.size.y)]
+                if size == .zero {
+                    continue
+                }
+                if root.backingStore == nil {
+                    n += 1
+                    root.backingStore = textureRegistry.newRenderTarget(size: size)
+                }
+                if batch.hasEffectLayer && root.backingStore2 == nil {
+                    n += 1
+                    root.backingStore2 = textureRegistry.newRenderTarget(size: size)
+                }
+
+                if n > 0 {
+                    Log.debug(
+                        .compositor,
+                        "allocated \(n) backing store for CompositeNode \(batch.root.id)")
+                }
+            }
             for batch in batches {
                 let iv: VkImageView? =
                     if batch.root.id == self.root.id {
@@ -120,6 +126,11 @@ class Compositor: @unchecked Sendable {
                     swapChainImageView: iv)
             }
         }
+    }
+
+    public func requestAnimationFrame(callback: @escaping (AnimationFrameController) -> Void) {
+        let controller = AnimationFrameController(callback, self)
+        self.animationFrameControllers[controller.id] = controller
     }
 
 }
@@ -150,7 +161,7 @@ private func writeDrawCommands(
     if batch.groups.isEmpty {
         return
     }
-    Log.debug(.compositor, "Writing draw command for \(batch)")
+    // Log.debug(.compositor, "Writing draw command for \(batch)")
 
     let backingStore = batch.root.backingStore!
     let size = SIMD2<UInt32>(batch.root.size)

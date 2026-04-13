@@ -79,16 +79,32 @@ struct Graphics101 {
             // compositor.scheduleRecomposite()
         }
 
-        Task {
-            try await Task.sleep(for: .seconds(1))
-            let node = CompositionNode()
-            node.shouldRasterize = true
-            node.size = [96, 96]
-            node.fillColor = .red
-            node.position = [0, 200]
-            node.cornerRadius = 24
-            compositor.root.addChild(node)
-        }
+        // Task {
+        //     try await Task.sleep(for: .seconds(1))
+        //     let node = CompositionNode()
+        //     node.shouldRasterize = true
+        //     node.size = [96, 96]
+        //     node.fillColor = .red
+        //     node.position = [0, 200]
+        //     node.cornerRadius = 24
+        //     node.opacity = 0
+        //     compositor.root.addChild(node)
+
+        //     let clock = ContinuousClock()
+        //     let start = clock.now
+
+        //     compositor.requestAnimationFrame { controller in
+        //         var progress = (clock.now - start) / .milliseconds(400)
+        //         if progress >= 1 {
+        //             progress = 1
+        //             controller.stop()
+        //         }
+        //         let animProgress = Float(1 - pow(1 - progress, 3))
+        //         node.opacity = animProgress
+        //         node.position.x = animProgress * 100
+
+        //     }
+        // }
 
         // Task {
         //     let renderer = await Renderer2(state: vulkanState)

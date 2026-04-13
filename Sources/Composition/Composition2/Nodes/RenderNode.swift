@@ -1,5 +1,12 @@
 // this doesnt actually exist in shader, only
 class RenderNode: Identifiable {
+    weak var compositor: Compositor? {
+        didSet {
+            for c in children {
+                c.compositor = compositor
+            }
+        }
+    }
     var parent: RenderNode?
     var children: [RenderNode] = []
 
@@ -77,6 +84,7 @@ class RenderNode: Identifiable {
     public func addChild(_ children: RenderNode...) {
         for c in children {
             c.parent = self
+            c.compositor = compositor
         }
 
         self.children.append(contentsOf: children)
@@ -86,6 +94,7 @@ class RenderNode: Identifiable {
     public func removeChild(child: RenderNode) {
         self.children.removeAll { $0.id == child.id }
         child.parent = nil
+        child.compositor = nil
         markDirty()
     }
 }
