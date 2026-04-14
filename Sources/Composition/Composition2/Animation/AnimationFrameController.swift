@@ -1,4 +1,5 @@
-class AnimationFrameController: Identifiable {
+@MainActor
+public class AnimationFrameController: Identifiable {
     let callback: (AnimationFrameController) -> Void
     unowned let compositor: Compositor
 

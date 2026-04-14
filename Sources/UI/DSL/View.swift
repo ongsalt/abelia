@@ -10,27 +10,39 @@ public protocol Component: View {
     var body: Body { get }
 }
 
+// extension Component {
+//     public func evaluate() {
+//         self.body
+//     }
+// }
+
 public struct Fragment: View {
     let views: [any View]
 
     static var empty: Fragment {
         Fragment(views: [])
     }
+
+    // public func evaluate() {
+    //     for v in self.views {
+    //         v.evaluate()
+    //     }
+    // }
 }
 
-struct Shit: Component {
-    let count = Signal(0)
+// struct Shit: Component {
+//     let count = Signal(0)
 
-    var body: some View {
-        Container {
-            Container {
-                Text("String")
-            }
+//     var body: some View {
+//         Container {
+//             Container {
+//                 Text("String")
+//             }
 
-            Text("count \(count.value)")
-        }
-    }
-}
+//             Text("count \(count.value)")
+//         }
+//     }
+// }
 
 // TODO: Variadic Generics
 @resultBuilder
@@ -44,7 +56,7 @@ public struct ViewBuilder {
     public static func buildBlock(_ components: View...) -> Fragment {
         for c in components {
             if let c = c as? any Component {
-                c.body //  bruhhhh
+                c.body  //  bruhhhh
             }
         }
 

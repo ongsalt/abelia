@@ -1,10 +1,10 @@
 import Foundation
 
-struct AffineMatrix {
-    var c1: SIMD4<Float>
-    var c2: SIMD4<Float>
-    var c3: SIMD4<Float>
-    var c4: SIMD4<Float>
+public struct AffineMatrix {
+    public var c1: SIMD4<Float>
+    public var c2: SIMD4<Float>
+    public var c3: SIMD4<Float>
+    public var c4: SIMD4<Float>
 
     static var identity: AffineMatrix {
         AffineMatrix(

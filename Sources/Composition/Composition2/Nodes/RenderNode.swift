@@ -1,15 +1,15 @@
 // this doesnt actually exist in shader, only
 @MainActor
-class RenderNode: Identifiable {
-    weak var compositor: Compositor? {
+public class RenderNode: Identifiable {
+    public weak var compositor: Compositor? {
         didSet {
             for c in children {
                 c.compositor = compositor
             }
         }
     }
-    var parent: RenderNode?
-    var children: [RenderNode] = []
+    public var parent: RenderNode?
+    public var children: [RenderNode] = []
 
     // its wrong
     public var scale: SIMD2<Float> = .one {

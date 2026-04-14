@@ -1,16 +1,60 @@
-@MainActor
-class Element: Identifiable {}
+import Composition
 
-// // box and text
+@MainActor
+public class Element: Identifiable {
+    // var parentData: ParentData? = nil
+    unowned var parent: Element? = nil
+    private var _children: [Element] = []
+
+    public var style: Style = .empty
+    
+    private(set) public var renderNode: RenderNode?
+
+    public func appendChild(_ element: Element, after position: Int? = nil) {
+        if let position {
+            _children.insert(element, at: position)
+        } else {
+            _children.append(element)
+        }
+
+        element.parent = self
+        // element.parentData = ParentData()
+    }
+
+    public func removeChild(child: Element) {
+        self._children.removeAll { $0.id == child.id }
+        child.parent = nil
+    }
+
+    // layouting stuff?
+}
+
+extension Element {
+    func appendChild(_ elements: some Sequence<Element>) {
+        for e in elements {
+            appendChild(e)
+        }
+    }
+}
+
+public class TextElement: Element {}
+public class DivElement: Element {}
+
+// we gonna have `eventTree`/`focusTree`/`accessibilityTree` at this level?
+// chain of ui responder?
+
+// // gonna treat this as sequence of node
+// class FragmentElement: Element {
+
+// }
+
+// box and text
 // @MainActor
 // class UIElement: Identifiable {
 //     unowned var parent: UIElement? = nil
-//     unowned var parentLayer: Layer? = nil
 
 //     var parentData: ParentData? = nil
 //     var children: [UIElement] = []
-
-//     var layer: Layer = Layer()
 
 //     var _width: Float? = nil
 //     var _height: Float? = nil
@@ -60,19 +104,19 @@ class Element: Identifiable {}
 //         child.place(area: child.parentData!.finalRect)
 //     }
 
-//     func addChild(_ view: View) {
+//     func appendChild(_ view: View) {
 //         for e in view.build() {
-//             addChild(element: e)
+//             appendChild(element: e)
 //         }
 //     }
 
-//     func addChild(_ elements: some Sequence<UIElement>) {
+//     func appendChild(_ elements: some Sequence<UIElement>) {
 //         for e in elements {
-//             addChild(element: e)
+//             appendChild(element: e)
 //         }
 //     }
 
-//     func addChild(element: UIElement, after position: Int? = nil) {
+//     func appendChild(element: UIElement, after position: Int? = nil) {
 //         if let position {
 //             children.insert(element, at: position)
 //         } else {
@@ -82,8 +126,8 @@ class Element: Identifiable {}
 //         element.parent = self
 //         element.parentData = ParentData()
 //         element.parentLayer = self.layer
-//         self.layer.addChild(element.layer)
-        
+//         self.layer.appendChild(element.layer)
+
 //         // TODO: trigger onmount
 //     }
 

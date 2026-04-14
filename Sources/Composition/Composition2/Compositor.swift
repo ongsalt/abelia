@@ -3,7 +3,7 @@ import Foundation
 import Pointer  // for pointers
 
 @MainActor
-class Compositor: @unchecked Sendable {
+public class Compositor: @unchecked Sendable {
     let state: VulkanState
     let pipeline: CompositePipeline
     let inputBuffer: InputBuffer  // this should be per frame in flight
