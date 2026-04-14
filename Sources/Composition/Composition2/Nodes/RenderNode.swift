@@ -63,22 +63,20 @@ public class RenderNode: Identifiable {
     }
 
     @MainActor
-    public init() {
+    public init() {}
 
-    }
-
-    var dirty: Bool = true
-    public func markDirty() {
-        dirty = true
+    var dirty: DirtyFlags = .source
+    public func markDirty(type kind: DirtyFlags = .source) {
+        dirty = kind
         if let parent {
             // if !parent.dirty {
-            parent.markDirty()
+            parent.markDirty(type: .overlapped)
             // }
         }
     }
 
     public func markClean() {
-        dirty = false
+        dirty = []
         for c in children {
             c.markClean()
         }

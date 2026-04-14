@@ -5,7 +5,7 @@ import UI
 @main
 struct Playground {
     public static func main() throws {
-        let (compositor, token) = try setupCompositor()
+        let compositor = try setupCompositor()
         Task {
             for i in 0..<200 {
                 setupScene(root: compositor.root, offset: Float(5 * i))

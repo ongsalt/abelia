@@ -12,10 +12,10 @@ layout(location = 0) flat in vec4 inOpacityScreenSizeAndMode;
 layout(location = 1) flat in vec4 inSizing; // position.{x,y}, size.{w,h}
 // this shuold be top left???
 
-layout(location = 2) in vec4 inTransformC1;
-layout(location = 3) in vec4 inTransformC2;
-layout(location = 4) in vec4 inTransformC3;
-layout(location = 5) in vec4 inTransformC4;
+// layout(location = 2) in vec4 inTransformC1;
+// layout(location = 3) in vec4 inTransformC2;
+// layout(location = 4) in vec4 inTransformC3;
+// layout(location = 5) in vec4 inTransformC4;
 
 layout(location = 6) in vec4 inCornerRadius;
 layout(location = 7) in vec4 inCornerDegreeAndBorderWidthAndVertexPos; // 2 float left
@@ -26,6 +26,8 @@ layout(location = 11) in vec4 inShadow; // offset (why tho), blur, spread (why)
 
 layout(location = 12) flat in uvec4 inContentsAndMask; // hasContent, contentIndex: u32, hasMask, maskIndex: u32
 layout(location = 13) in vec4 inNineGrid; // normalized??? (uv coord)
+layout(location = 14) in vec2 inRelativeOffset;
+
 
 
 layout(location = 0) out vec4 outFragColor;
@@ -98,10 +100,10 @@ void main() {
         return;
     }
 
-    mat4 transform = mat4(inTransformC1, inTransformC2, inTransformC3, inTransformC4);
-    vec2 localPos = (transform * vec4(gl_FragCoord.xy, 0.0, 1.0)).xy;
-    vec2 localCenter = (transform * vec4(inSizing.xy + inSizing.zw / 2.0, 0.0, 1.0)).xy;
-    vec2 relativeOffset = localPos - localCenter;
+    // mat4 transform = mat4(inTransformC1, inTransformC2, inTransformC3, inTransformC4);
+    // vec2 localPos = (transform * vec4(gl_FragCoord.xy, 0.0, 1.0)).xy;
+    // vec2 localCenter = (transform * vec4(inSizing.xy + inSizing.zw / 2.0, 0.0, 1.0)).xy;
+    vec2 relativeOffset = inRelativeOffset;
 
     vec2 box = inSizing.zw / 2;
     float cornerDegree = inCornerDegreeAndBorderWidthAndVertexPos.x;

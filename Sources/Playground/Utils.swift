@@ -3,7 +3,7 @@ import Foundation
 import Wayland
 
 @MainActor
-func setupCompositor() throws -> (Compositor, RunLoopObservationToken) {
+func setupCompositor() throws -> Compositor {
     let display = try Display()
     display.monitorEvents()
 
@@ -15,6 +15,7 @@ func setupCompositor() throws -> (Compositor, RunLoopObservationToken) {
         display.dispatchPending()
         display.flush()
     }
+    Unmanaged.passRetained(token)
 
     // TODO: mova wl stuff out
     let vulkanState = VulkanState(
@@ -25,6 +26,6 @@ func setupCompositor() throws -> (Compositor, RunLoopObservationToken) {
     let compositor = Compositor(state: vulkanState)
     let task = compositor.start()
 
-    return (compositor, token)
+    return compositor
 }
 

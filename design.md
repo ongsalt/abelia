@@ -13,11 +13,7 @@
 # TODO
 - BRUSH
 - effect shader
-- put some vertex data into uniform buffer
 - fix affine position calculation
-- scrollNode
-- sampling rasterizationRoot
-- schedule phase 0 node simulteneously
 - stop doing descriptor indexing (descriptorBindingSampledImageUpdateAfterBind)
     - it say 91.73% of android device support this
     - supported
@@ -25,8 +21,15 @@
     - not supported
         - Redmi Note 12 Pro (2023, ~300usd) -> Dimensity 1080
         - mi 14 -> snapdragon 8 gen 3 wtf
-<!-- - optmize root grouping -->
+- sampling rasterizationRoot
 - pixel snapping
+
+## Optimization 
+- put some vertex data into uniform buffer
+- scrollNode
+- build damage rect
+- schedule phase 0 node simulteneously
+<!-- - optmize root grouping -->
 
 
 # Render loop

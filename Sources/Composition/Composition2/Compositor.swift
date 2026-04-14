@@ -45,11 +45,11 @@ public class Compositor: @unchecked Sendable {
         Task { @MainActor in
             let continuousClock = ContinuousClock()
             for await _ in dirtyNotifier.recv {
-                if !self.dirtyNotifier.dirty { continue }
+                if !self.dirtyNotifier.dirty.shouldUpdate { continue }
                 Log.info(.compositor, "Dirty")
                 var frame = 0
                 let duration = await continuousClock.measure {
-                    while (self.dirtyNotifier.dirty || !animationFrameControllers.isEmpty) && !Task.isCancelled {
+                    while (self.dirtyNotifier.dirty.shouldUpdate || !animationFrameControllers.isEmpty) && !Task.isCancelled {
                         // wait until dirty
                         await self.recomposite()
                         frame += 1
@@ -137,9 +137,9 @@ public class Compositor: @unchecked Sendable {
 @MainActor
 private class DirtyNotifier: RenderNode {
     let (recv, send) = AsyncStream<Void>.makeStream()
-    override var dirty: Bool {
+    override var dirty: DirtyFlags {
         didSet {
-            if dirty {
+            if dirty.shouldUpdate {
                 send.yield()
             }
         }
@@ -147,7 +147,7 @@ private class DirtyNotifier: RenderNode {
 
     override init() {
         super.init()
-        self.dirty = false
+        self.dirty = []
     }
 }
 

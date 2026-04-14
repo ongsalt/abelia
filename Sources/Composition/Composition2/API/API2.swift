@@ -12,25 +12,25 @@ extension APIDesign {
         var shouldRasterize: Bool = false
         // we need to calculate Bounding Box + shadow + border and shit
 
-        var flags: DirtyFlags = .dirty
-        func markDirty() {
-            // if compositor.localThreadState.isRendering {
-            //     flags.insert(.outdated)
-            // } else {
-            //     flags.insert(.dirty)
-            // }
-        }
+        // var flags: DirtyFlags = .dirty
+        // func markDirty() {
+        //     // if compositor.localThreadState.isRendering {
+        //     //     flags.insert(.outdated)
+        //     // } else {
+        //     //     flags.insert(.dirty)
+        //     // }
+        // }
 
-        func markClean() {
-            if flags.contains(.outdated) {
-                flags = .dirty
-            } else {
-                flags = []
-            }
-            for c in children {
-                c.markClean()
-            }
-        }
+        // func markClean() {
+        //     if flags.contains(.outdated) {
+        //         flags = .dirty
+        //     } else {
+        //         flags = []
+        //     }
+        //     for c in children {
+        //         c.markClean()
+        //     }
+        // }
     }
 
     class ShapeNode: Node {  // new node that wont ever cache its content.
@@ -114,12 +114,14 @@ enum IntermediateNode {
     }
 }
 
-struct DirtyFlags: OptionSet {
-    let rawValue: Int
+public struct DirtyFlags: OptionSet, Sendable {
+    public let rawValue: Int
+    public init(rawValue: Int) {
+        self.rawValue = rawValue
+    }
 
-    static let dirty = DirtyFlags(rawValue: 1 << 0)
-    // mutated while renndering
-    static let outdated = DirtyFlags(rawValue: 1 << 1)
+    public static let source = DirtyFlags(rawValue: 1 << 0)
+    public static let overlapped = DirtyFlags(rawValue: 1 << 1)
 }
 
 extension DirtyFlags {
