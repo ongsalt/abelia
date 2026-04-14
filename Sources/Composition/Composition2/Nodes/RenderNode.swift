@@ -10,6 +10,7 @@ class RenderNode: Identifiable {
     var parent: RenderNode?
     var children: [RenderNode] = []
 
+    // its wrong
     public var scale: SIMD2<Float> = .one {
         didSet {
             markDirty()
@@ -54,17 +55,13 @@ class RenderNode: Identifiable {
     }
     // will be set when doing opacity/animation
     // the framework might decide if it is a dependency of foreground effect
-    package var _shouldRasterize: Bool = false {
+    var _shouldRasterize: Bool = false {
         didSet {
             markDirty()
         }
     }
-    package var isRasterizationRoot: Bool {
-        shouldRasterize || _shouldRasterize || (opacity != 1 && opacity != 0)
-        // we can actually keep the rasterrized texture for a while for fade animation
-    }
 
-    package var dirty: Bool = true
+    var dirty: Bool = true
     public func markDirty() {
         dirty = true
         if let parent {
@@ -100,7 +97,14 @@ class RenderNode: Identifiable {
 }
 
 extension RenderNode {
-    package var rasterizationRoot: RenderNode {
+    var isRasterizationRoot: Bool {
+        (shouldRasterize || _shouldRasterize || (opacity != 1 && opacity != 0)) && !children.isEmpty
+        // we can actually keep the rasterrized texture for a while for fade animation
+    }
+
+    // size including transformation and shadow
+
+    var rasterizationRoot: RenderNode {
         guard let parent else {
             return self  // this wont happen
         }
@@ -110,20 +114,19 @@ extension RenderNode {
         return parent.rasterizationRoot
     }
 
-    package var totalAffine: AffineMatrix {
-        AffineMatrix
-            .identity
+    var totalAffine: AffineMatrix {
+        (parent?.totalAffine ?? AffineMatrix.identity)
             .scaled(x: scale.x, y: scale.y, z: 1.0)
             .rotated(angleRadians: rotation, axis: SIMD3(0, 0, 1))
             .then(affine)
     }
 
     // TODO: properly calculate transformed bounds
-    package var transformedPosition: SIMD2<Float> {
+    var transformedPosition: SIMD2<Float> {
         position
     }
 
-    package var absolutePosition: SIMD2<Float> {
+    var absolutePosition: SIMD2<Float> {
         if let parent {
             parent.absolutePosition + transformedPosition
         } else {
@@ -131,26 +134,38 @@ extension RenderNode {
         }
     }
 
-    package var absoluteRect: Rect {
+    var rootRelativePosition: SIMD2<Float> {
+        if let parent {
+            if parent.isRasterizationRoot {
+                transformedPosition
+            } else {
+                parent.rootRelativePosition + transformedPosition
+            }
+        } else {
+            .zero
+        }
+    }
+
+    var absoluteRect: Rect {
         Rect(topLeft: absolutePosition, size: size * scale)
     }
 
     func print(indentation: Int = 0) {
         let i = String(repeating: " ", count: indentation)
-        Swift.print(i + "- \(Self.self) \(isRasterizationRoot ? "[root]" : ""): \(self.absoluteRect)")
+        Swift.print(
+            i + "- \(Self.self) \(isRasterizationRoot ? "[root]" : ""): \(self.absoluteRect)")
         for c in self.children {
             c.print(indentation: indentation + 2)
         }
     }
 }
 
-// now its vertex buffer not input, shuold this be HOST_COHERANT?? its gonna update a lot 
+// now its vertex buffer not input, shuold this be HOST_COHERANT?? its gonna update a lot
 // old vertex input -> perVertexData (localPos, dataIndex)
 //                  -> sharedVertexData
 // both of these can be in a InputBuffer
 
 // fragment shader input: push_constant, (current) texture list,
- 
 
 // we have 16 vertex attr * 16 bytes -> 256 bytes -> 64 float
 // 0. opacity, screenSize.{w,h}, mode (0=shape, 1=shadow)
@@ -171,7 +186,6 @@ extension RenderNode {
 // always clip immediate contents, clip chlid contents only when rasterize: true
 //
 
-/// TODO: mode
 /// Shadow should be in seperated mode (so we can sort it)
 /// how do we expose this api tho shadowZ: [normal|bottom]
 /// Mode, 1 layer -> >1 draw commmands

@@ -30,7 +30,6 @@ class RenderTextureRegistry {
         actualSize: SIMD2<UInt32>? = nil,
         edgeSampling: VkSamplerAddressMode = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT
     ) -> RenderTexture {
-        // TODO: get index
         let texture = RenderTexture(
             registry: self,
             size: size,
@@ -75,12 +74,9 @@ class RenderTextureRegistry {
 
         await vulkan.runCommands { cb in
             texture.transitionCommand(
-                from: VK_IMAGE_LAYOUT_UNDEFINED,
                 to: VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                srcStageMask: VK_PIPELINE_STAGE_2_NONE,
-                dstStageMask: VK_PIPELINE_STAGE_2_COPY_BIT,
-                srcAccessMask: 0,
-                dstAccessMask: VK_ACCESS_2_TRANSFER_WRITE_BIT,
+                stageMask: VK_PIPELINE_STAGE_2_COPY_BIT,
+                accessMask: VK_ACCESS_2_TRANSFER_WRITE_BIT,
                 cb: cb
             )
 
@@ -94,17 +90,13 @@ class RenderTextureRegistry {
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region)
 
             texture.transitionCommand(
-                from: VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 to: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                srcStageMask: VK_PIPELINE_STAGE_2_COPY_BIT,
-                dstStageMask: VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-                srcAccessMask: VK_ACCESS_2_TRANSFER_WRITE_BIT,
-                dstAccessMask: VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
+                stageMask: VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                accessMask: VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
                 cb: cb
             )
         }
 
-        texture.hasUndefinedLayout = false
         // Log.debug(.vulkan, "stagingBuffer.buffer: \(stagingBuffer.buffer)")
 
         return texture

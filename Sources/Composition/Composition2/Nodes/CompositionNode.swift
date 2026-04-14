@@ -22,6 +22,11 @@ class CompositionNode: RenderNode {
     var backingStore: RenderTexture?
     var backingStore2: RenderTexture?
     // var attachmentSizeHint: SIMD2<Float>?
+
+    // TODO: affine 
+    var textureSize: SIMD2<Float> {
+        size + 2 * (shadowBlur + shadowSpread)
+    }
 }
 
 extension CompositionNode {
@@ -38,24 +43,29 @@ extension CompositionNode {
             UInt32(rootSize.y.max(1))
         )
 
-        let nodePosition = absolutePosition
+        let nodePosition = rootRelativePosition
         let nodeSize = size
 
         let hasContent = contents != nil
         let contentIndex: UInt32 = contents?.renderTexture.index ?? 0
 
-        let transform = totalAffine.fastInverse()
+        let transform = totalAffine.inverse()
 
-        let topLeft = nodePosition
-        let bottomLeft = nodePosition + SIMD2(0, nodeSize.y)
-        let bottomRight = nodePosition + nodeSize
-        let topRight = nodePosition + SIMD2(nodeSize.x, 0)
+        let topLeft = totalAffine * nodePosition
+        let bottomLeft = totalAffine * (nodePosition + SIMD2(0, nodeSize.y))
+        let bottomRight = totalAffine * (nodePosition + nodeSize)
+        let topRight = totalAffine * (nodePosition + SIMD2(nodeSize.x, 0))
 
         let shadowExpand = shadowSpread.max(0) + shadowBlur * 3.0
-        let sTopLeft = topLeft + shadowOffset - SIMD2(repeating: shadowExpand)
-        let sBottomLeft = bottomLeft + shadowOffset + SIMD2(-shadowExpand, shadowExpand)
-        let sBottomRight = bottomRight + shadowOffset + SIMD2(repeating: shadowExpand)
-        let sTopRight = topRight + shadowOffset + SIMD2(shadowExpand, -shadowExpand)
+        let sTopLeft = totalAffine * (nodePosition + shadowOffset - SIMD2(repeating: shadowExpand))
+        let sBottomLeft =
+            totalAffine
+            * (nodePosition + shadowOffset + SIMD2(-shadowExpand, nodeSize.y + shadowExpand))
+        let sBottomRight =
+            totalAffine * (nodePosition + shadowOffset + nodeSize + SIMD2(repeating: shadowExpand))
+        let sTopRight =
+            totalAffine
+            * (nodePosition + shadowOffset + SIMD2(nodeSize.x + shadowExpand, -shadowExpand))
 
         let commonArgs = (
             opacity: opacity,
@@ -80,6 +90,7 @@ extension CompositionNode {
         var vertices: [CompositeNodeVertexData] = []
 
         // 1. Shadow Pass (drawn first, below shape)
+        // if isRoot: draw by parent root
         if shadowColor.a > 0 {
             vertices.append(contentsOf: [
                 CompositeNodeVertexData(
@@ -169,6 +180,7 @@ extension CompositionNode {
         }
 
         // 2. Shape/Content Pass (drawn on top)
+        // if isRoot: draw by to self
         vertices.append(contentsOf: [
             CompositeNodeVertexData(
                 opacity: commonArgs.opacity,
@@ -255,6 +267,99 @@ extension CompositionNode {
             ),
         ])
 
+        // 3. Composite pass
+        // TODO: calculate optimal size in case of overflow
+        // children position must be absolute to this
+        // if isRasterizationRoot {
+        //     vertices.append(contentsOf: [
+        //         CompositeNodeVertexData(
+        //             opacity: commonArgs.opacity,
+        //             screenSize: commonArgs.screenSize,
+        //             position: commonArgs.position,
+        //             size: commonArgs.size,
+        //             vertexPos: topLeft,
+        //             transform: commonArgs.transform,
+        //             cornerRadius: commonArgs.cornerRadius,
+        //             cornerDegree: commonArgs.cornerDegree,
+        //             borderWidth: commonArgs.borderWidth,
+        //             color: fillColor,  // Normal fill color
+        //             borderColor: commonArgs.borderColor, tintColor: commonArgs.tintColor,
+        //             shadowOffset: .zero,
+        //             shadowBlur: 0,
+        //             shadowSpread: 0,
+        //             hasContent: commonArgs.hasContent,
+        //             contentIndex: commonArgs.contentIndex,
+        //             nineGrid: commonArgs.nineGrid,
+        //             mode: 0.0  // Shape Mode
+        //         ),
+        //         CompositeNodeVertexData(
+        //             opacity: commonArgs.opacity,
+        //             screenSize: commonArgs.screenSize,
+        //             position: commonArgs.position,
+        //             size: commonArgs.size,
+        //             vertexPos: bottomLeft,
+        //             transform: commonArgs.transform,
+        //             cornerRadius: commonArgs.cornerRadius,
+        //             cornerDegree: commonArgs.cornerDegree,
+        //             borderWidth: commonArgs.borderWidth,
+        //             color: fillColor,
+        //             borderColor: commonArgs.borderColor,
+        //             tintColor: commonArgs.tintColor,
+        //             shadowOffset: .zero,
+        //             shadowBlur: 0,
+        //             shadowSpread: 0,
+        //             hasContent: commonArgs.hasContent,
+        //             contentIndex: commonArgs.contentIndex,
+        //             nineGrid: commonArgs.nineGrid,
+        //             mode: 0.0
+        //         ),
+        //         CompositeNodeVertexData(
+        //             opacity: commonArgs.opacity,
+        //             screenSize: commonArgs.screenSize,
+        //             position: commonArgs.position,
+        //             size: commonArgs.size,
+        //             vertexPos: bottomRight,
+        //             transform: commonArgs.transform,
+        //             cornerRadius: commonArgs.cornerRadius,
+        //             cornerDegree: commonArgs.cornerDegree,
+        //             borderWidth: commonArgs.borderWidth,
+        //             color: fillColor,
+        //             borderColor: commonArgs.borderColor,
+        //             tintColor: commonArgs.tintColor,
+        //             shadowOffset: .zero,
+        //             shadowBlur: 0,
+        //             shadowSpread: 0,
+        //             hasContent: commonArgs.hasContent,
+        //             contentIndex: commonArgs.contentIndex,
+        //             nineGrid: commonArgs.nineGrid,
+        //             mode: 0.0
+        //         ),
+        //         CompositeNodeVertexData(
+        //             opacity: commonArgs.opacity,
+        //             screenSize: commonArgs.screenSize,
+        //             position: commonArgs.position,
+        //             size: commonArgs.size,
+        //             vertexPos: topRight,
+        //             transform: commonArgs.transform,
+        //             cornerRadius: commonArgs.cornerRadius,
+        //             cornerDegree: commonArgs.cornerDegree,
+        //             borderWidth: commonArgs.borderWidth,
+        //             color: fillColor,
+        //             borderColor: commonArgs.borderColor,
+        //             tintColor: commonArgs.tintColor,
+        //             shadowOffset: .zero,
+        //             shadowBlur: 0,
+        //             shadowSpread: 0,
+        //             hasContent: commonArgs.hasContent,
+        //             contentIndex: commonArgs.contentIndex,
+        //             nineGrid: commonArgs.nineGrid,
+        //             mode: 0.0
+        //         ),
+        //     ])
+
+        // }
+
         return vertices
     }
+
 }

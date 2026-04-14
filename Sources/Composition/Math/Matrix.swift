@@ -33,23 +33,28 @@ struct AffineMatrix {
         return m.c1 * v.x + m.c2 * v.y + m.c3 * v.z + m.c4 * v.w
     }
 
-    func fastInverse() -> AffineMatrix {
-        // Transpose the 3x3 rotation part
-        let r1 = SIMD3(c1.x, c2.x, c3.x)
-        let r2 = SIMD3(c1.y, c2.y, c3.y)
-        let r3 = SIMD3(c1.z, c2.z, c3.z)
-
-        // New translation is -(R^T * old_translation)
-        let oldT = SIMD3(c4.x, c4.y, c4.z)
-        let newT = -(r1 * oldT.x + r2 * oldT.y + r3 * oldT.z)
-
-        return AffineMatrix(
-            c1: SIMD4(r1, 0),
-            c2: SIMD4(r2, 0),
-            c3: SIMD4(r3, 0),
-            c4: SIMD4(newT, 1)
-        )
+    static func * (m: AffineMatrix, v: SIMD2<Float>) -> SIMD2<Float> {
+        let result = m * SIMD4<Float>(v.x, v.y, 0, 1)
+        return SIMD2<Float>(result.x, result.y)
     }
+
+    // func fastInverse() -> AffineMatrix {
+    //     // Transpose the 3x3 rotation part
+    //     let r1 = SIMD3(c1.x, c2.x, c3.x)
+    //     let r2 = SIMD3(c1.y, c2.y, c3.y)
+    //     let r3 = SIMD3(c1.z, c2.z, c3.z)
+
+    //     // New translation is -(R^T * old_translation)
+    //     let oldT = SIMD3(c4.x, c4.y, c4.z)
+    //     let newT = -(r1 * oldT.x + r2 * oldT.y + r3 * oldT.z)
+
+    //     return AffineMatrix(
+    //         c1: SIMD4(r1, 0),
+    //         c2: SIMD4(r2, 0),
+    //         c3: SIMD4(r3, 0),
+    //         c4: SIMD4(newT, 1)
+    //     )
+    // }
 
     func then(_ other: AffineMatrix) -> AffineMatrix {
         other * self

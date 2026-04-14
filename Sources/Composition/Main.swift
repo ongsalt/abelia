@@ -7,12 +7,12 @@ import Wayland
 @main
 @MainActor
 struct Graphics101 {
-    static func main() throws {
+    static func main() async throws {
         let instance = Graphics101()
-        try instance.run()
+        try await instance.run()
     }
 
-    func run() throws {
+    func run() async throws {
         let display = try Display()
         display.monitorEvents()
 
@@ -61,6 +61,7 @@ struct Graphics101 {
             card.shadowBlur = 28
             card.shadowOffset = [0, 16]
             card.shadowColor = .black.multiply(opacity: 0.15)
+            // card.scale = [1, 1.1]
             compositor.root.addChild(card)
 
             // Name
@@ -76,8 +77,6 @@ struct Graphics101 {
             setupScene(root: compositor.root)
 
             compositor.root.print()
-            // await compositor.recomposite()
-            // compositor.scheduleRecomposite()
         }
 
         // Task {
@@ -107,22 +106,16 @@ struct Graphics101 {
         //     }
         // }
 
-        // Task {
-        //     let renderer = await Renderer2(state: vulkanState)
-        //     await renderer.perform()
 
-        //     _ = Unmanaged.passRetained(renderer)  // for now
-        // }
-
-        RunLoop.main.run()
+        await compositor.run()
         drop(token)
     }
 }
 
 func setupScene(root: CompositionNode) {
     let colors: [Color] = [
-        .red, .orange,
-        // .red, .orange, .yellow, .green, .mint, .teal, .cyan, .blue, .indigo, .purple, .pink, .brown,
+        // .red, .orange,
+        .red, .orange, .yellow, .green, .mint, .teal, .cyan, .blue, .indigo, .purple, .pink, .brown,
     ]
 
     for (offset, c) in colors.enumerated() {

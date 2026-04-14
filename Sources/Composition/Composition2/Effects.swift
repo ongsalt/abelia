@@ -8,6 +8,7 @@ enum ImageFilter {
     case toneMap
     case material(MaterialType)  // very opinionate
     case dither
+    // case custom(Shader)
 }
 
 enum EdgeSamplingMethod {

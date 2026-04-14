@@ -21,6 +21,9 @@ class Compositor: @unchecked Sendable {
     //     root.backingStores!
     // }
 
+    // TODO: frame sync, proper sending, most of the task is synchronous except waiting for frame
+    private var recompositionQueue = RenderQueue()
+
     init(state: VulkanState) {
         self.state = state
         self.size = state.swapChain.extent.simd2
@@ -36,42 +39,20 @@ class Compositor: @unchecked Sendable {
         self.inputBuffer = InputBuffer(state: state)
 
         // should i just remove this and make everthing tell the compositor directly
-        dirtyNotifier.onDirty = {
-            print("Invalidate")
-            self.scheduleRecomposite()
+        dirtyNotifier.onDirty = { [recompositionQueue] in
+            recompositionQueue.schedule()
         }
 
         self.root.compositor = self
     }
 
-    // TODO: frame sync, proper sending, most of the task is synchronous except waiting for frame
-    private var recompositionTask: Task<Void, Never>? = nil
-    private var shouldRecompositeAgain = false
-    func scheduleRecomposite() {
-        if recompositionTask != nil {
-            if !shouldRecompositeAgain {
-                shouldRecompositeAgain = true
-            }
-
-            return
-        }
-
-        Log.debug(.compositor, "Recomposition scheduled")
-        recompositionTask = Task {
+    func run() async {
+        await recompositionQueue.onFrame {
             let continuousClock = ContinuousClock()
             let start = continuousClock.now
-            Log.debug(.compositor, "Recomposition start")
+            // Log.info(.compositor, "Recomposition start")
             await self.recomposite()
             let end = continuousClock.now
-            Log.debug(
-                .compositor,
-                "Recomposition end in \((end - start).attoseconds / (1_000_000_000_000_000)) ms"
-            )
-            recompositionTask = nil
-            if shouldRecompositeAgain {
-                shouldRecompositeAgain = false
-                scheduleRecomposite()
-            }
         }
     }
 
@@ -83,6 +64,7 @@ class Compositor: @unchecked Sendable {
         // just redraw everything ... rasterizationRoot
         let batches = Batch.compute(root: root)
 
+        // allocate backing store
         for batch in batches {
             var n = 0
             let root = batch.root
@@ -116,6 +98,8 @@ class Compositor: @unchecked Sendable {
         // present it somehow
 
         await renderer.perform { commandBuffer, swapChainImageView in
+            Log.info(.renderLoop, "acquired frame")
+
             // need to group this to phase
             for batch in batches {
                 let iv: VkImageView? =
@@ -182,27 +166,10 @@ private func writeDrawCommands(
         for dep in batch.dependencies {
             if let depBackingStore = dep.backingStore {
                 _barriers.append(
-                    VkImageMemoryBarrier2(
-                        sType: VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-                        pNext: nil,
-                        srcStageMask: VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                        srcAccessMask: VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT
-                            | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-                        dstStageMask: VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-                        dstAccessMask: VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
-                        oldLayout: VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
-                        newLayout: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                        srcQueueFamilyIndex: VK_QUEUE_FAMILY_IGNORED,
-                        dstQueueFamilyIndex: VK_QUEUE_FAMILY_IGNORED,
-                        image: depBackingStore.image,
-                        subresourceRange: .init(
-                            aspectMask: VK_IMAGE_ASPECT_COLOR_BIT.rawValue,
-                            baseMipLevel: 0,
-                            levelCount: 1,
-                            baseArrayLayer: 0,
-                            layerCount: 1
-                        )
-                    ),
+                    depBackingStore.barrier(
+                        to: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                        stageMask: VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                        accessMask: VK_ACCESS_2_SHADER_SAMPLED_READ_BIT)
                 )
             }
         }
@@ -225,58 +192,24 @@ private func writeDrawCommands(
         // texture
         // 1 -> write to first store
         // 2 -> write to first store, read from second
-
         // external: read from first
+        Log.debug(.compositor, "placed barrier for \(backingStore.image)")
         var _barriers: [VkImageMemoryBarrier2] = [
-            VkImageMemoryBarrier2(
-                sType: VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-                pNext: nil,
-                srcStageMask: VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-                srcAccessMask: VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
-                dstStageMask: VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                dstAccessMask: VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT
-                    | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-                oldLayout: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                newLayout: VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
-                srcQueueFamilyIndex: VK_QUEUE_FAMILY_IGNORED,  // ignore
-                dstQueueFamilyIndex: VK_QUEUE_FAMILY_IGNORED,  // ignore
-                image: backingStore.image,
-                subresourceRange: .init(
-                    aspectMask: VK_IMAGE_ASPECT_COLOR_BIT.rawValue,
-                    baseMipLevel: 0,
-                    levelCount: 1,
-                    baseArrayLayer: 0,
-                    layerCount: 1
-                )
-            ).fromUndefinedLayout(backingStore.hasUndefinedLayout)
+            backingStore.barrier(
+                to: VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+                stageMask: VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                accessMask: VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT
+            )
         ]
-        backingStore.hasUndefinedLayout = false
 
         if let b2: RenderTexture = batch.root.backingStore2 {
             _barriers.append(
-                VkImageMemoryBarrier2(
-                    sType: VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-                    pNext: nil,
-                    srcStageMask: VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                    srcAccessMask: VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT
-                        | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-                    dstStageMask: VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-                    dstAccessMask: VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
-                    oldLayout: VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
-                    newLayout: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                    srcQueueFamilyIndex: VK_QUEUE_FAMILY_IGNORED,  // ignore
-                    dstQueueFamilyIndex: VK_QUEUE_FAMILY_IGNORED,  // ignore
-                    image: b2.image,
-                    subresourceRange: .init(
-                        aspectMask: VK_IMAGE_ASPECT_COLOR_BIT.rawValue,
-                        baseMipLevel: 0,
-                        levelCount: 1,
-                        baseArrayLayer: 0,
-                        layerCount: 1
-                    )
-                ).fromUndefinedLayout(b2.hasUndefinedLayout),
+                b2.barrier(
+                    to: VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    stageMask: VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+                    accessMask: VK_ACCESS_2_SHADER_SAMPLED_READ_BIT
+                ),
             )
-            b2.hasUndefinedLayout = false
         }
 
         let imageBarrier = Pin(_barriers)
@@ -326,7 +259,7 @@ private func writeDrawCommands(
             renderer.pipeline.bind(commandBuffer: cmdBuffer)  // its composition pipeline
 
             let vertexData: [CompositeNodeVertexData] = nodes.flatMap { $0.toVertexData() }
-            Log.info(.compositor, "vertexData hash = \(vertexData.hashValue)")
+            Log.debug(.compositor, "vertexData hash = \(vertexData.hashValue)")
 
             let quadCount = vertexData.count / 4
             let indices = (0..<quadCount).flatMap { i -> [UInt32] in
@@ -391,18 +324,4 @@ private func setViewport(_ size: SIMD2<UInt32>, commandBuffer: VkCommandBuffer) 
         extent: .init(width: size.x, height: size.y)
     )
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor)
-}
-
-extension VkImageMemoryBarrier2 {
-    fileprivate func fromUndefinedLayout(_ isIt: Bool) -> Self {
-        if isIt {
-            var out = self
-            out.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED
-            out.srcStageMask = VK_PIPELINE_STAGE_2_NONE
-            out.srcAccessMask = 0
-            return out
-        }
-
-        return self
-    }
 }

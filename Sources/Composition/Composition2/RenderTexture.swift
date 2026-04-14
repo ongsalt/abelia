@@ -12,7 +12,12 @@ class RenderTexture {
     var size: SIMD2<UInt32>
     let actualSize: SIMD2<UInt32>
 
-    package var hasUndefinedLayout: Bool = true
+    package var hasUndefinedLayout: Bool {
+        currentLayout == VK_IMAGE_LAYOUT_UNDEFINED
+    }
+    var currentLayout: VkImageLayout = VK_IMAGE_LAYOUT_UNDEFINED
+    var currentStageMask: VkPipelineStageFlags2 = VK_PIPELINE_STAGE_2_NONE
+    var currentAccessMask: VkAccessFlags2 = VK_ACCESS_2_NONE
 
     var descriptorImageInfo: VkDescriptorImageInfo {
         VkDescriptorImageInfo(
@@ -118,19 +123,17 @@ class RenderTexture {
     }
 
     func transitionCommand(
-        from oldLayout: VkImageLayout,
         to targetLayout: VkImageLayout,
-        srcStageMask: VkPipelineStageFlags2 = 0,
-        dstStageMask: VkPipelineStageFlags2 = 0,
-        srcAccessMask: VkAccessFlags2,
-        dstAccessMask: VkAccessFlags2,
+        stageMask: VkPipelineStageFlags2 = 0,
+        accessMask: VkAccessFlags2,
         cb: VkCommandBuffer
     ) {
         let barrier = Box(
             barrier(
-                from: oldLayout, to: targetLayout, srcStageMask: srcStageMask,
-                dstStageMask: dstStageMask, srcAccessMask: srcAccessMask,
-                dstAccessMask: dstAccessMask)
+                to: targetLayout,
+                stageMask: stageMask,
+                accessMask: accessMask
+            )
         )
 
         let barrierPresentDependencyInfo = Box(VkDependencyInfo()) {
@@ -143,20 +146,17 @@ class RenderTexture {
     }
 
     func barrier(
-        from oldLayout: VkImageLayout,
         to targetLayout: VkImageLayout,
-        srcStageMask: VkPipelineStageFlags2 = 0,
-        dstStageMask: VkPipelineStageFlags2 = 0,
-        srcAccessMask: VkAccessFlags2,
-        dstAccessMask: VkAccessFlags2,
+        stageMask: VkPipelineStageFlags2,
+        accessMask: VkAccessFlags2,
     ) -> VkImageMemoryBarrier2 {
-        with(VkImageMemoryBarrier2()) {
+        let barrier = with(VkImageMemoryBarrier2()) {
             $0.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2
-            $0.srcStageMask = srcStageMask
-            $0.srcAccessMask = srcAccessMask
-            $0.dstStageMask = dstStageMask
-            $0.dstAccessMask = dstAccessMask
-            $0.oldLayout = oldLayout
+            $0.srcStageMask = currentStageMask
+            $0.srcAccessMask = currentAccessMask
+            $0.dstStageMask = stageMask
+            $0.dstAccessMask = accessMask
+            $0.oldLayout = currentLayout
             $0.newLayout = targetLayout
             $0.image = self.image
             $0.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT.rawValue
@@ -165,6 +165,12 @@ class RenderTexture {
             $0.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED
             $0.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED
         }
+
+        self.currentLayout = targetLayout
+        self.currentStageMask = stageMask
+        self.currentAccessMask = accessMask
+
+        return barrier
     }
 
     // TODO: cleanup this on deinit?
