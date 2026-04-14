@@ -1,4 +1,4 @@
-@preconcurrency import CVMA
+@preconcurrency import CVulkan
 import Foundation
 import Wayland  // for pointers
 import Pointer

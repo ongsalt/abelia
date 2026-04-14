@@ -1,4 +1,4 @@
-@preconcurrency import CVMA
+@preconcurrency import CVulkan
 import Pointer
 
 // TODO: resize??? -> just realloc?

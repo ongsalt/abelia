@@ -1,4 +1,4 @@
-@preconcurrency import CVMA
+@preconcurrency import CVulkan
 import Pointer
 
 extension VkBool32: @retroactive ExpressibleByBooleanLiteral {

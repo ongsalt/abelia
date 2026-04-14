@@ -1,4 +1,4 @@
-@preconcurrency import CVMA
+@preconcurrency import CVulkan
 import Foundation
 
 class GPUBuffer<BufferData> {

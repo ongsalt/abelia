@@ -27,7 +27,7 @@ let package = Package(
 
         // Everything vulkan is in here
         .target(
-            name: "CVMA",
+            name: "CVulkan",
             cSettings: [
                 .define("VK_USE_PLATFORM_WAYLAND_KHR", .when(platforms: [.linux]))  // i should fucking put these 2 together
             ],
@@ -57,7 +57,7 @@ let package = Package(
             dependencies: [
                 .product(name: "Numerics", package: "swift-numerics"),
                 .target(name: "Wayland", condition: .when(platforms: [.linux])),
-                "CVMA",
+                "CVulkan",
                 // "FreeType",
                 "CPango",
                 "Pointer"
