@@ -1,6 +1,6 @@
 @preconcurrency import CVMA
 import Foundation
-import Wayland  // for pointers
+import Pointer
 
 /// - Main(rect/composite) node
 /// - effect node

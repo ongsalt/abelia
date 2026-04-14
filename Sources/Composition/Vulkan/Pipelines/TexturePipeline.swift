@@ -1,6 +1,6 @@
 @preconcurrency import CVMA
 import Foundation
-import Wayland
+import Pointer
 
 struct TextureVertexData {
     let sizing: SIMD4<Float>

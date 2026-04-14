@@ -1,6 +1,5 @@
 @preconcurrency import CVMA
 import Foundation
-import Wayland
 
 protocol Pipeline {
     associatedtype DrawCommand = ()

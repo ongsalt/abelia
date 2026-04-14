@@ -1,6 +1,5 @@
 @preconcurrency import CVMA
 import Foundation
-import Wayland
 
 class GPUBuffer<BufferData> {
     let mapped: UnsafeMutableBufferPointer<BufferData>

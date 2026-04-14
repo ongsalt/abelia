@@ -1,6 +1,7 @@
 import CWayland
 import Foundation
 import Glibc
+import Pointer
 
 public class SHMPool {
     let pool: OpaquePointer

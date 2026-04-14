@@ -1,6 +1,6 @@
 @preconcurrency import CVMA
 import Foundation
-import Wayland  // for pointers
+import Pointer  // for pointers
 
 class Renderer2 {
     let state: VulkanState

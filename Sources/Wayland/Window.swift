@@ -1,4 +1,5 @@
 import Glibc
+import Pointer
 
 // not actually a window
 open class Window {

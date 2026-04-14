@@ -1,6 +1,6 @@
 import Foundation
 @_spi(SwiftUI) import Observation
-import Wayland
+import Pointer
 
 @MainActor
 public class ObservationSource<T> where T: Sendable {

@@ -1,6 +1,6 @@
 @preconcurrency import CVMA
 import Foundation
-import Wayland
+import Pointer
 
 struct CompositeNodeVertexData: Hashable {
 	/// X: Opacity (0.0 to 1.0)

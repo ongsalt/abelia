@@ -1,4 +1,5 @@
 import CWayland
+import Pointer
 
 // TODO: width height
 public class Surface: @unchecked Sendable {

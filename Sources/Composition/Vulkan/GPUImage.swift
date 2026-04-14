@@ -1,5 +1,5 @@
 @preconcurrency import CVMA
-import Wayland
+import Pointer
 
 // its only for cpu rendered text for now
 class GPUImage {

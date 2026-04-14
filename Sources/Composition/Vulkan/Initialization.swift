@@ -1,7 +1,7 @@
 @preconcurrency import CVMA
 import Foundation
 import Glibc
-import Wayland
+import Pointer
 
 private let instanceLayers = CStringArray {
     #if DEBUG

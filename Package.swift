@@ -17,7 +17,7 @@ let package = Package(
         .target(name: "CWayland"),
         .target(
             name: "Wayland",
-            dependencies: ["CWayland"],
+            dependencies: ["CWayland", "Pointer"],
             swiftSettings: [
                 .interoperabilityMode(.C)
             ]
@@ -34,6 +34,7 @@ let package = Package(
         ),
 
         // .target(name: "Signal"),
+        .target(name: "Pointer"),
         .target(name: "UI", dependencies: ["Composition", "DSLMacro"]),
         // .executableTarget(name: "Signal"),
 
@@ -59,6 +60,7 @@ let package = Package(
                 "CVMA",
                 // "FreeType",
                 "CPango",
+                "Pointer"
             ],
             resources: [
                 .copy("Resources/Compiled")

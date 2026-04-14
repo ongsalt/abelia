@@ -1,5 +1,5 @@
 @preconcurrency import CVMA
-import Wayland
+import Pointer
 
 extension VkBool32: @retroactive ExpressibleByBooleanLiteral {
     public init(booleanLiteral value: Bool) {

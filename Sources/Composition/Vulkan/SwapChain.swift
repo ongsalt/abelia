@@ -1,6 +1,6 @@
 @preconcurrency import CVMA
 import Foundation
-import Wayland
+import Pointer
 
 final class SwapChain {
     let device: VkDevice

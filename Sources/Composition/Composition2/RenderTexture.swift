@@ -1,5 +1,5 @@
 @preconcurrency import CVMA
-import Wayland
+import Pointer
 
 // TODO: resize??? -> just realloc?
 class RenderTexture {

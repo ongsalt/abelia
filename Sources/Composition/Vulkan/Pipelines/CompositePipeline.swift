@@ -1,6 +1,6 @@
 @preconcurrency import CVMA
 import Foundation
-import Wayland
+import Pointer
 
 class CompositePipeline {
     let pipeline: VkPipeline
