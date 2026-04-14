@@ -9,10 +9,10 @@ import Wayland
 struct Graphics101 {
     static func main() async throws {
         let instance = Graphics101()
-        try await instance.run()
+        try instance.run()
     }
 
-    func run() async throws {
+    func run() throws {
         let display = try Display()
         display.monitorEvents()
 
@@ -33,34 +33,44 @@ struct Graphics101 {
 
         let compositor = Compositor(state: vulkanState)
 
-        await compositor.run()
+        setupScene(root: compositor.root)
+
+        Task {
+            try await Task.sleep(for: .seconds(1))
+            animateRect(compositor: compositor)
+        }
+        
+        let task = compositor.start()
+
+        RunLoop.main.run()
         drop(token)
     }
 }
 
-// func setupScene(root: CompositionNode) {
-//     let colors: [Color] = [
-//         // .red, .orange,
-//         .red, .orange, .yellow, .green, .mint, .teal, .cyan, .blue, .indigo, .purple, .pink, .brown,
-//     ]
+@MainActor
+func setupScene(root: CompositionNode) {
+    let colors: [Color] = [
+        // .red, .orange,
+        .red, .orange, .yellow, .green, .mint, .teal, .cyan, .blue, .indigo, .purple, .pink, .brown,
+    ]
 
-//     for (offset, c) in colors.enumerated() {
-//         let node = CompositionNode()
-//         // node.shouldRasterize = true
-//         node.size = [96, 96]
-//         node.fillColor = c
-//         node.position = [24 * Float(offset), 24 * Float(offset)]
-//         node.cornerRadius = 24
+    for (offset, c) in colors.enumerated() {
+        let node = CompositionNode()
+        // node.shouldRasterize = true
+        node.size = [96, 96]
+        node.fillColor = c
+        node.position = [24 * Float(offset), 24 * Float(offset)]
+        node.cornerRadius = 24
 
-//         node.shadowBlur = 18
-//         node.shadowColor = .black.multiply(opacity: 0.4)
+        node.shadowBlur = 18
+        node.shadowColor = .black.multiply(opacity: 0.4)
 
-//         // node.borderWidth = 0.5
-//         // node.borderColor = .black
+        // node.borderWidth = 0.5
+        // node.borderColor = .black
 
-//         root.addChild(node)
-//     }
-// }
+        root.addChild(node)
+    }
+}
 
 // Task {
 //     func drawText(text: String) async -> RenderTexture {
@@ -108,29 +118,29 @@ struct Graphics101 {
 //     compositor.root.print()
 // }
 
-// Task {
-//     try await Task.sleep(for: .seconds(1))
-//     let node = CompositionNode()
-//     node.shouldRasterize = true
-//     node.size = [96, 96]
-//     node.fillColor = .red
-//     node.position = [0, 200]
-//     node.cornerRadius = 24
-//     node.opacity = 0
-//     compositor.root.addChild(node)
+@MainActor
+func animateRect(compositor: Compositor) {
+    let node = CompositionNode()
+    node.shouldRasterize = true
+    node.size = [96, 96]
+    node.fillColor = .red
+    node.position = [0, 200]
+    node.cornerRadius = 24
+    node.opacity = 0
+    compositor.root.addChild(node)
 
-//     let clock = ContinuousClock()
-//     let start = clock.now
+    let clock = ContinuousClock()
+    let start = clock.now
 
-//     compositor.requestAnimationFrame { controller in
-//         var progress = (clock.now - start) / .milliseconds(400)
-//         if progress >= 1 {
-//             progress = 1
-//             controller.stop()
-//         }
-//         let animProgress = Float(1 - pow(1 - progress, 3))
-//         node.opacity = animProgress
-//         node.position.x = animProgress * 100
+    compositor.requestAnimationFrame { controller in
+        var progress = (clock.now - start) / .milliseconds(400)
+        if progress >= 1 {
+            progress = 1
+            controller.stop()
+        }
+        let animProgress = Float(1 - pow(1 - progress, 3))
+        node.opacity = animProgress
+        node.position.x = animProgress * 100
 
-//     }
-// }
+    }
+}

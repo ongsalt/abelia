@@ -38,69 +38,72 @@ public class Compositor: @unchecked Sendable {
         self.inputBuffer = InputBuffer(state: state)
         self.pipeline = CompositePipeline(state: state, textureRegistry: textureRegistry)
 
-        // should i just remove this and make everthing tell the compositor directly
-        dirtyNotifier.onDirty = { [] in
-            // recompositionQueue.schedule()
-        }
-
         self.root.compositor = self
     }
 
     func start() -> Task<Void, Never> {
         Task { @MainActor in
-            while !Task.isCancelled {
-                // wait until dirty
-                let continuousClock: ContinuousClock = ContinuousClock()
-                let start = continuousClock.now
-                // Log.info(.compositor, "Recomposition start")
-                await self.recomposite()
-                let end = continuousClock.now
+            let continuousClock = ContinuousClock()
+            for await _ in dirtyNotifier.recv {
+                if !self.dirtyNotifier.dirty { continue }
+                Log.info(.compositor, "Dirty")
+                var frame = 0
+                let duration = await continuousClock.measure {
+                    while (self.dirtyNotifier.dirty || !animationFrameControllers.isEmpty) && !Task.isCancelled {
+                        // wait until dirty
+                        await self.recomposite()
+                        frame += 1
+                        // Log.info(.compositor, "Recomposition start")
+                    }
+                }
+                Log.info(
+                    .compositor, "finished \(frame) frames in \(duration / .milliseconds(1))ms")
             }
         }
     }
 
     private func recomposite() async {
-        inputBuffer.reset()
-        for controller in animationFrameControllers.values {
-            controller.run()
-        }
-        // just redraw everything ... rasterizationRoot
-        let batches = Batch.compute(root: root)
-
-        // allocate backing store
-        for batch in batches {
-            var n = 0
-            let root = batch.root
-            let size: SIMD2<UInt32> = [UInt32(root.size.x), UInt32(root.size.y)]
-            if size == .zero {
-                continue
-            }
-            if root.backingStore == nil {
-                n += 1
-                let t = textureRegistry.newRenderTarget(size: size)
-                root.backingStore = t
-            }
-            if batch.hasEffectLayer && root.backingStore2 == nil {
-                n += 1
-                let t = textureRegistry.newRenderTarget(size: size)
-                root.backingStore2 = t
-            }
-
-            if n > 0 {
-                Log.debug(
-                    .compositor,
-                    "allocated \(n) backing store for CompositeNode \(batch.root.backingStore?.image)"
-                )
-            }
-        }
-
         // TODO: fix race condition
-        root.markClean()
 
         // Log.debug(.compositor, "\(root.backingStore?.image)")
         // present it somehow
 
         await renderer.perform { commandBuffer, swapChainImageView in
+            inputBuffer.reset()
+            for controller in animationFrameControllers.values {
+                controller.run() // this might be mutated
+            }
+            // just redraw everything ... rasterizationRoot
+            let batches = Batch.compute(root: root)
+            self.dirtyNotifier.markClean()
+
+            // allocate backing store
+            for batch in batches {
+                var n = 0
+                let root = batch.root
+                let size: SIMD2<UInt32> = [UInt32(root.size.x), UInt32(root.size.y)]
+                if size == .zero {
+                    continue
+                }
+                if root.backingStore == nil {
+                    n += 1
+                    let t = textureRegistry.newRenderTarget(size: size)
+                    root.backingStore = t
+                }
+                if batch.hasEffectLayer && root.backingStore2 == nil {
+                    n += 1
+                    let t = textureRegistry.newRenderTarget(size: size)
+                    root.backingStore2 = t
+                }
+
+                if n > 0 {
+                    Log.debug(
+                        .compositor,
+                        "allocated \(n) backing store for CompositeNode \(batch.root.backingStore?.image)"
+                    )
+                }
+            }
+
             Log.info(.renderLoop, "acquired frame")
             // is this counted as multithread recording
 
@@ -133,11 +136,11 @@ public class Compositor: @unchecked Sendable {
 
 @MainActor
 private class DirtyNotifier: RenderNode {
-    var onDirty: () -> Void = {}
+    let (recv, send) = AsyncStream<Void>.makeStream()
     override var dirty: Bool {
         didSet {
             if dirty {
-                onDirty()
+                send.yield()
             }
         }
     }
@@ -200,7 +203,7 @@ private func writeDrawCommands(
         // 1 -> write to first store
         // 2 -> write to first store, read from second
         // external: read from first
-        Log.debug(.compositor, "placed barrier for \(backingStore.image)")
+        // Log.debug(.compositor, "placed barrier for \(backingStore.image)")
         var _barriers: [VkImageMemoryBarrier2] = [
             backingStore.barrier(
                 to: VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,

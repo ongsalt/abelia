@@ -21,7 +21,7 @@ import Pointer
 // Batch is per rasterization root?
 // we then can pararellize this by running phase 1 of every batch simulteneously unless its depends on each other
 //  - need to do per group deps not per batch
-
+@MainActor
 struct Batch {
     let root: CompositionNode
     let hasEffectLayer: Bool  // TODO: (well if we have more than 1 group, we can we need 2 attachment)
@@ -127,6 +127,7 @@ struct RootWithChildren {
     var depth: Int
 
     // TODO: optimize this
+    @MainActor
     static func group(_ node: CompositionNode) -> [RootWithChildren] {
         // identify root
         // var roots: [CompositionNode] = []
