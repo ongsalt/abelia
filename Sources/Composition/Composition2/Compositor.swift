@@ -2,27 +2,26 @@
 import Foundation
 import Pointer  // for pointers
 
+@MainActor
 class Compositor: @unchecked Sendable {
     let state: VulkanState
+    let pipeline: CompositePipeline
+    let inputBuffer: InputBuffer  // this should be per frame in flight
+
     let renderer: Renderer
     let textureRegistry: RenderTextureRegistry
-    let inputBuffer: InputBuffer  // this should be per frame in flight
     let textRenderer = TextRenderer()
     var size: SIMD2<UInt32>
 
     var animationFrameControllers: [ObjectIdentifier: AnimationFrameController] = [:]
+    let root: CompositionNode
+    private let dirtyNotifier = DirtyNotifier()
+    private(set) var isRecording = false
 
     // use the root layer with caution, some property should not be touch
-    let root: CompositionNode
     // private let frameClock = FrameClock()
 
-    private let dirtyNotifier = DirtyNotifier()
-    // var renderTexture: RenderTexture {
-    //     root.backingStores!
-    // }
-
     // TODO: frame sync, proper sending, most of the task is synchronous except waiting for frame
-    private var recompositionQueue = RenderQueue()
 
     init(state: VulkanState) {
         self.state = state
@@ -37,22 +36,26 @@ class Compositor: @unchecked Sendable {
         self.renderer = Renderer(state: state, textureRegistry: textureRegistry)
 
         self.inputBuffer = InputBuffer(state: state)
+        self.pipeline = CompositePipeline(state: state, textureRegistry: textureRegistry)
 
         // should i just remove this and make everthing tell the compositor directly
-        dirtyNotifier.onDirty = { [recompositionQueue] in
-            recompositionQueue.schedule()
+        dirtyNotifier.onDirty = { [] in
+            // recompositionQueue.schedule()
         }
 
         self.root.compositor = self
     }
 
-    func run() async {
-        await recompositionQueue.onFrame {
-            let continuousClock = ContinuousClock()
-            let start = continuousClock.now
-            // Log.info(.compositor, "Recomposition start")
-            await self.recomposite()
-            let end = continuousClock.now
+    func start() -> Task<Void, Never> {
+        Task { @MainActor in
+            while !Task.isCancelled {
+                // wait until dirty
+                let continuousClock: ContinuousClock = ContinuousClock()
+                let start = continuousClock.now
+                // Log.info(.compositor, "Recomposition start")
+                await self.recomposite()
+                let end = continuousClock.now
+            }
         }
     }
 
@@ -99,6 +102,7 @@ class Compositor: @unchecked Sendable {
 
         await renderer.perform { commandBuffer, swapChainImageView in
             Log.info(.renderLoop, "acquired frame")
+            // is this counted as multithread recording
 
             // need to group this to phase
             for batch in batches {
@@ -112,8 +116,9 @@ class Compositor: @unchecked Sendable {
                     to: commandBuffer,
                     batch: batch,
                     inputBuffer: inputBuffer,
-                    renderer: self.renderer,
-                    swapChainImageView: iv
+                    pipeline: pipeline,
+                    swapChainImageView: iv,
+                    textureRegistry: textureRegistry
                 )
             }
         }
@@ -126,6 +131,7 @@ class Compositor: @unchecked Sendable {
 
 }
 
+@MainActor
 private class DirtyNotifier: RenderNode {
     var onDirty: () -> Void = {}
     override var dirty: Bool {
@@ -142,13 +148,14 @@ private class DirtyNotifier: RenderNode {
     }
 }
 
+@MainActor
 private func writeDrawCommands(
     to cmdBuffer: VkCommandBuffer,
     batch: Batch,
     inputBuffer: InputBuffer,
-    renderer: Renderer,
+    pipeline: CompositePipeline,
     swapChainImageView: VkImageView? = nil,
-
+    textureRegistry: RenderTextureRegistry
 ) {
     if batch.groups.isEmpty {
         return
@@ -198,7 +205,8 @@ private func writeDrawCommands(
             backingStore.barrier(
                 to: VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
                 stageMask: VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                accessMask: VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT
+                accessMask: VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT
+                    | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT
             )
         ]
 
@@ -256,7 +264,7 @@ private func writeDrawCommands(
         switch group {
         // TODO:
         case .composite(let nodes):
-            renderer.pipeline.bind(commandBuffer: cmdBuffer)  // its composition pipeline
+            pipeline.bind(commandBuffer: cmdBuffer)  // its composition pipeline
 
             let vertexData: [CompositeNodeVertexData] = nodes.flatMap { $0.toVertexData() }
             Log.debug(.compositor, "vertexData hash = \(vertexData.hashValue)")
@@ -276,18 +284,18 @@ private func writeDrawCommands(
             var address: SIMD2<UInt32> = [800, 600]
             vkCmdPushConstants(
                 cmdBuffer,
-                renderer.pipeline.pipelineLayout,
+                pipeline.pipelineLayout,
                 VK_SHADER_STAGE_VERTEX_BIT.rawValue | VK_SHADER_STAGE_FRAGMENT_BIT.rawValue,
                 0,
                 UInt32(MemoryLayout<SIMD2<UInt32>>.size),
                 &address
             )
 
-            var descriptorSet: VkDescriptorSet? = renderer.textureRegistry.descriptorSet
+            var descriptorSet: VkDescriptorSet? = textureRegistry.descriptorSet
             vkCmdBindDescriptorSets(
                 cmdBuffer,
                 VK_PIPELINE_BIND_POINT_GRAPHICS,
-                renderer.pipeline.pipelineLayout,
+                pipeline.pipelineLayout,
                 0,
                 1,
                 &descriptorSet,

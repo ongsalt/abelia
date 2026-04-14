@@ -8,7 +8,6 @@ final class SwapChain {
     var swapChain: VkSwapchainKHR
     var extent: VkExtent2D
 
-
     // TODO: stop doing mailbox
     // this is our frame in flight
     var fences: [VkFence]
@@ -20,6 +19,8 @@ final class SwapChain {
     var imageViews: [VkImageView]
     var frameIndex: Int = 0
     var presentSemaphores: [VkSemaphore]
+
+    // var perFrameStorage: [T] = []
 
     init(
         surface: VkSurfaceKHR,
@@ -68,8 +69,7 @@ final class SwapChain {
         // - Iced wgpu backend fails with Vulkan: https://github.com/niri-wm/niri/issues/1910
         // - Zed: https://github.com/niri-wm/niri/issues/2335
         // TODO: recreate swapchain maybe
-
-
+        
         return (images[Int(imageIndex)], imageViews[Int(imageIndex)], imageIndex)
     }
 

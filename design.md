@@ -26,3 +26,19 @@
 - put some vertex data into uniform buffer
 - effect shader
 - pixel snapping
+
+
+# Render loop
+double buffering and vsync is enough
+
+`DirtyFlags: dirty, mutated while rendering`
+
+- EVERYTHING IS ON MAIN THREAD
+- mark dirty
+- there must only be one instance of this
+- while dirty || hasAnimationFrame 
+    - (await) acquire frame
+    - animation frame callback (this might mutate the tree but its fine)
+    - if dirty (after updated)
+        - flush tree state -> record render command
+- back to idle

@@ -1,12 +1,11 @@
 @preconcurrency import CVulkan
 import Foundation
-import Wayland  // for pointers
 import Pointer
+import Wayland  // for pointers
 
+@MainActor
 class Renderer {
     let state: VulkanState
-    let pipeline: CompositePipeline
-    let textureRegistry: RenderTextureRegistry
 
     let inputBuffer: RawGPUBuffer
 
@@ -15,9 +14,7 @@ class Renderer {
 
     init(state: VulkanState, textureRegistry: RenderTextureRegistry) {
         self.state = state
-        self.textureRegistry = textureRegistry
-        pipeline = CompositePipeline(state: state, textureRegistry: textureRegistry)
-
+        // compositor should own this
         self.renderTexture = textureRegistry.newRenderTarget(size: state.swapChain.extent.simd2)
 
         self.inputBuffer = RawGPUBuffer(

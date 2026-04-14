@@ -3,10 +3,34 @@ enum APIDesign {}
 extension APIDesign {
     class Node {  // basically SpriteVisual -> currently our CompositionNode
         // transform/offset/opacity
+        var parent: Node?
+        var children: [Node] = []
+
         var comment: String?
         var brush: Brush?
 
         var shouldRasterize: Bool = false
+        // we need to calculate Bounding Box + shadow + border and shit
+
+        var flags: DirtyFlags = .dirty
+        func markDirty() {
+            // if compositor.localThreadState.isRendering {
+            //     flags.insert(.outdated)
+            // } else {
+            //     flags.insert(.dirty)
+            // }
+        }
+
+        func markClean() {
+            if flags.contains(.outdated) {
+                flags = .dirty
+            } else {
+                flags = []
+            }
+            for c in children {
+                c.markClean()
+            }
+        }
     }
 
     class ShapeNode: Node {  // new node that wont ever cache its content.
@@ -16,11 +40,8 @@ extension APIDesign {
         }
     }
 
-    // // this will rasterize its content to a offscreen texture before composite
-    // // basically flutter RepaintBoundary
-    // class RasterizedLayer: Node {
-
-    // }
+    class ScrollNode: Node {  // only redraw diff
+    }
 
     struct DropShadow {
         var color: Color
@@ -37,12 +58,12 @@ extension APIDesign {
 
     enum Brush {
         case solid(Color)
-        case gradient(Gradient) // -> image/gradient1d/vertex interpolation
+        case gradient(Gradient)  // -> image/gradient1d/vertex interpolation
         case image(any Surface, ninegrid: SIMD4<Float>, crop: SIMD4<Float>)
         // well well well, this still require grouping node into layer
         // and this shouldnt sample layer outside its rasterizationRoot anyways
         // this is the current behavior
-        case effect([ImageFilter]) // -> image
+        case effect([ImageFilter])  // -> image
     }
 
     // 1d texture lookup for simple case
@@ -90,5 +111,19 @@ enum IntermediateNode {
             case .textureLoading: nil
             }
         }
+    }
+}
+
+struct DirtyFlags: OptionSet {
+    let rawValue: Int
+
+    static let dirty = DirtyFlags(rawValue: 1 << 0)
+    // mutated while renndering
+    static let outdated = DirtyFlags(rawValue: 1 << 1)
+}
+
+extension DirtyFlags {
+    var shouldUpdate: Bool {
+        rawValue != 0
     }
 }

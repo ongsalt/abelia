@@ -1,4 +1,5 @@
 // this doesnt actually exist in shader, only
+@MainActor
 class RenderNode: Identifiable {
     weak var compositor: Compositor? {
         didSet {
@@ -59,6 +60,11 @@ class RenderNode: Identifiable {
         didSet {
             markDirty()
         }
+    }
+
+    @MainActor
+    init() {
+
     }
 
     var dirty: Bool = true

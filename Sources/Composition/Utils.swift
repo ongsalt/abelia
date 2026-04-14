@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 
 // To ensure main thread is not blocked
 func launchCounter() -> Task<Void, any Error> {
@@ -37,14 +38,32 @@ func duplicated<T>(_ value: T) -> [2 of T] {
 }
 
 extension Result {
+    var error: Failure? {
+        do {
+            _ = try get()
+            return nil
+        } catch {
+            return error
+        }
+    }
+
+    var value: Success? {
+        do {
+            return try get()
+        } catch {
+            return nil
+        }
+    }
+
     func unwrap() -> Success {
-        expect("Unwrap failed")
+        expect("Fail to unwrap")
     }
 
     func expect(_ message: String) -> Success {
         do {
             return try self.get()
         } catch {
+            print(message)
             fatalError(message)
         }
     }

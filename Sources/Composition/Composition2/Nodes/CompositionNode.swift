@@ -1,3 +1,4 @@
+@MainActor
 class CompositionNode: RenderNode {
     var cornerRadius: Float = 0
     var cornerDegree: Float = 4

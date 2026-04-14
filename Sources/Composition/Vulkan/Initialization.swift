@@ -23,7 +23,6 @@ private let deviceExtensions: CStringArray = [
 ]
 
 // feature needs
-
 private func createInstance() -> VkInstance {
     volkInitialize()
     var instance: VkInstance! = VkInstance(bitPattern: 0)
