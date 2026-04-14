@@ -35,12 +35,13 @@ struct Graphics101 {
 
         setupScene(root: compositor.root)
 
+        let task = compositor.start()
         Task {
             try await Task.sleep(for: .seconds(1))
             animateRect(compositor: compositor)
+            try await Task.sleep(for: .seconds(0.3))
+            await makeCard(compositor: compositor)
         }
-        
-        let task = compositor.start()
 
         RunLoop.main.run()
         drop(token)
@@ -73,50 +74,49 @@ func setupScene(root: CompositionNode) {
 }
 
 // Task {
-//     func drawText(text: String) async -> RenderTexture {
-//         let (ink, logical) = compositor.textRenderer.measure(text: text)
-//         // TODO: transfer this to gpu
-//         let buffer = UnsafeMutableBufferPointer<UInt8>.allocate(
-//             capacity: Int(logical.height * logical.width))
-//         buffer.initialize(repeating: 0)
-//         _ = compositor.textRenderer.render(
-//             text, to: buffer, width: logical.width, height: logical.height)
+@MainActor
+func drawText(text: String, compositor: Compositor) async -> RenderTexture {
+    let (ink, logical) = compositor.textRenderer.measure(text: text)
+    // TODO: transfer this to gpu
+    let buffer = UnsafeMutableBufferPointer<UInt8>.allocate(
+        capacity: Int(logical.height * logical.width))
+    buffer.initialize(repeating: 0)
+    _ = compositor.textRenderer.render(
+        text, to: buffer, width: logical.width, height: logical.height)
 
-//         let texture = await compositor.textureRegistry.createStaticTexture(
-//             from: buffer,
-//             size: [UInt32(logical.width), UInt32(logical.height)],
-//             format: VK_FORMAT_R8_UNORM
-//         )
+    let texture = await compositor.textureRegistry.createStaticTexture(
+        from: buffer,
+        size: [UInt32(logical.width), UInt32(logical.height)],
+        format: VK_FORMAT_R8_UNORM
+    )
 
-//         return texture
-//     }
+    return texture
+}
 
-//     // Complex Profile Card UI
-//     let card = CompositionNode()
-//     card.size = [240, 240]
-//     card.fillColor = .white
-//     card.position = [220, 60]  // Centered-ish in the window
-//     card.cornerRadius = 32
-//     card.shadowBlur = 28
-//     card.shadowOffset = [0, 16]
-//     card.shadowColor = .black.multiply(opacity: 0.15)
-//     // card.scale = [1, 1.1]
-//     compositor.root.addChild(card)
+@MainActor
+func makeCard(compositor: Compositor) async {
+    let card = CompositionNode()
+    card.size = [240, 240]
+    card.fillColor = .white
+    card.position = [220, 60]  // Centered-ish in the window
+    card.cornerRadius = 32
+    card.shadowBlur = 28
+    card.shadowOffset = [0, 16]
+    card.shadowColor = .black.multiply(opacity: 0.15)
+    // card.scale = [1, 1.1]
+    compositor.root.addChild(card)
 
-//     // Name
-//     let nameTex = await drawText(text: "asfjhisdkfuh")
-//     let nameNode = CompositionNode()
-//     nameNode.contents = nameTex
-//     nameNode.size = SIMD2(nameTex.size)
-//     nameNode.position = [(240 - Float(nameTex.size.x)) / 2, 100]  // Centered text
-//     nameNode.tintColor = .black
-//     // nameNode.fillColor = .black.multiply(opacity: 0.5)
+    // Name
+    let nameTex = await drawText(text: "asfjhisdkfuh", compositor: compositor)
+    let nameNode = CompositionNode()
+    nameNode.contents = nameTex
+    nameNode.size = SIMD2(nameTex.size)
+    nameNode.position = [(240 - Float(nameTex.size.x)) / 2, 100]  // Centered text
+    nameNode.tintColor = .black
+    // nameNode.fillColor = .black.multiply(opacity: 0.5)
 
-//     card.addChild(nameNode)
-//     setupScene(root: compositor.root)
-
-//     compositor.root.print()
-// }
+    card.addChild(nameNode)
+}
 
 @MainActor
 func animateRect(compositor: Compositor) {

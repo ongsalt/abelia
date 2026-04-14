@@ -390,7 +390,7 @@ class VulkanState: @unchecked Sendable {
 extension VulkanState {
     /// Warning: this do blocks
     // TODO: async
-    func runCommands<T>(_ block: (VkCommandBuffer) -> T) async -> T {
+    nonisolated(nonsending) func runCommands<T>(_ block: (VkCommandBuffer) -> T) async -> T {
         var commandBuffers = Array(
             repeating: VkCommandBuffer(bitPattern: 0), count: 1)
         let cbAllocCI = Box(VkCommandBufferAllocateInfo()) {

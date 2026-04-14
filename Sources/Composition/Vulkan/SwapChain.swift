@@ -8,7 +8,6 @@ final class SwapChain {
     var swapChain: VkSwapchainKHR
     var extent: VkExtent2D
 
-    // TODO: stop doing mailbox
     // this is our frame in flight
     var fences: [VkFence]
     let framesInFlightCount: Int = 2

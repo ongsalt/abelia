@@ -2,6 +2,7 @@
 import Foundation
 import Pointer
 
+@MainActor
 class RenderTextureRegistry {
     let vulkan: VulkanState
     let descriptorPool: VkDescriptorPool
