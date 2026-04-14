@@ -2,14 +2,14 @@
 import Pointer
 
 // TODO: resize??? -> just realloc?
-class RenderTexture {
+public class RenderTexture {
     unowned let registry: RenderTextureRegistry
     let image: VkImage
     let view: VkImageView
     let allocation: VmaAllocation
     var sampler: VkSampler
     var index: UInt32
-    var size: SIMD2<UInt32>
+    package(set) public var size: SIMD2<UInt32>
     let actualSize: SIMD2<UInt32>
 
     package var hasUndefinedLayout: Bool {
@@ -177,7 +177,7 @@ class RenderTexture {
 }
 
 extension RenderTexture: Equatable {
-    static func == (lhs: RenderTexture, rhs: RenderTexture) -> Bool {
+    public static func == (lhs: RenderTexture, rhs: RenderTexture) -> Bool {
         lhs.image == rhs.image
     }
 }

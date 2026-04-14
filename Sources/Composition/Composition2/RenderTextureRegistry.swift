@@ -3,7 +3,7 @@ import Foundation
 import Pointer
 
 @MainActor
-class RenderTextureRegistry {
+public class RenderTextureRegistry {
     let vulkan: VulkanState
     let descriptorPool: VkDescriptorPool
     let descriptorSetLayout: VkDescriptorSetLayout
@@ -44,7 +44,7 @@ class RenderTextureRegistry {
     }
 
     // pango shit
-    func createStaticTexture(
+    public func createStaticTexture(
         from buffer: UnsafeMutableBufferPointer<UInt8>,
         size: SIMD2<UInt32>,
         format: VkFormat,

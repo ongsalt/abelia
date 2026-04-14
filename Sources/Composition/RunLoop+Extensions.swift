@@ -2,7 +2,7 @@ import CoreFoundation
 import Foundation
 import Wayland
 
-class RunLoopObservationToken {
+public class RunLoopObservationToken {
     let observer: RunLoopObserver
 
     init(_ observer: RunLoopObserver) {
@@ -16,7 +16,7 @@ class RunLoopObservationToken {
     }
 }
 
-extension RunLoop {
+public extension RunLoop {
     var currentCFRunLoop: CFRunLoop {
         let _cfRunLoopStorage = Mirror(reflecting: self).children.first {
             $0.label == "_cfRunLoopStorage"

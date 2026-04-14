@@ -63,7 +63,7 @@ public class RenderNode: Identifiable {
     }
 
     @MainActor
-    init() {
+    public init() {
 
     }
 

@@ -108,7 +108,7 @@ public class Display {
             if ret != 0 {
                 self.cancelRead()
                 print("bruh ret:\(ret) errno:\(errno)")
-                self.dispatchPending()
+                // self.dispatchPending()
                 return
             }
             // source.suspend()

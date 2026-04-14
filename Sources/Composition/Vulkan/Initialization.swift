@@ -278,7 +278,7 @@ private func createVMA(
     return allocator!
 }
 
-class VulkanState: @unchecked Sendable {
+public class VulkanState: @unchecked Sendable {
     let instance: VkInstance
     let surface: VkSurfaceKHR
     let physicalDevice: VkPhysicalDevice
@@ -299,7 +299,7 @@ class VulkanState: @unchecked Sendable {
 
     let allocator: VmaAllocator
 
-    init(waylandDisplay: OpaquePointer, waylandSurface: OpaquePointer) {
+    public init(waylandDisplay: OpaquePointer, waylandSurface: OpaquePointer) {
         instance = createInstance()
 
         surface = createWaylandSurface(

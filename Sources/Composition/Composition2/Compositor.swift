@@ -9,12 +9,12 @@ public class Compositor: @unchecked Sendable {
     let inputBuffer: InputBuffer  // this should be per frame in flight
 
     let renderer: Renderer
-    let textureRegistry: RenderTextureRegistry
-    let textRenderer = TextRenderer()
+    public let textureRegistry: RenderTextureRegistry
+    public let textRenderer = TextRenderer()
     var size: SIMD2<UInt32>
 
     var animationFrameControllers: [ObjectIdentifier: AnimationFrameController] = [:]
-    let root: CompositionNode
+    public let root: CompositionNode
     private let dirtyNotifier = DirtyNotifier()
     private(set) var isRecording = false
 
@@ -23,7 +23,7 @@ public class Compositor: @unchecked Sendable {
 
     // TODO: frame sync, proper sending, most of the task is synchronous except waiting for frame
 
-    init(state: VulkanState) {
+    public init(state: VulkanState) {
         self.state = state
         self.size = state.swapChain.extent.simd2
 
@@ -41,7 +41,7 @@ public class Compositor: @unchecked Sendable {
         self.root.compositor = self
     }
 
-    func start() -> Task<Void, Never> {
+    public func start() -> Task<Void, Never> {
         Task { @MainActor in
             let continuousClock = ContinuousClock()
             for await _ in dirtyNotifier.recv {
@@ -270,7 +270,7 @@ private func writeDrawCommands(
             pipeline.bind(commandBuffer: cmdBuffer)  // its composition pipeline
 
             let vertexData: [CompositeNodeVertexData] = nodes.flatMap { $0.toVertexData() }
-            Log.debug(.compositor, "vertexData hash = \(vertexData.hashValue)")
+            // Log.debug(.compositor, "vertexData hash = \(vertexData.hashValue)")
 
             let quadCount = vertexData.count / 4
             let indices = (0..<quadCount).flatMap { i -> [UInt32] in

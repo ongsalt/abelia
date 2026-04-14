@@ -12,7 +12,7 @@ public class AnimationFrameController: Identifiable {
         self.callback(self)
     }
 
-    func stop() {
+    public func stop() {
         compositor.animationFrameControllers[id] = nil
     }
 }

@@ -1,28 +1,28 @@
 @MainActor
-class CompositionNode: RenderNode {
-    var cornerRadius: Float = 0
-    var cornerDegree: Float = 4
+public class CompositionNode: RenderNode {
+    public var cornerRadius: Float = 0
+    public var cornerDegree: Float = 4
 
-    var shadowColor: Color = .transparent
-    var shadowBlur: Float = 0
-    var shadowOffset: SIMD2<Float> = .zero
-    var shadowSpread: Float = 0
+    public var shadowColor: Color = .transparent
+    public var shadowBlur: Float = 0
+    public var shadowOffset: SIMD2<Float> = .zero
+    public var shadowSpread: Float = 0
 
-    var borderColor: Color = .transparent
-    var borderWidth: Float = 0
+    public var borderColor: Color = .transparent
+    public var borderWidth: Float = 0
 
-    var fillColor: Color = .transparent
-    var tintColor: Color = .white  // For text tinting
-    // var scalingMode:
+    public var fillColor: Color = .transparent
+    public var tintColor: Color = .white  // For text tinting
+    // public var scalingMode:
 
-    var contents: LayerContents?
-    var ninegrid: SIMD4<Float> = .zero
+    public var contents: LayerContents?
+    public var ninegrid: SIMD4<Float> = .zero
 
     // func invalidateContents() {}
 
     var backingStore: RenderTexture?
     var backingStore2: RenderTexture?
-    // var attachmentSizeHint: SIMD2<Float>?
+    // public var attachmentSizeHint: SIMD2<Float>?
 
     // TODO: affine 
     var textureSize: SIMD2<Float> {

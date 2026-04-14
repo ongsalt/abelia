@@ -186,8 +186,9 @@ final class RawGPUBuffer {
     }
 
     func write<BufferData>(_ data: [BufferData], offset: Int = 0) -> Int {
-        if offset + data.count * MemoryLayout<BufferData>.stride > capacity {
-            fatalError("data is larger than allocated buffer")
+        let size = offset + data.count * MemoryLayout<BufferData>.stride
+        if size > capacity {
+            fatalError("data is larger than allocated buffer \(size) > \(capacity)")
         }
 
         (mapped + offset).initializeMemory(as: BufferData.self, from: data, count: data.count)

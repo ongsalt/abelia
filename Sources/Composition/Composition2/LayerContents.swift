@@ -1,13 +1,13 @@
 @preconcurrency import CVulkan
 
-protocol LayerContents {
+public protocol LayerContents {
     // we want to put an image in here somehow
     // func
     var renderTexture: RenderTexture { get }
 }
 
 extension RenderTexture: LayerContents {
-    var renderTexture: RenderTexture { self }
+    public var renderTexture: RenderTexture { self }
 }
 
 func putLayerContent() {
