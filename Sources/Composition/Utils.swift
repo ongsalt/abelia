@@ -68,3 +68,14 @@ extension Result {
         }
     }
 }
+
+
+
+func measure<T>(_ label: String, block: () -> T) -> T {
+    var value: T!
+    let duration = ContinuousClock().measure {
+        value = block()
+    }
+    Log.debug(.general, "Finished \(label) in \(duration / .milliseconds(1))ms")
+    return value!
+}
