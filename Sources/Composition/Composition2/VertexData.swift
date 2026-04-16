@@ -2,7 +2,7 @@
 import Foundation
 import Pointer
 
-struct CompositeNodeVertexData: Hashable {
+struct CompositeNodeVertexData {
 	/// X: Opacity (0.0 to 1.0)
 	/// Y: Screen Width
 	/// Z: Screen Height
@@ -142,6 +142,8 @@ struct CompositeNodeVertexData: Hashable {
 			location: 0,
 			binding: 0,
 			format: VK_FORMAT_R32G32B32A32_SFLOAT,
+			// Note that the current offset(of:) member continues to require T to be copyable, as key paths do not (currently) support noncopyable targets.
+			// https://github.com/swiftlang/swift-evolution/blob/main/proposals/0437-noncopyable-stdlib-primitives.md
 			offset: UInt32(MemoryLayout<Self>.offset(of: \.opacityScreenSizeAndMode)!)
 		),
 		.init(
@@ -223,4 +225,8 @@ struct CompositeNodeVertexData: Hashable {
 			offset: UInt32(MemoryLayout<Self>.offset(of: \.nineGrid)!)
 		),
 	]
+}
+
+struct CompositeNodeData {
+
 }

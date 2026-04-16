@@ -157,12 +157,18 @@ extension AffineMatrix {
     }
 
     func scaled(x: Float, y: Float, z: Float) -> AffineMatrix {
+        if x == 0 && y == 0 && z == 0 {
+            return self
+        }
         var result = self
         result.scale(x: x, y: y, z: z)
         return result
     }
 
     func rotated(angleRadians: Float, axis: SIMD3<Float>) -> AffineMatrix {
+        if angleRadians == 0 {
+            return self
+        }
         var result = self
         result.rotate(angleRadians: angleRadians, axis: axis)
         return result

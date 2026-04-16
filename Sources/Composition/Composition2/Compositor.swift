@@ -6,7 +6,7 @@ import Pointer  // for pointers
 public class Compositor: @unchecked Sendable {
     let state: VulkanState
     let pipeline: CompositePipeline
-    let inputBuffer: InputBuffer  // this should be per frame in flight
+    private(set) var inputBuffer: InputBuffer  // this should be per frame in flight
 
     let renderer: Renderer
     public let textureRegistry: RenderTextureRegistry
@@ -35,10 +35,19 @@ public class Compositor: @unchecked Sendable {
         self.textureRegistry = RenderTextureRegistry(vulkan: state)
         self.renderer = Renderer(state: state, textureRegistry: textureRegistry)
 
-        self.inputBuffer = InputBuffer(state: state)
+        self.inputBuffer = InputBuffer(state: state, size: 12 * 1024 * 1024)
         self.pipeline = CompositePipeline(state: state, textureRegistry: textureRegistry)
 
         self.root.compositor = self
+        // self.root.compositorPrivate = CompositorPrivateData(
+        //     rasterizationRoot: self.root,
+        //     totalAffine: .identity,
+        //     transformedPosition: .zero,
+        //     absolutePosition: .zero,
+        //     rootRelativePosition: .zero,
+        //     absoluteRect: Rect(topLeft: .zero, size: self.root.size)
+        // )
+
     }
 
     public func start() -> Task<Void, Never> {
@@ -49,7 +58,9 @@ public class Compositor: @unchecked Sendable {
                 Log.info(.compositor, "Dirty")
                 var frame = 0
                 let duration = await continuousClock.measure {
-                    while (self.dirtyNotifier.dirty.shouldUpdate || !animationFrameControllers.isEmpty) && !Task.isCancelled {
+                    while (self.dirtyNotifier.dirty.shouldUpdate
+                        || !animationFrameControllers.isEmpty) && !Task.isCancelled
+                    {
                         // wait until dirty
                         await self.recomposite()
                         frame += 1
@@ -69,13 +80,24 @@ public class Compositor: @unchecked Sendable {
         // present it somehow
 
         await renderer.perform { commandBuffer, swapChainImageView in
+
             inputBuffer.reset()
             for controller in animationFrameControllers.values {
-                controller.run() // this might be mutated
+                controller.run()  // this might be mutated
             }
             // just redraw everything ... rasterizationRoot
-            let batches = Batch.compute(root: root)
-            self.dirtyNotifier.markClean()
+
+            measure("updateCompositorPrivateData") {
+                // self.root.updateCompositorPrivateData()
+            }
+
+            let batches: [Batch] = measure("Computing batches") {
+                return Batch.compute(root: root)
+            }
+
+            measure("markClean") {
+                self.dirtyNotifier.markClean()
+            }
 
             // allocate backing store
             for batch in batches {
@@ -104,26 +126,31 @@ public class Compositor: @unchecked Sendable {
                 }
             }
 
-            Log.info(.renderLoop, "acquired frame")
+            // Log.info(.renderLoop, "acquired frame")
             // is this counted as multithread recording
 
-            // need to group this to phase
-            for batch in batches {
-                let iv: VkImageView? =
-                    if batch.root.id == self.root.id {
-                        swapChainImageView
-                    } else {
-                        nil
-                    }
-                writeDrawCommands(
-                    to: commandBuffer,
-                    batch: batch,
-                    inputBuffer: inputBuffer,
-                    pipeline: pipeline,
-                    swapChainImageView: iv,
-                    textureRegistry: textureRegistry
-                )
+            let duration2 = ContinuousClock().measure {
+                // need to group this to phase
+                for batch in batches {
+                    let iv: VkImageView? =
+                        if batch.root.id == self.root.id {
+                            swapChainImageView
+                        } else {
+                            nil
+                        }
+                    writeDrawCommands(
+                        to: commandBuffer,
+                        batch: batch,
+                        inputBuffer: &inputBuffer,
+                        pipeline: pipeline,
+                        swapChainImageView: iv,
+                        textureRegistry: textureRegistry
+                    )
+                }
             }
+
+            Log.info(.compositor, "writeDrawCommands in \(duration2 / .milliseconds(1))ms")
+
         }
     }
 
@@ -148,6 +175,14 @@ private class DirtyNotifier: RenderNode {
     override init() {
         super.init()
         self.dirty = []
+        // self.compositorPrivate = CompositorPrivateData(
+        //     rasterizationRoot: self,
+        //     totalAffine: .identity,
+        //     transformedPosition: .zero,
+        //     absolutePosition: .zero,
+        //     rootRelativePosition: .zero,
+        //     absoluteRect: .zero
+        // )
     }
 }
 
@@ -155,7 +190,7 @@ private class DirtyNotifier: RenderNode {
 private func writeDrawCommands(
     to cmdBuffer: VkCommandBuffer,
     batch: Batch,
-    inputBuffer: InputBuffer,
+    inputBuffer: inout InputBuffer,
     pipeline: CompositePipeline,
     swapChainImageView: VkImageView? = nil,
     textureRegistry: RenderTextureRegistry
@@ -222,7 +257,7 @@ private func writeDrawCommands(
                 ),
             )
         }
-
+        5
         let imageBarrier = Pin(_barriers)
         let dependencyInfo = Box(VkDependencyInfo()) {
             $0.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO
@@ -269,17 +304,27 @@ private func writeDrawCommands(
         case .composite(let nodes):
             pipeline.bind(commandBuffer: cmdBuffer)  // its composition pipeline
 
-            let vertexData: [CompositeNodeVertexData] = nodes.flatMap { $0.toVertexData() }
-            // Log.debug(.compositor, "vertexData hash = \(vertexData.hashValue)")
-
-            let quadCount = vertexData.count / 4
-            let indices = (0..<quadCount).flatMap { i -> [UInt32] in
-                let o = UInt32(i) * 4
-                return [o, o + 1, o + 2, o, o + 3, o + 2]
+            var pos = UInt64(inputBuffer.offset)
+            measure("vertex data generation") {
+                for n in nodes {
+                    // n.writeVertexData(ptr: buffer.baseAddress!, offset: &offset)
+                    n.writeVertexData(to: &inputBuffer)
+                }
             }
 
-            var pos = inputBuffer.write(vertexData)
-            let pos2 = inputBuffer.write(indices)
+            let pos2 = UInt64(inputBuffer.offset)
+            // Log.debug(.compositor, "vertexData hash = \(vertexData.hashValue)")
+
+            // we need to optimize this too
+            let indices = measure("indices generation") {
+                let quadCount =
+                    ((pos2 - pos) / UInt64(MemoryLayout<CompositeNodeVertexData>.size)) / 4
+                return (0..<quadCount).flatMap { i -> [UInt32] in
+                    let o = UInt32(i) * 4
+                    return [o, o + 1, o + 2, o, o + 3, o + 2]
+                }
+            }
+            inputBuffer.write(indices)
 
             vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &inputBuffer.raw.buffer, &pos)
             vkCmdBindIndexBuffer(cmdBuffer, inputBuffer.raw.buffer, pos2, VK_INDEX_TYPE_UINT32)

@@ -62,8 +62,12 @@ class Renderer {
         let swapChain = state.swapChain
         let frameIndex = swapChain.frameIndex
 
+        // let clock = ContinuousClock()
+        // let start = clock.now
         await waitForImage()
         let (image, imageView, imageIndex) = await acquireNextImage()
+        // let duration = clock.now - start
+        // Log.info(.renderLoop, "acquired image in \(duration / .milliseconds(1))ms")
 
         // Set viewport and scissor
         let commandBuffer = state.commandBuffers[frameIndex]

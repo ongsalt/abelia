@@ -8,8 +8,9 @@ struct Playground {
         let compositor = try setupCompositor()
         Task {
             for i in 0..<200 {
-                setupScene(root: compositor.root, offset: Float(5 * i))
-                await Task.yield()
+                setupScene(root: compositor.root, offset: Float(2 * i))
+                // await Task.yield()
+                try await Task.sleep(for: .milliseconds(1))
             }
         }
         RunLoop.main.run()

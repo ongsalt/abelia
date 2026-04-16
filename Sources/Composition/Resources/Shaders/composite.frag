@@ -32,22 +32,32 @@ layout(location = 14) in vec2 inRelativeOffset;
 
 layout(location = 0) out vec4 outFragColor;
 
-float sdRoundedRectSuperellipse(vec2 p, vec2 halfBox, vec4 radius, float degree) {
-    // radius order: tl, tr, br, bl
-    float selectedRadius;
-    if (p.y > 0.0) {
-        selectedRadius = (p.x > 0.0) ? radius.z : radius.w;
-    } else {
-        selectedRadius = (p.x > 0.0) ? radius.y : radius.x;
-    }
 
-    vec2 q = abs(p) - halfBox + selectedRadius;
-    float inD = min(max(q.x, q.y), 0.0);
-    vec2 mq = max(q, 0.0);
-    float n = max(degree, 1.0);
-    float outD = pow(pow(mq.x, n) + pow(mq.y, n), 1.0 / n) - selectedRadius;
-    return inD + outD;
+// actually sdRoundedBox
+float sdRoundedRectSuperellipse(vec2 p, vec2 halfBox, vec4 radius, float degree) {
+    radius.xy = (p.x > 0.0) ? radius.xy : radius.zw;
+    radius.x  = (p.y > 0.0) ? radius.x  : radius.y;
+    
+    vec2 q = abs(p) - halfBox + radius.x;
+    return min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - radius.x;
 }
+
+// float sdRoundedRectSuperellipse(vec2 p, vec2 halfBox, vec4 radius, float degree) {
+//     // radius order: tl, tr, br, bl
+//     float selectedRadius;
+//     if (p.y > 0.0) {
+//         selectedRadius = (p.x > 0.0) ? radius.z : radius.w;
+//     } else {
+//         selectedRadius = (p.x > 0.0) ? radius.y : radius.x;
+//     }
+
+//     vec2 q = abs(p) - halfBox + selectedRadius;
+//     float inD = min(max(q.x, q.y), 0.0);
+//     vec2 mq = max(q, 0.0);
+//     float n = max(degree, 1.0);
+//     float outD = pow(pow(mq.x, n) + pow(mq.y, n), 1.0 / n) - selectedRadius;
+//     return inD + outD;
+// }
 
 // Abramowitz-Stegun erf approximation (max error ~1.5e-7)
 float erfApprox(float x) {
@@ -127,11 +137,11 @@ void main() {
 
             float shadowCoverage;
             if (shadowBlur > 0.0) {
-                float t = ds / max(shadowBlur, 1e-4);
+                // float t = ds / max(shadowBlur, 1e-4);
                 // erfApprox(0) = 0 -> 0.5
                 // erfApprox(-inf) = -1 -> 1.0
                 // erfApprox(inf) = 1 -> 0.0
-                shadowCoverage = 0.5 - 0.5 * erfApprox(t);
+                shadowCoverage = 0.5 - 0.5 * smoothstep(0, shadowBlur, ds);
             } else {
                 shadowCoverage = ds <= 0.0 ? 1.0 : 0.0;
             }
