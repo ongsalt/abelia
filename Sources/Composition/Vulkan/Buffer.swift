@@ -185,6 +185,7 @@ final class RawGPUBuffer {
         self.vmaAllocator = allocator
     }
 
+    @inline(always)
     func write<BufferData>(_ data: [BufferData], offset: Int = 0) -> Int {
         let size = offset + data.count * MemoryLayout<BufferData>.stride
         if size > capacity {
@@ -196,12 +197,23 @@ final class RawGPUBuffer {
         return data.count * MemoryLayout<BufferData>.stride
     }
 
+    @inline(always)
     func write<BufferData>(_ data: UnsafeBufferPointer<BufferData>, offset: Int = 0) -> Int {
         if offset + data.count * MemoryLayout<BufferData>.stride > capacity {
             fatalError("data is larger than allocated buffer")
         }
-        (mapped + offset).initializeMemory(as: BufferData.self, from: data.baseAddress!, count: data.count)
+        (mapped + offset).initializeMemory(
+            as: BufferData.self, from: data.baseAddress!, count: data.count)
         return data.count * MemoryLayout<BufferData>.stride
+    }
+
+    @inline(always)
+    func write<BufferData: ~Copyable>(struct data: consuming BufferData, offset: Int) -> Int {
+        if offset + MemoryLayout<BufferData>.stride > capacity {
+            fatalError("data is larger than allocated buffer")
+        }
+        (mapped + offset).initializeMemory(as: BufferData.self, to: consume data)
+        return MemoryLayout<BufferData>.stride
     }
 
     deinit {

@@ -1,4 +1,4 @@
-class InputBuffer {
+final class InputBuffer {
     let raw: RawGPUBuffer
     var offset: Int = 0
 
@@ -6,21 +6,23 @@ class InputBuffer {
         raw = RawGPUBuffer(allocator: state.allocator, device: state.device, size: size)
     }
 
+    @inline(always)
     func write<BufferData>(_ data: [BufferData]) -> UInt64 {
         let current = offset
         offset += raw.write(data, offset: offset)
         return UInt64(current)
     }
 
-    // func write<BufferData>(_ data: UnsafeBufferPointer<BufferData>, offset: Int = 0) -> Int {
-
-    // }
-
     func reset() {
         offset = 0
     }
+}
 
-    // func move(_ amount: Int) {
-    //     offset += amount
-    // }
+extension InputBuffer: Writable {
+    @inline(always)
+    func write<BufferData: ~Copyable>(data: consuming BufferData) -> UInt64 {
+        let current = offset
+        offset += raw.write(struct: consume data, offset: offset)
+        return UInt64(current)
+    }
 }

@@ -2,6 +2,7 @@ import Foundation
 
 struct Log {
     enum Tag {
+        case general
         case vulkan
         case renderLoop
         case ui

@@ -24,8 +24,12 @@
 - sampling rasterizationRoot
 - pixel snapping
 
+
 ## Optimization 
 - put some vertex data into uniform buffer
+    - cuz its tree, compose say we can do gap buffer
+    - compositorPrivate: skipping fields where `value == .identity`
+    - 
 - scrollNode
 - build damage rect
 - schedule phase 0 node simulteneously
