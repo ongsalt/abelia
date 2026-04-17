@@ -32,12 +32,7 @@ class Shader {
 
         self.shaderModule = shaderModule!
     }
-
-    func leak() -> Shader {
-        Unmanaged.passRetained(self)
-        return self
-    }
-
+    
     deinit {
         vkDestroyShaderModule(device, shaderModule, nil)
         buffer.deallocate()

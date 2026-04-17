@@ -24,7 +24,7 @@ struct BufferWriter: ~Copyable, Writable {
     }
 
     // @_optimize(speed)
-    @inline(always)
+    // @inline(always)
     mutating func write<BufferData: ~Copyable>(data: consuming BufferData) -> UInt64 {
         self.raw.baseAddress!.assumingMemoryBound(to: BufferData.self).pointee = consume data
         let size = UInt64(MemoryLayout<BufferData>.size)
