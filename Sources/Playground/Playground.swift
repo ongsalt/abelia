@@ -7,10 +7,13 @@ struct Playground {
     public static func main() throws {
         let compositor = try setupCompositor()
         Task {
-            for i in 0..<200 {
-                setupScene(root: compositor.root, offset: Float(2 * i))
+            while !Task.isCancelled {
+                compositor.root.children = []
+                for i in 0..<200 {
+                    setupScene(root: compositor.root, offset: Float(2 * i))
+                }
                 // await Task.yield()
-                try await Task.sleep(for: .milliseconds(1))
+                try await Task.sleep(for: .seconds(1))
             }
         }
         RunLoop.main.run()
