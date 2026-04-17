@@ -15,7 +15,7 @@ public class Compositor: @unchecked Sendable {
 
     var animationFrameControllers: [ObjectIdentifier: AnimationFrameController] = [:]
     public let root: CompositionNode
-    private let dirtyNotifier = DirtyNotifier()
+    private let dirtyNotifier: DirtyNotifier = DirtyNotifier()
     private(set) var isRecording = false
 
     // use the root layer with caution, some property should not be touch
@@ -39,15 +39,23 @@ public class Compositor: @unchecked Sendable {
         self.pipeline = CompositePipeline(state: state, textureRegistry: textureRegistry)
 
         self.root.compositor = self
-        // self.root.compositorPrivate = CompositorPrivateData(
-        //     rasterizationRoot: self.root,
-        //     totalAffine: .identity,
-        //     transformedPosition: .zero,
-        //     absolutePosition: .zero,
-        //     rootRelativePosition: .zero,
-        //     absoluteRect: Rect(topLeft: .zero, size: self.root.size)
-        // )
+        self.root.compositorPrivate = CompositorPrivateData(
+            rasterizationRoot: self.root,
+            totalAffine: .identity,
+            transformedPosition: .zero,
+            absolutePosition: .zero,
+            rootRelativePosition: .zero,
+            absoluteRect: Rect(topLeft: .zero, size: SIMD2(self.size))
+        )
 
+        self.dirtyNotifier.compositorPrivate = CompositorPrivateData(
+            rasterizationRoot: self.dirtyNotifier,
+            totalAffine: .identity,
+            transformedPosition: .zero,
+            absolutePosition: .zero,
+            rootRelativePosition: .zero,
+            absoluteRect: Rect(topLeft: .zero, size: SIMD2(self.size))
+        )
     }
 
     public func start() -> Task<Void, Never> {
@@ -88,8 +96,9 @@ public class Compositor: @unchecked Sendable {
             // just redraw everything ... rasterizationRoot
 
             measure("updateCompositorPrivateData") {
-                // self.root.updateCompositorPrivateData()
+                self.root.updateCompositorPrivateData()
             }
+            // self.root.print()
 
             let batches: [Batch] = measure("Computing batches") {
                 return Batch.compute(root: root)
@@ -98,6 +107,8 @@ public class Compositor: @unchecked Sendable {
             measure("markClean") {
                 self.dirtyNotifier.markClean()
             }
+
+            // print(batches)
 
             // allocate backing store
             for batch in batches {
@@ -175,14 +186,6 @@ private class DirtyNotifier: RenderNode {
     override init() {
         super.init()
         self.dirty = []
-        // self.compositorPrivate = CompositorPrivateData(
-        //     rasterizationRoot: self,
-        //     totalAffine: .identity,
-        //     transformedPosition: .zero,
-        //     absolutePosition: .zero,
-        //     rootRelativePosition: .zero,
-        //     absoluteRect: .zero
-        // )
     }
 }
 

@@ -89,6 +89,12 @@ public class RenderNode: Identifiable {
         }
 
         self.children.append(contentsOf: children)
+
+        if self.compositorPrivate != nil {
+            for c in children {
+                c.updateCompositorPrivateData()
+            }
+        }
         markDirty()
     }
 
@@ -98,6 +104,74 @@ public class RenderNode: Identifiable {
         child.compositor = nil
         markDirty()
     }
+
+    var compositorPrivate: CompositorPrivateData!
+    func updateCompositorPrivateData() {
+        // self.print()
+        // TODO: skip
+        self.compositorPrivate = CompositorPrivateData(self)
+        for c in self.children {
+            c.updateCompositorPrivateData()
+        }
+    }
+}
+
+@MainActor
+struct CompositorPrivateData {
+    // size including transformation and shadow
+    var rasterizationRoot: RenderNode
+    var totalAffine: AffineMatrix
+    var transformedPosition: SIMD2<Float>
+    var absolutePosition: SIMD2<Float>
+    var rootRelativePosition: SIMD2<Float>
+    var absoluteRect: Rect
+}
+
+extension CompositorPrivateData {
+    @MainActor
+    init(_ node: RenderNode) {
+        // rasterizationRoot
+        if node.isRasterizationRoot {
+            rasterizationRoot = node
+        } else if let p = node.parent {
+            rasterizationRoot = p.compositorPrivate?.rasterizationRoot ?? node
+        } else {
+            rasterizationRoot = node  // this wont happen
+        }
+
+        //totalAffine
+        // or we make the gpu do this?
+        totalAffine = (node.parent?.compositorPrivate.totalAffine ?? AffineMatrix.identity)
+            .scaled(x: node.scale.x, y: node.scale.y, z: 1.0)
+            .rotated(angleRadians: node.rotation, axis: SIMD3(0, 0, 1))
+            .then(node.affine)
+        // totalAffine = .identity
+
+        // TODO: properly calculate transformed bounds
+        transformedPosition = node.position
+
+        absolutePosition =
+            if let p = node.parent {
+                (p.compositorPrivate.absolutePosition) + transformedPosition
+            } else {
+                .zero
+            }
+
+        rootRelativePosition =
+            if let p = node.parent {
+                if p.isRasterizationRoot {
+                    transformedPosition
+                } else {
+                    (p.compositorPrivate.rootRelativePosition) + transformedPosition
+                }
+            } else {
+                .zero
+            }
+
+        // TODO: properly compute transformation
+        absoluteRect = Rect(topLeft: absolutePosition, size: node.size * node.scale)
+    }
+
 }
 
 extension RenderNode {
@@ -106,62 +180,25 @@ extension RenderNode {
         // we can actually keep the rasterrized texture for a while for fade animation
     }
 
-    // size including transformation and shadow
-
-    var rasterizationRoot: RenderNode {
-        guard let parent else {
-            return self  // this wont happen
-        }
-        if self.isRasterizationRoot {
-            return self
-        }
-        return parent.rasterizationRoot
-    }
-
-    var totalAffine: AffineMatrix {
-        (parent?.totalAffine ?? AffineMatrix.identity)
-            .scaled(x: scale.x, y: scale.y, z: 1.0)
-            .rotated(angleRadians: rotation, axis: SIMD3(0, 0, 1))
-            .then(affine)
-    }
-
-    // TODO: properly calculate transformed bounds
-    var transformedPosition: SIMD2<Float> {
-        position
-    }
-
-    var absolutePosition: SIMD2<Float> {
-        if let parent {
-            parent.absolutePosition + transformedPosition
-        } else {
-            .zero
-        }
-    }
-
-    var rootRelativePosition: SIMD2<Float> {
-        if let parent {
-            if parent.isRasterizationRoot {
-                transformedPosition
-            } else {
-                parent.rootRelativePosition + transformedPosition
-            }
-        } else {
-            .zero
-        }
-    }
-
-    var absoluteRect: Rect {
-        Rect(topLeft: absolutePosition, size: size * scale)
-    }
-
     func print(indentation: Int = 0) {
         let i = String(repeating: " ", count: indentation)
         Swift.print(
-            i + "- \(Self.self) \(isRasterizationRoot ? "[root]" : ""): \(self.absoluteRect)")
+            i
+                + "- \(Self.self) \(isRasterizationRoot ? "[root]" : ""): \(self.absoluteRect)"
+        )
         for c in self.children {
             c.print(indentation: indentation + 2)
         }
     }
+
+    // delegates
+    var rasterizationRoot: RenderNode { compositorPrivate.rasterizationRoot }
+    var totalAffine: AffineMatrix { compositorPrivate.totalAffine }
+    var transformedPosition: SIMD2<Float> { compositorPrivate.transformedPosition }
+    var absolutePosition: SIMD2<Float> { compositorPrivate.absolutePosition }
+    var rootRelativePosition: SIMD2<Float> { compositorPrivate.rootRelativePosition }
+    var absoluteRect: Rect { compositorPrivate.absoluteRect }
+
 }
 
 // now its vertex buffer not input, shuold this be HOST_COHERANT?? its gonna update a lot

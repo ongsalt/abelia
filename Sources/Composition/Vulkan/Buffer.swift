@@ -207,7 +207,8 @@ final class RawGPUBuffer {
         return data.count * MemoryLayout<BufferData>.stride
     }
 
-    @inline(always)
+    // @inline(always)
+    // @_optimize(speed)
     func write<BufferData: ~Copyable>(struct data: consuming BufferData, offset: Int) -> Int {
         if offset + MemoryLayout<BufferData>.stride > capacity {
             fatalError("data is larger than allocated buffer")

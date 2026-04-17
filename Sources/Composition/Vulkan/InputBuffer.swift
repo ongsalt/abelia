@@ -6,7 +6,8 @@ final class InputBuffer {
         raw = RawGPUBuffer(allocator: state.allocator, device: state.device, size: size)
     }
 
-    @inline(always)
+    // @inline(always)
+    // @_optimize(speed)
     func write<BufferData>(_ data: [BufferData]) -> UInt64 {
         let current = offset
         offset += raw.write(data, offset: offset)
@@ -19,7 +20,8 @@ final class InputBuffer {
 }
 
 extension InputBuffer: Writable {
-    @inline(always)
+    // @inline(always)
+    // @_optimize(speed)
     func write<BufferData: ~Copyable>(data: consuming BufferData) -> UInt64 {
         let current = offset
         offset += raw.write(struct: consume data, offset: offset)

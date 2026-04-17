@@ -4,7 +4,7 @@ protocol Writable: ~Copyable {
 }
 
 extension Writable where Self: ~Copyable {
-    // @inline(always)
+    @inline(always)
     mutating func write<let count: Int, BufferData>(
         inlined array: consuming InlineArray<count, BufferData>
     )
@@ -23,6 +23,7 @@ struct BufferWriter: ~Copyable, Writable {
         self.offset = position
     }
 
+    // @_optimize(speed)
     @inline(always)
     mutating func write<BufferData: ~Copyable>(data: consuming BufferData) -> UInt64 {
         self.raw.baseAddress!.assumingMemoryBound(to: BufferData.self).pointee = consume data
