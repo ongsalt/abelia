@@ -21,19 +21,21 @@ class Counter: Component {
     }
 }
 
-@Autobind
-class CounterFr: Component {
+@MainActor
+// @Autobind2
+// we need to put @MainActor in generated code too
+// maybe we can explicitly told the engine: which will be updated?
+func CounterFr() -> some View {
     @State
     var count = 0
 
-    var body: some View {
-        Container {
-            Text("count: \(self.count)")
+    return Container {
+        Text("count: \(count)")
 
-            Button(onClick: { self.count += 1 }) {
-                Text("increment")
-            }
+        Button(onClick: { count += 1 }) {
+            Text("increment")
         }
+        // .padding(12)
     }
 }
 

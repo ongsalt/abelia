@@ -3,3 +3,7 @@
 // TODO: think of better name
 public macro Autobind() =
         #externalMacro(module: "DSLMacro", type: "AutobindMacro")
+
+@attached(peer, names: overloaded)
+public macro Autobind2() =
+        #externalMacro(module: "DSLMacro", type: "AutobindMacro")

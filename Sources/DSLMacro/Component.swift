@@ -67,7 +67,7 @@ struct AutobindMacro: MemberMacro {
         return (functions, initializers)
     }
 
-    private static func transformFunction(_ decl: FunctionDeclSyntax) -> Result<
+    static func transformFunction(_ decl: FunctionDeclSyntax) -> Result<
         FunctionDeclSyntax?, ComponentMacroError
     > {
         let res = transformSignature(signature: decl.signature)
@@ -265,6 +265,29 @@ struct AutobindMacro: MemberMacro {
 
         return [
             StmtSyntax(stringLiteral: out.joined(separator: " "))
+        ]
+    }
+}
+
+extension AutobindMacro: PeerMacro {
+    static func expansion(
+        of node: AttributeSyntax,
+        providingPeersOf declaration: some DeclSyntaxProtocol,
+        in context: some MacroExpansionContext
+    ) throws -> [DeclSyntax] {
+        guard let decl = declaration.as(FunctionDeclSyntax.self) else {
+            return [
+                "// this must be atttached to a function, a class or a struct."
+            ]
+        }
+
+        let t = try transformFunction(decl).get()
+        guard let t else {
+            return []
+        }
+
+        return [
+            DeclSyntax(t)
         ]
     }
 }
