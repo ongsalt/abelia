@@ -1,4 +1,5 @@
 // Normal ownership
+// TODO: exclude current effect when tracking subscriber
 public class Signal<T>: Source {
     internal var subscribers: [Int: any Subscriber] = [:]
     private var innerValue: T

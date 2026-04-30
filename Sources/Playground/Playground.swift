@@ -1,21 +1,50 @@
 import Composition
 import Foundation
 import UI
+import Reactivity
+
+@MainActor
+func Counter() -> View {
+    @State
+    var count = 0
+
+    Task {
+        while !Task.isCancelled {
+            try await Task.sleep(for: .seconds(1))
+            count += 1
+        }
+    }
+
+    return Row {
+        Text("idk")
+        Column {
+            Text("count = \(count)")
+        }
+
+        Box {
+            Text("Increment")
+        }
+    }
+}
 
 @main
 struct Playground {
     public static func main() throws {
-        let compositor = try setupCompositor()
-        Task {
-            while !Task.isCancelled {
-                compositor.root.children = []
-                for i in 0..<200 {
-                    setupScene(root: compositor.root, offset: Float(2 * i))
-                }
-                // await Task.yield()
-                try await Task.sleep(for: .seconds(1))
-            }
-        }
+        // let node = Counter()
+
+        // node.renderNode.print()
+
+        // let compositor = try setupCompositor()
+        // Task {
+        //     while !Task.isCancelled {
+        //         compositor.root.children = []
+        //         for i in 0..<200 {
+        //             setupScene(root: compositor.root, offset: Float(2 * i))
+        //         }
+        //         // await Task.yield()
+        //         try await Task.sleep(for: .seconds(1))
+        //     }
+        // }
         RunLoop.main.run()
     }
 }

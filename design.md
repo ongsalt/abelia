@@ -50,3 +50,10 @@ double buffering and vsync is enough
     - if dirty (after updated)
         - flush tree state -> record render command
 - back to idle
+
+# Styling
+- modifier (like compose)
+- builder method
+    - `&mut self` -> quite awkward
+    - wrap but with `func Self.margin() -> Margin<Self>`
+- wrap it like flutter

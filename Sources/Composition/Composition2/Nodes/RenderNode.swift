@@ -1,6 +1,7 @@
 // this doesnt actually exist in shader, only
 @MainActor
 public class RenderNode: Identifiable {
+    public var comment: String?
     public weak var compositor: Compositor? {
         didSet {
             for c in children {
@@ -67,6 +68,10 @@ public class RenderNode: Identifiable {
 
     var dirty: DirtyFlags = .source
     public func markDirty(type kind: DirtyFlags = .source) {
+        if self.dirty.contains(kind) {
+            return
+        }
+
         dirty = kind
         if let parent {
             // if !parent.dirty {
@@ -84,6 +89,9 @@ public class RenderNode: Identifiable {
 
     public func addChild(_ children: RenderNode...) {
         for c in children {
+            if c === self {
+                fatalError("cannot add self as self children")
+            }
             c.parent = self
             c.compositor = compositor
         }
@@ -95,14 +103,15 @@ public class RenderNode: Identifiable {
                 c.updateCompositorPrivateData()
             }
         }
-        markDirty()
+
+        markDirty(type: .source)
     }
 
     public func removeChild(child: RenderNode) {
         self.children.removeAll { $0.id == child.id }
         child.parent = nil
         child.compositor = nil
-        markDirty()
+        markDirty(type: .source)
     }
 
     var compositorPrivate: CompositorPrivateData!
@@ -180,11 +189,11 @@ extension RenderNode {
         // we can actually keep the rasterrized texture for a while for fade animation
     }
 
-    func print(indentation: Int = 0) {
+    public func print(indentation: Int = 0) {
         let i = String(repeating: " ", count: indentation)
         Swift.print(
             i
-                + "- \(Self.self) \(isRasterizationRoot ? "[root]" : ""): \(self.absoluteRect)"
+                + "\(Self.self) \(isRasterizationRoot ? "[root]" : ""): \(self.compositorPrivate?.absoluteRect) (\(comment ?? ""))"
         )
         for c in self.children {
             c.print(indentation: indentation + 2)

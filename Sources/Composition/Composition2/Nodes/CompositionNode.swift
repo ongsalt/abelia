@@ -1,5 +1,7 @@
 @MainActor
 public class CompositionNode: RenderNode {
+    public override init() {}
+    
     public var cornerRadius: Float = 0
     public var cornerDegree: Float = 4
 

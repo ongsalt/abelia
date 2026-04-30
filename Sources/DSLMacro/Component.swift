@@ -86,6 +86,10 @@ struct AutobindMacro: MemberMacro {
 
         // external name must be the same
         let out = FunctionDeclSyntax(
+            attributes: decl.attributes.filter {
+                $0.trimmedDescription != "@Autobind" && $0.trimmedDescription != "@Autobind2"
+            },
+            modifiers: decl.modifiers,
             name: decl.name,
             genericParameterClause: decl.genericParameterClause,
             signature: newSignature,

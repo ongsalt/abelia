@@ -1,34 +1,24 @@
-@MainActor
-public protocol View: ~Copyable {
+// @MainActor
+// public protocol View: ~Copyable {
 
-}
-
-public protocol Component: View {
-    associatedtype Body: View
-
-    @ViewBuilder
-    var body: Body { get }
-}
-
-// extension Component {
-//     public func evaluate() {
-//         self.body
-//     }
 // }
 
-public struct Fragment: View {
-    let views: [any View]
+// public struct Fragment: View {
+//     let views: [any View]
 
-    static var empty: Fragment {
-        Fragment(views: [])
-    }
+//     static var empty: Fragment {
+//         Fragment(views: [])
+//     }
 
-    // public func evaluate() {
-    //     for v in self.views {
-    //         v.evaluate()
-    //     }
-    // }
-}
+//     // public func evaluate() {
+//     //     for v in self.views {
+//     //         v.evaluate()
+//     //     }
+//     // }
+// }
+
+public typealias View = LayoutNode
+public typealias Body = [LayoutNode]
 
 // struct Shit: Component {
 //     let count = Signal(0)
@@ -48,39 +38,12 @@ public struct Fragment: View {
 @resultBuilder
 @MainActor
 public struct ViewBuilder {
-    public static func buildBlock() -> Fragment {
-        Fragment(views: [])
+    public static func buildBlock() -> Body {
+        []
     }
 
     // just in case we need this (if block?)
-    public static func buildBlock(_ components: View...) -> Fragment {
-        for c in components {
-            if let c = c as? any Component {
-                c.body  //  bruhhhh
-            }
-        }
-
-        return Fragment(views: components)
+    public static func buildBlock(_ components: View...) -> Body {
+        return components
     }
 }
-
-// @resultBuilder
-// struct HOFViewBuilder {
-//     typealias Component = View
-
-//     // TODO: generics
-//     public static func buildExpression<T>(_ expression: @autoclosure @escaping () -> T) -> () -> T {
-//         expression
-//     }
-
-//     public static func buildBlock() -> () -> [Component] {
-//         { [] }
-//     }
-
-//     // just in case we need this (if block?)
-//     public static func buildBlock(_ components: (() -> Component)...) -> () -> [Component] {
-//         {
-//             components.map { $0() }
-//         }
-//     }
-// }

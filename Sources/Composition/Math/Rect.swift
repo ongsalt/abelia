@@ -1,14 +1,14 @@
-struct Rect {
-    static let zero = Rect(top: 0, left: 0, width: 0, height: 0)
-    static let one = Rect(top: 1, left: 1, width: 1, height: 1)
-    static let unit = one
+public struct Rect: Sendable {
+    public static let zero = Rect(top: 0, left: 0, width: 0, height: 0)
+    public static let one = Rect(top: 1, left: 1, width: 1, height: 1)
+    public static let unit = one
 
-    var top: Float
-    var left: Float
-    var width: Float
-    var height: Float
+    public var top: Float
+    public var left: Float
+    public var width: Float
+    public var height: Float
 
-    init(
+    public init(
         top: Float, left: Float, width: Float, height: Float
     ) {
         self.top = top
@@ -17,7 +17,7 @@ struct Rect {
         self.height = height
     }
 
-    init(
+    public init(
         topLeft: SIMD2<Float>, size: SIMD2<Float>
     ) {
         self.top = topLeft.y
@@ -26,7 +26,7 @@ struct Rect {
         self.height = size.y
     }
 
-    init(
+    public init(
         center: SIMD2<Float>, size: SIMD2<Float>
     ) {
         self.top = center.y - size.y / 2
@@ -35,7 +35,7 @@ struct Rect {
         self.height = size.y
     }
 
-    var right: Float {
+    public var right: Float {
         get {
             left + width
         }
@@ -44,7 +44,7 @@ struct Rect {
         }
     }
 
-    var bottom: Float {
+    public var bottom: Float {
         get {
             top + height
         }
@@ -53,11 +53,11 @@ struct Rect {
         }
     }
 
-    var center: SIMD2<Float> {
+    public var center: SIMD2<Float> {
         SIMD2(left + width / 2, top + height / 2)
     }
 
-    var topLeft: SIMD2<Float> {
+    public var topLeft: SIMD2<Float> {
         get {
             SIMD2(left, top)
         }
@@ -67,7 +67,7 @@ struct Rect {
         }
     }
 
-    var size: SIMD2<Float> {
+    public var size: SIMD2<Float> {
         get {
             SIMD2(width, height)
         }
@@ -77,27 +77,27 @@ struct Rect {
         }
     }
 
-    var atOrigin: Rect {
+    public var atOrigin: Rect {
         Rect(top: 0, left: 0, width: width, height: height)
     }
 
-    func padded(_ amount: Float) -> Rect {
+    public func padded(_ amount: Float) -> Rect {
         Rect(
             top: top - amount, left: left - amount, width: width + 2 * amount,
             height: height + 2 * amount
         )
     }
 
-    func offset(_ offset: SIMD2<Float>) -> Rect {
+    public func offset(_ offset: SIMD2<Float>) -> Rect {
         Rect(top: top + offset.y, left: left + offset.x, width: width, height: height)
     }
 
-    func contains(_ position: (Float, Float)) -> Bool {
+    public func contains(_ position: (Float, Float)) -> Bool {
         let (x, y) = position
         return x >= left && x <= left + width && y >= top && y <= top + height
     }
 
-    func overlap(with other: borrowing Rect) -> Bool {
+    public func overlap(with other: borrowing Rect) -> Bool {
         let b = other.bottom
         let t = other.top
         let l = other.left
@@ -109,7 +109,7 @@ struct Rect {
 
 
 extension Rect: CustomStringConvertible {
-    var description: String {
+    public var description: String {
         "Rect(\(top), \(left), \(width), \(height))"
     }
 }
