@@ -1,7 +1,7 @@
 import Composition
 import Foundation
-import UI
 import Reactivity
+import UI
 
 @MainActor
 func Counter() -> View {
@@ -24,6 +24,16 @@ func Counter() -> View {
         Box {
             Text("Increment")
         }
+        // .padding(.px(12))
+        .background("red")
+        .padding(12.px)
+    }
+}
+
+typealias Px = Int
+extension Int {
+    var px: Px {
+        Px(self)
     }
 }
 

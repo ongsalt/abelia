@@ -48,6 +48,9 @@ let package = Package(
             ]
         ),
 
+        .testTarget(name: "ReactivityTests", dependencies: [
+            "Reactivity"
+        ]),
         // .plugin(
         //     name: "ShaderCompilation",
         //     capability: .buildTool(),
@@ -61,7 +64,7 @@ let package = Package(
                 "CVulkan",
                 // "FreeType",
                 "CPango",
-                "Pointer"
+                "Pointer",
             ],
             resources: [
                 .copy("Resources/Compiled")
@@ -76,7 +79,7 @@ let package = Package(
             dependencies: [
                 "UI",
                 "Composition",
-                "Reactivity"
+                "Reactivity",
             ],
             // cSettings: [
             //     .define("VK_USE_PLATFORM_WAYLAND_KHR", .when(platforms: [.linux]))
