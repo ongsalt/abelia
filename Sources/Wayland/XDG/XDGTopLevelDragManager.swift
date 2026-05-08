@@ -1,4 +1,4 @@
-import CWayland
+import CWayland2
 
 public class XDGTopLevelDragManager {
 

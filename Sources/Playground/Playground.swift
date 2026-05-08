@@ -85,24 +85,24 @@ func setupScene(root: CompositionNode, offset: Float) {
 }
 
 // Task {
-@MainActor
-func drawText(text: String, compositor: Compositor) async -> RenderTexture {
-    let (ink, logical) = compositor.textRenderer.measure(text: text)
-    // TODO: transfer this to gpu
-    let buffer = UnsafeMutableBufferPointer<UInt8>.allocate(
-        capacity: Int(logical.height * logical.width))
-    buffer.initialize(repeating: 0)
-    _ = compositor.textRenderer.render(
-        text, to: buffer, width: logical.width, height: logical.height)
+// @MainActor
+// func drawText(text: String, compositor: Compositor) async -> RenderTexture {
+//     let (ink, logical) = compositor.textRenderer.measure(text: text)
+//     // TODO: transfer this to gpu
+//     let buffer = UnsafeMutableBufferPointer<UInt8>.allocate(
+//         capacity: Int(logical.height * logical.width))
+//     buffer.initialize(repeating: 0)
+//     _ = compositor.textRenderer.render(
+//         text, to: buffer, width: logical.width, height: logical.height)
 
-    let texture = await compositor.textureRegistry.createStaticTexture(
-        from: buffer,
-        size: [UInt32(logical.width), UInt32(logical.height)],
-        format: .init(9)  // VK_FORMAT_R8_UNORM
-    )
+//     let texture = await compositor.textureRegistry.createStaticTexture(
+//         from: buffer,
+//         size: [UInt32(logical.width), UInt32(logical.height)],
+//         format: .init(9)  // VK_FORMAT_R8_UNORM
+//     )
 
-    return texture
-}
+//     return texture
+// }
 
 @MainActor
 func makeCard(compositor: Compositor) async {
@@ -117,13 +117,13 @@ func makeCard(compositor: Compositor) async {
     // card.scale = [1, 1.1]
     compositor.root.addChild(card)
 
-    // Name
-    let nameTex = await drawText(text: "asfjhisdkfuh", compositor: compositor)
-    let nameNode = CompositionNode()
-    nameNode.contents = nameTex
-    nameNode.size = SIMD2(nameTex.size)
-    nameNode.position = [(240 - Float(nameTex.size.x)) / 2, 100]  // Centered text
-    nameNode.tintColor = .black
+    // // Name
+    // let nameTex = await drawText(text: "asfjhisdkfuh", compositor: compositor)
+    // let nameNode = CompositionNode()
+    // nameNode.contents = nameTex
+    // nameNode.size = SIMD2(nameTex.size)
+    // nameNode.position = [(240 - Float(nameTex.size.x)) / 2, 100]  // Centered text
+    // nameNode.tintColor = .black
     // nameNode.fillColor = .black.multiply(opacity: 0.5)
 
     card.addChild(nameNode)

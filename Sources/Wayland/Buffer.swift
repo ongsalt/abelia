@@ -1,4 +1,4 @@
-import CWayland
+import CWayland2
 import Glibc
 
 // content of a wl_surface

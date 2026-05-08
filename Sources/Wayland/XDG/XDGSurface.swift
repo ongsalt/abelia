@@ -1,4 +1,4 @@
-import CWayland
+import CWayland2
 import Glibc
 
 // we shuold actually do codegen

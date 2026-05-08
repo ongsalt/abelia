@@ -1,4 +1,4 @@
-module CWayland [system] {
+module CWayland2 [system] {
   header "shim.h"
   link "wayland-client"
   link "wayland-server"
