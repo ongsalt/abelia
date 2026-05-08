@@ -35,3 +35,9 @@ public final class Computed<T> {
         self.init(wrappedValue)
     }
 }
+
+extension Computed: CustomStringConvertible {
+    public var description: String {
+        "\(Computed<T>.self)(\(value))"
+    }
+}

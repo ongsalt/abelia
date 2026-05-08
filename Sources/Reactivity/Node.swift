@@ -3,8 +3,7 @@
 
 public class Node {
     public var label: String?
-    var order: Int = 0
-    private(set) var dirty: Bool = false // we need to do `maybeDirty`
+    private(set) var dirty: Bool = false  // we need to do `maybeDirty`
     var dirtyCallback: (() -> Void)?
     private(set) var dependencies: Set<Node> = []
     private(set) var dependants: Set<Node> = []
@@ -14,7 +13,18 @@ public class Node {
         self.dirtyCallback = dirtyCallback
     }
 
+    // if we mark self 2 time then we fucked up?
     func markDirty() {
+        var marked: Set<ObjectIdentifier> = []
+        markDirty(marked: &marked)
+    }
+
+    func markDirty(marked: inout Set<ObjectIdentifier>) {
+        if marked.contains(self.id) {
+            // print("Cycle detected at \(self) [\(self.id)]")
+            fatalError("Cycle detected at \(self) [\(self.id)]")
+        }
+        marked.insert(self.id)
         dirty = true
         // idk which should run first
         if let dirtyCallback {
@@ -37,6 +47,9 @@ public class Node {
     }
 
     func addDependency(_ dep: Node) {
+        // we should have a toggle for this
+        // check if dep IS depending on current node or not
+
         // TODO: cycle check
         self.dependencies.insert(dep)
         dep.dependants.insert(self)
@@ -58,6 +71,16 @@ public class Node {
             d.dependants.remove(self)
         }
         self.dependencies = []
+    }
+
+    deinit {
+        print("droping \(self)")
+    }
+}
+
+extension Node: CustomStringConvertible {
+    public var description: String {
+        "Node(label: \(label ?? "nil"))"   
     }
 }
 

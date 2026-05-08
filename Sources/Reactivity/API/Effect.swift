@@ -17,5 +17,6 @@ class Effect {
 
     deinit {
         node.dirtyCallback = nil
+        node.clearDependencies()
     }
 }

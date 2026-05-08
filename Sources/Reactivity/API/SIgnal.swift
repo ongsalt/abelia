@@ -8,24 +8,20 @@ public final class Signal<T> {
             return self._value
         }
         set {
-            if Self.isChanged(self._value, newValue) {
-                self._value = newValue
-                node.markDirty()
-            }
+            self._value = newValue
+            node.markDirty()
         }
     }
 
-    var _value: T
+    private var _value: T
 
     public init(_ value: T) {
         self._value = value
     }
 
-    static func isChanged(_ lhs: borrowing T, _ rhs: borrowing T) -> Bool {
-        true
-    }
-
     // property wrapper shi
+    // this fucked up where T: Equatable
+    // i probably need a custom property wrapper macro
     public var wrappedValue: T {
         get {
             value
@@ -41,7 +37,22 @@ public final class Signal<T> {
 }
 
 extension Signal where T: Equatable {
-    static func isChanged(_ lhs: borrowing T, _ rhs: borrowing T) -> Bool {
-        lhs != rhs
+    public var value: T {
+        get {
+            TrackingContext.current?.reportRead(node)
+            return self._value
+        }
+        set {
+            if self._value != newValue {
+                self._value = newValue
+                node.markDirty()
+            }
+        }
+    }
+}
+
+extension Signal: CustomStringConvertible {
+    public var description: String {
+        "\(Signal<T>.self)(\(value))"
     }
 }
