@@ -1,5 +1,5 @@
 {
-  "originHash" : "e7cde7d09cfbed3246b23e305a7d21f00edb77c63d6f2392ecc7e8af95cd05a1",
+  "originHash" : "00c63abf1a2ba4beeaa71d18c485c9a61f9821ff8534aa6f634cf794d6e8a169",
   "pins" : [
     {
       "identity" : "swift-numerics",
@@ -17,6 +17,15 @@
       "state" : {
         "revision" : "4799286537280063c85a32f09884cfbca301b1a1",
         "version" : "602.0.0"
+      }
+    },
+    {
+      "identity" : "swinit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/ongsalt/swinit",
+      "state" : {
+        "branch" : "main",
+        "revision" : "89b8f08f0f271c45e6548977d004d3f6229d8733"
       }
     }
   ],

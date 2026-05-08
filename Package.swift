@@ -2,7 +2,16 @@
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import CompilerPluginSupport
+
 import PackageDescription
+import Foundation
+
+var vulkanIncludePath: [CSetting] = []
+if let vulkanSDK = ProcessInfo.processInfo.environment["VULKAN_SDK"] {
+    // vulkanSearchPath.append
+    // let includePath = "\(vulkanSDK)/Include"
+    vulkanIncludePath.append(.unsafeFlags(["-I\(vulkanSDK)/Include"]))
+}
 
 let package = Package(
     name: "graphics-101",
@@ -12,25 +21,28 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/apple/swift-numerics", from: "1.0.0"),
         .package(url: "https://github.com/swiftlang/swift-syntax", from: "602.0.0"),
+        .package(url: "https://github.com/ongsalt/swinit", branch: "main"),
     ],
     targets: [
-        .target(name: "CWayland"),
+        .target(name: "CWayland2"),
         .target(
             name: "Wayland",
-            dependencies: ["CWayland", "Pointer"],
+            dependencies: [
+                .target(name: "CWayland2"),
+                "Pointer",
+            ],
             swiftSettings: [
                 .interoperabilityMode(.C)
             ]
         ),
 
+        // bruh, how do i do this on windows
         .systemLibrary(name: "CPango", pkgConfig: "pangoft2"),
-
-        // Everything vulkan is in here
         .target(
             name: "CVulkan",
             cSettings: [
-                .define("VK_USE_PLATFORM_WAYLAND_KHR", .when(platforms: [.linux]))  // i should fucking put these 2 together
-            ],
+                .define("VK_USE_PLATFORM_WAYLAND_KHR", .when(platforms: [.linux])),
+            ] + vulkanIncludePath,
         ),
 
         // .target(name: "Signal"),
@@ -48,9 +60,11 @@ let package = Package(
             ]
         ),
 
-        .testTarget(name: "ReactivityTests", dependencies: [
-            "Reactivity"
-        ]),
+        .testTarget(
+            name: "ReactivityTests",
+            dependencies: [
+                "Reactivity"
+            ]),
         // .plugin(
         //     name: "ShaderCompilation",
         //     capability: .buildTool(),
@@ -60,10 +74,9 @@ let package = Package(
             name: "Composition",
             dependencies: [
                 .product(name: "Numerics", package: "swift-numerics"),
-                .target(name: "Wayland", condition: .when(platforms: [.linux])),
                 "CVulkan",
                 // "FreeType",
-                "CPango",
+                .target(name: "CPango", condition: .when(platforms: [.linux])),
                 "Pointer",
             ],
             resources: [
@@ -80,6 +93,7 @@ let package = Package(
                 "UI",
                 "Composition",
                 "Reactivity",
+                .product(name: "Swinit", package: "swinit"),
             ],
             // cSettings: [
             //     .define("VK_USE_PLATFORM_WAYLAND_KHR", .when(platforms: [.linux]))
