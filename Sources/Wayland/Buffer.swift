@@ -1,5 +1,5 @@
 import CWayland2
-import Glibc
+import Foundation
 
 // content of a wl_surface
 public class Buffer {

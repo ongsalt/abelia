@@ -1,6 +1,5 @@
 import CWayland2
 import Foundation
-import Glibc
 
 public class SharedMemoryBuffer {
     let shm: OpaquePointer

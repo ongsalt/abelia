@@ -1,5 +1,6 @@
-import Glibc
+import Foundation
 
+// TODO: make this non copyable struct
 public final class CString {
     public var swiftString: String {
         didSet {
@@ -18,21 +19,13 @@ public final class CString {
         update()
     }
 
-    public func leak() {
-        Unmanaged.passRetained(self)
-    }
-
     private func update() {
         var cStr = swiftString.cString(using: .utf8)!
 
         buffer = realloc(buffer, cStr.count * MemoryLayout<CChar>.size)
             .assumingMemoryBound(to: CChar.self)
-        strcpy(buffer, &cStr)
+        strcpy_s(buffer, cStr.count, &cStr)
 
-    }
-
-    func unleak() {
-        Unmanaged.passUnretained(self).takeRetainedValue()
     }
 
     deinit {

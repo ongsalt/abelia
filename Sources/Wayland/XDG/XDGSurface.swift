@@ -1,5 +1,4 @@
 import CWayland2
-import Glibc
 
 // we shuold actually do codegen
 public class XDGSurface {
