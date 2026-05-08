@@ -30,7 +30,7 @@ class GPUImage {
             $0.format = VK_FORMAT_R8_UNORM
             $0.initialLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
             $0.usage =
-                VK_IMAGE_USAGE_TRANSFER_DST_BIT.rawValue | VK_IMAGE_USAGE_SAMPLED_BIT.rawValue
+                VK_IMAGE_USAGE_TRANSFER_DST_BIT.u32 | VK_IMAGE_USAGE_SAMPLED_BIT.u32
             $0.format = VK_FORMAT_R8G8B8A8_SRGB
             // $0.tiling = VK_IMAGE_TILING_LINEAR
 
@@ -39,9 +39,9 @@ class GPUImage {
         }
 
         var allocationCi = VmaAllocationCreateInfo(
-            flags: VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT.rawValue
-                | VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT.rawValue
-                | VMA_ALLOCATION_CREATE_MAPPED_BIT.rawValue,
+            flags: VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT.u32
+                | VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT.u32
+                | VMA_ALLOCATION_CREATE_MAPPED_BIT.u32,
             usage: VMA_MEMORY_USAGE_AUTO,
             requiredFlags: 0,
             preferredFlags: 0,

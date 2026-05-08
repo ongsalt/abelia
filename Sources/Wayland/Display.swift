@@ -1,5 +1,6 @@
 import CWayland2
 import Foundation
+import Glibc
 
 public enum InitWaylandError: Error {
     case noXdgRuntimeDirectory

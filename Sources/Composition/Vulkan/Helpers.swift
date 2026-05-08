@@ -1,5 +1,13 @@
 @preconcurrency import CVulkan
+
 import Pointer
+
+extension RawRepresentable where RawValue: BinaryInteger {
+    var u32: UInt32 {
+        numericCast(self.rawValue)
+    }
+}
+
 
 extension VkBool32: @retroactive ExpressibleByBooleanLiteral {
     public init(booleanLiteral value: Bool) {
@@ -13,13 +21,11 @@ extension VkBool32: @retroactive ExpressibleByBooleanLiteral {
 
     public typealias BooleanLiteralType = Bool
 }
-
 extension VkBool32 {
     func isTrue() -> Bool {
         self == 1
     }
 }
-
 extension VkResult {
     func isOk() -> Bool {
         self == VK_SUCCESS
@@ -59,7 +65,6 @@ extension VkResult {
         let code: VkResult
     }
 }
-
 struct Vulkan {
     static func makeVersion(major: UInt32, minor: UInt32, patch: UInt32) -> UInt32 {
         return (major << 22) | (minor << 12) | patch
@@ -143,7 +148,6 @@ struct Vulkan {
     }
 
 }
-
 struct SwapChainSupportDetails {
     let capabilities: VkSurfaceCapabilitiesKHR
     let formats: [VkSurfaceFormatKHR]
@@ -167,32 +171,27 @@ struct SwapChainSupportDetails {
         self.presentModes = presentModes
     }
 }
-
 extension Array where Element == OpaquePointer? {
     func unwrapPointer() -> [OpaquePointer] {
         self.map { $0! }
     }
 }
-
 extension UnsafeMutableRawBufferPointer {
     var hexString: String {
         self.map { String(format: "%02X", $0) }.joined(separator: " ")
     }
 }
-
 extension VkBufferUsageFlagBits {
     static func | (lhs: VkBufferUsageFlagBits, rhs: VkBufferUsageFlagBits) -> VkBufferUsageFlagBits
     {
         VkBufferUsageFlagBits(lhs.rawValue | rhs.rawValue)
     }
 }
-
 extension VkExtent2D {
     var simd2: SIMD2<UInt32> {
         SIMD2(self.width, self.height)
     }
 }
-
 extension SIMD2 where Scalar == UInt32 {
     var extent2d: VkExtent2D {
         VkExtent2D(width: x, height: y)
@@ -202,5 +201,4 @@ extension SIMD2 where Scalar == UInt32 {
         VkExtent3D(width: x, height: y, depth: 1)
     }
 }
-
-extension VkCommandBuffer: @unchecked Sendable {}
+// extension VkCommandBuffer: @unchecked Sendable {}

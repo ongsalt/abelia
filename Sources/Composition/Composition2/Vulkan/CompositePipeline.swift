@@ -2,6 +2,7 @@
 import Foundation
 import Pointer
 
+@MainActor
 class CompositePipeline {
     let pipeline: VkPipeline
     let pipelineLayout: VkPipelineLayout
@@ -97,13 +98,13 @@ class CompositePipeline {
             rasterizer.polygonMode = VK_POLYGON_MODE_FILL
             rasterizer.lineWidth = 1.0
 
-            rasterizer.cullMode = VK_CULL_MODE_NONE.rawValue
+            rasterizer.cullMode = VK_CULL_MODE_NONE.u32
         }
 
         let colorBlendAttachment = Box(VkPipelineColorBlendAttachmentState()) {
             $0.colorWriteMask = VkColorComponentFlags(
-                VK_COLOR_COMPONENT_R_BIT.rawValue | VK_COLOR_COMPONENT_G_BIT.rawValue
-                    | VK_COLOR_COMPONENT_B_BIT.rawValue | VK_COLOR_COMPONENT_A_BIT.rawValue
+                VK_COLOR_COMPONENT_R_BIT.u32 | VK_COLOR_COMPONENT_G_BIT.u32
+                    | VK_COLOR_COMPONENT_B_BIT.u32 | VK_COLOR_COMPONENT_A_BIT.u32
             )
             $0.blendEnable = true
             $0.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA
@@ -132,7 +133,7 @@ class CompositePipeline {
         // This one for screen size
         let pushConstantRange = Box(VkPushConstantRange()) {
             $0.stageFlags =
-                VK_SHADER_STAGE_VERTEX_BIT.rawValue | VK_SHADER_STAGE_FRAGMENT_BIT.rawValue
+                VK_SHADER_STAGE_VERTEX_BIT.u32 | VK_SHADER_STAGE_FRAGMENT_BIT.u32
             $0.size = UInt32(MemoryLayout<SIMD2<UInt32>>.size)
         }
 
@@ -140,7 +141,7 @@ class CompositePipeline {
         //     $0.binding = 0
         //     $0.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
         //     $0.descriptorCount = 1  // how tf would i know,
-        //     $0.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT.rawValue | VK_SHADER_STAGE_VERTEX_BIT.rawValue
+        //     $0.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT.u32 | VK_SHADER_STAGE_VERTEX_BIT.u32
         // }
         // var descriptorSetLayoutCI = with(VkDescriptorSetLayoutCreateInfo()) {
         //     $0.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO

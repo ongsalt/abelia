@@ -125,8 +125,7 @@ func makeCard(compositor: Compositor) async {
     // nameNode.position = [(240 - Float(nameTex.size.x)) / 2, 100]  // Centered text
     // nameNode.tintColor = .black
     // nameNode.fillColor = .black.multiply(opacity: 0.5)
-
-    card.addChild(nameNode)
+    // card.addChild(nameNode)
 }
 
 @MainActor

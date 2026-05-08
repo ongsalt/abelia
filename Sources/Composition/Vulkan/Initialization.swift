@@ -1,28 +1,44 @@
+// feature needs
+
+// TODO: device picking logic: checkDeviceExtensionSupport
+// TODO: make this v2
+
 @preconcurrency import CVulkan
+
 import Foundation
-import Glibc
+
 import Pointer
+
+#if canImport(Glibc)
+    import Glibc
+#endif
+
+#if os(Windows)
+    import WinSDK
+#endif
 
 private let instanceLayers = CStringArray {
     #if DEBUG
         "VK_LAYER_KHRONOS_validation"
     #endif
 }
-private let instanceExtensions: CStringArray = [
-    "VK_KHR_get_physical_device_properties2",
-    "VK_KHR_external_fence_capabilities",
-    "VK_KHR_surface",
-    "VK_KHR_wayland_surface",
-]
-
+private let instanceExtensions = CStringArray {
+    "VK_KHR_get_physical_device_properties2"
+    "VK_KHR_external_fence_capabilities"
+    "VK_KHR_surface"
+    #if os(Windows)
+        "VK_KHR_wayland_surface"
+    #endif
+    #if os(Linux)
+        "VK_KHR_win32_surface"
+    #endif
+}
 private let deviceLayers: CStringArray = []
 private let deviceExtensions: CStringArray = [
     "VK_KHR_swapchain",
     "VK_KHR_external_fence",
     "VK_KHR_external_fence_fd",
 ]
-
-// feature needs
 private func createInstance() -> VkInstance {
     volkInitialize()
     var instance: VkInstance! = VkInstance(bitPattern: 0)
@@ -65,7 +81,7 @@ private func createInstance() -> VkInstance {
     // )
 
     let result = vkCreateInstance(&createInfo, nil, &instance)
-    guard result.rawValue == 0 else {
+    guard result.u32 == 0 else {
         fatalError(
             "Cannot create vulkan instance [code: \(result)] pls see https://docs.vulkan.org/refpages/latest/refpages/source/VkResult.html"
         )
@@ -78,31 +94,57 @@ private func createInstance() -> VkInstance {
     return instance
 }
 
-private func createWaylandSurface(
-    instance: VkInstance, waylandDisplay: OpaquePointer, waylandSurface: OpaquePointer
+#if os(Linux)
+    private func createWaylandSurface(
+        instance: VkInstance,
+        waylandDisplay: OpaquePointer,
+        waylandSurface: OpaquePointer
+    ) -> VkSurfaceKHR {
+        var createInfo = VkWaylandSurfaceCreateInfoKHR(
+            sType: VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR,
+            pNext: nil,
+            flags: VkWaylandSurfaceCreateFlagsKHR(),
+            display: waylandDisplay,
+            surface: waylandSurface
+        )
+
+        var surface: VkSurfaceKHR? = nil
+
+        vkCreateWaylandSurfaceKHR(
+            instance,
+            &createInfo,
+            nil,
+            &surface
+        ).expect("Cannot create wayland surface")
+
+        return surface!
+    }
+#endif
+
+private func createWin32Surface(
+    instance: VkInstance,
+    hinstance: HINSTANCE,
+    hwnd: HWND,
 ) -> VkSurfaceKHR {
-    var createInfo = VkWaylandSurfaceCreateInfoKHR(
+    var ci = VkWin32SurfaceCreateInfoKHR(
         sType: VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR,
         pNext: nil,
-        flags: VkWaylandSurfaceCreateFlagsKHR(),
-        display: waylandDisplay,
-        surface: waylandSurface
+        flags: VkWin32SurfaceCreateFlagsKHR(),
+        hinstance: hinstance,
+        hwnd: hwnd
     )
 
     var surface: VkSurfaceKHR? = nil
-
-    vkCreateWaylandSurfaceKHR(
+    
+    vkCreateWin32SurfaceKHR(
         instance,
-        &createInfo,
+        &ci,
         nil,
         &surface
-    ).expect("Cannot create wayland surface")
+    ).expect("Cannot create win32 surface")
 
     return surface!
 }
-
-// TODO: device picking logic: checkDeviceExtensionSupport
-// TODO: make this v2
 private func pickPhysicalDevice(instance: VkInstance) -> (
     device: VkPhysicalDevice, properties: VkPhysicalDeviceProperties,
     features: VkPhysicalDeviceFeatures
@@ -130,7 +172,6 @@ private func pickPhysicalDevice(instance: VkInstance) -> (
     return properties[0]
 
 }
-
 struct SelectedQueuesIndices {
     let graphicsFamily: Int?
     let presentFamily: Int?
@@ -140,7 +181,6 @@ struct SelectedQueuesIndices {
         return s.count
     }
 }
-
 private func findQueueFamilies(device: VkPhysicalDevice, surface: VkSurfaceKHR)
     -> SelectedQueuesIndices
 {
@@ -152,7 +192,7 @@ private func findQueueFamilies(device: VkPhysicalDevice, surface: VkSurfaceKHR)
     vkGetPhysicalDeviceQueueFamilyProperties(device, &count, &queues)
 
     let graphicsFamily = queues.firstIndex {
-        $0.queueFlags & VK_QUEUE_GRAPHICS_BIT.rawValue != 0
+        $0.queueFlags & VK_QUEUE_GRAPHICS_BIT.u32 != 0
     }!
 
     var presentFamily: Int? = nil
@@ -169,7 +209,6 @@ private func findQueueFamilies(device: VkPhysicalDevice, surface: VkSurfaceKHR)
         presentFamily: presentFamily
     )
 }
-
 private func createLogicalDevice(families: SelectedQueuesIndices, physicalDevice: VkPhysicalDevice)
     -> (device: VkDevice, graphicsQueue: VkQueue, presentQueue: VkQueue)
 {
@@ -224,7 +263,7 @@ private func createLogicalDevice(families: SelectedQueuesIndices, physicalDevice
 
         var device: VkDevice? = nil
         let result = vkCreateDevice(physicalDevice, &deviceCreateInfo, nil, &device)
-        guard result.rawValue == 0 else {
+        guard result.u32 == 0 else {
             fatalError(
                 "Can't create vulkan device [code: \(result)] pls see https://docs.vulkan.org/refpages/latest/refpages/source/VkResult.html"
             )
@@ -245,7 +284,6 @@ private func createLogicalDevice(families: SelectedQueuesIndices, physicalDevice
         presentQueue: presentQueue!
     )
 }
-
 private func createVMA(
     instance: VkInstance,
     physicalDevice: VkPhysicalDevice,
@@ -257,11 +295,11 @@ private func createVMA(
     allocatorCreateInfo[].instance = instance
     allocatorCreateInfo[].vulkanApiVersion = Vulkan.apiVersion
     allocatorCreateInfo[].flags =
-        VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT.rawValue
-        | VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT.rawValue
-        | VMA_ALLOCATOR_CREATE_EXT_MEMORY_PRIORITY_BIT.rawValue
+        VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT.u32
+        | VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT.u32
+        | VMA_ALLOCATOR_CREATE_EXT_MEMORY_PRIORITY_BIT.u32
     #if os(Windows)
-        allocatorCreateInfo[].flags |= VMA_ALLOCATOR_CREATE_KHR_EXTERNAL_MEMORY_WIN32_BIT.rawValue
+        allocatorCreateInfo[].flags |= VMA_ALLOCATOR_CREATE_KHR_EXTERNAL_MEMORY_WIN32_BIT.u32
     #endif
 
     let vulkanFunctions = Box(VmaVulkanFunctions())
@@ -271,13 +309,12 @@ private func createVMA(
 
     var allocator: VmaAllocator? = VmaAllocator(bitPattern: 0)
     let res = vmaCreateAllocator(allocatorCreateInfo.ptr, &allocator)
-    guard res.rawValue == 0 else {
+    guard res.u32 == 0 else {
         fatalError("createVMA failed with result: \(res)")
     }
 
     return allocator!
 }
-
 public class VulkanState: @unchecked Sendable {
     let instance: VkInstance
     let surface: VkSurfaceKHR
@@ -299,11 +336,36 @@ public class VulkanState: @unchecked Sendable {
 
     let allocator: VmaAllocator
 
-    public init(waylandDisplay: OpaquePointer, waylandSurface: OpaquePointer) {
-        instance = createInstance()
+    #if os(Linux)
+        public convenience init(waylandDisplay: OpaquePointer, waylandSurface: OpaquePointer) {
+            self.init(
+                surface: createWaylandSurface(
+                    instance: instance,
+                    waylandDisplay: waylandDisplay,
+                    waylandSurface: waylandSurface
+                )
+            )
+        }
+    #endif
 
-        surface = createWaylandSurface(
-            instance: instance, waylandDisplay: waylandDisplay, waylandSurface: waylandSurface)
+    #if os(Windows)
+        public convenience init(
+            hinstance: HINSTANCE,
+            hwnd: HWND,
+        ) {
+            self.init(
+                surface: createWin32Surface(
+                    instance: instance,
+                    hinstance: hinstance,
+                    hwnd: hwnd,
+                )
+            )
+        }
+    #endif
+
+    public init(surface: VkSurfaceKHR) {
+        instance = createInstance()
+        self.surface = surface
 
         let selectedDeviceInfo = pickPhysicalDevice(instance: instance)
         self.physicalDevice = selectedDeviceInfo.device
@@ -358,7 +420,7 @@ public class VulkanState: @unchecked Sendable {
         let commandPoolCI = Box(VkCommandPoolCreateInfo()) {
             $0.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO
             $0.flags = VkCommandPoolCreateFlags(
-                VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT.rawValue
+                VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT.u32
             )
             $0.queueFamilyIndex = queueFamilyIndex
         }
@@ -386,7 +448,6 @@ public class VulkanState: @unchecked Sendable {
         destroy()
     }
 }
-
 extension VulkanState {
     /// Warning: this do blocks
     // TODO: async
@@ -402,7 +463,7 @@ extension VulkanState {
 
         var commandBufferCI = with(VkCommandBufferBeginInfo()) {
             $0.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO
-            $0.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT.rawValue
+            $0.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT.u32
         }
         vkBeginCommandBuffer(commandBuffers[0], &commandBufferCI).unwrap()
 
@@ -440,7 +501,6 @@ extension VulkanState {
     }
 
 }
-
 private struct TrustMeBro: @unchecked Sendable {
     var fence: VkFence?
     var device: VkDevice

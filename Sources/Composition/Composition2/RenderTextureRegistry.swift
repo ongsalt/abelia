@@ -58,7 +58,7 @@ public class RenderTextureRegistry {
             index: numericCast(textures.count),
             edgeSampling: VK_SAMPLER_ADDRESS_MODE_REPEAT,
             // edgeSampling: VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
-            usages: VK_IMAGE_USAGE_TRANSFER_DST_BIT.rawValue | VK_IMAGE_USAGE_SAMPLED_BIT.rawValue,
+            usages: VK_IMAGE_USAGE_TRANSFER_DST_BIT.u32 | VK_IMAGE_USAGE_SAMPLED_BIT.u32,
             samples: VK_SAMPLE_COUNT_1_BIT,
             format: format,
         )
@@ -82,7 +82,7 @@ public class RenderTextureRegistry {
             )
 
             var region = VkBufferImageCopy()
-            region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT.rawValue
+            region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT.u32
             region.imageSubresource.layerCount = 1
             region.imageExtent = size.extent3d  // Set to your image dimensions
 
@@ -135,13 +135,13 @@ public class RenderTextureRegistry {
             $0.binding = 0
             $0.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
             $0.descriptorCount = maxSize  // how tf would i know,
-            $0.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT.rawValue
+            $0.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT.u32
         }
         let flags = Box(
             VkDescriptorBindingFlags(
-                VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT.rawValue
-                    | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT.rawValue
-                    // | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT.rawValue
+                VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT.u32
+                    | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT.u32
+                    // | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT.u32
             )
         )
         let bindingFlags: Box<VkDescriptorSetLayoutBindingFlagsCreateInfo> = Box(
@@ -156,7 +156,7 @@ public class RenderTextureRegistry {
             $0.bindingCount = 1
             $0.pBindings = layoutBinding.readonly
             $0.pNext = bindingFlags.raw
-            $0.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT.rawValue
+            $0.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT.u32
         }
 
         let descriptorSetLayout = Box(VkDescriptorSetLayout(bitPattern: 0)) {
@@ -212,7 +212,7 @@ public class RenderTextureRegistry {
             $0.maxSets = 1
             $0.poolSizeCount = 1
             $0.pPoolSizes = poolSize.readonly
-            $0.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT.rawValue
+            $0.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT.u32
         }
 
         var descriptorPool = VkDescriptorPool(bitPattern: 0)

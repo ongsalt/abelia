@@ -1,7 +1,8 @@
 import Foundation
-import Synchronization
 
 // To ensure main thread is not blocked
+import Synchronization
+
 func launchCounter() -> Task<Void, any Error> {
     Task {
         var i = 0
@@ -12,27 +13,21 @@ func launchCounter() -> Task<Void, any Error> {
         }
     }
 }
-
 func with<T>(_ value: T, block map: (inout T) -> Void) -> T {
     var value = value
     map(&value)
     return value
 }
-
 func run<T>(_ fn: () -> T) -> T {
     fn()
 }
-
 func drop<T>(_ value: consuming T) {}
-
 func duplicated<T>(_ value: T) -> [4 of T] {
     [value, value, value, value]
 }
-
 func duplicated<T>(_ value: T) -> [3 of T] {
     [value, value, value]
 }
-
 func duplicated<T>(_ value: T) -> [2 of T] {
     [value, value]
 }
@@ -68,9 +63,6 @@ extension Result {
         }
     }
 }
-
-
-
 func measure<T>(_ label: String, block: () -> T) -> T {
     var value: T!
     let duration = ContinuousClock().measure {

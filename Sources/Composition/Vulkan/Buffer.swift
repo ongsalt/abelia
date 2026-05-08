@@ -61,16 +61,16 @@ class GPUBuffer<BufferData> {
             pNext: nil,
             flags: 0,
             size: UInt64(size),
-            usage: (usages?.rawValue ?? 0) | (VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT).rawValue,
+            usage: (usages?.u32 ?? 0) | (VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT).u32,
             sharingMode: VK_SHARING_MODE_EXCLUSIVE,
             queueFamilyIndexCount: 0,
             pQueueFamilyIndices: nil
         )
 
         var bufferAllocCI = VmaAllocationCreateInfo(
-            flags: VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT.rawValue
-                | VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT.rawValue
-                | VMA_ALLOCATION_CREATE_MAPPED_BIT.rawValue,
+            flags: VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT.u32
+                | VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT.u32
+                | VMA_ALLOCATION_CREATE_MAPPED_BIT.u32,
             usage: VMA_MEMORY_USAGE_AUTO,
             requiredFlags: 0,
             preferredFlags: 0,
@@ -141,8 +141,8 @@ final class RawGPUBuffer {
             pNext: nil,
             flags: 0,
             size: UInt64(size),
-            usage: (usages?.rawValue ?? 0)
-                | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT.rawValue,
+            usage: (usages?.u32 ?? 0)
+                | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT.u32,
             sharingMode: VK_SHARING_MODE_EXCLUSIVE,
             queueFamilyIndexCount: 0,
             pQueueFamilyIndices: nil
@@ -150,9 +150,9 @@ final class RawGPUBuffer {
 
         var bufferAllocCI = VmaAllocationCreateInfo(
             flags: hostAccess
-                ? (VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT.rawValue
-                    | VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT.rawValue
-                    | VMA_ALLOCATION_CREATE_MAPPED_BIT.rawValue)
+                ? (VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT.u32
+                    | VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT.u32
+                    | VMA_ALLOCATION_CREATE_MAPPED_BIT.u32)
                 : 0,
             usage: VMA_MEMORY_USAGE_AUTO,
             requiredFlags: 0,

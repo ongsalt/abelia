@@ -1,7 +1,6 @@
 @preconcurrency import CVulkan
 import Foundation
 import Pointer
-import Wayland  // for pointers
 
 @MainActor
 class Renderer {
@@ -74,7 +73,7 @@ class Renderer {
         vkResetCommandBuffer(commandBuffer, 0).unwrap()
         var commandBufferCI = with(VkCommandBufferBeginInfo()) {
             $0.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO
-            $0.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT.rawValue
+            $0.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT.u32
         }
         vkBeginCommandBuffer(commandBuffer, &commandBufferCI).unwrap()
 
@@ -90,7 +89,7 @@ class Renderer {
                 $0.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED
                 $0.newLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL
                 $0.image = image
-                $0.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT.rawValue
+                $0.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT.u32
                 $0.subresourceRange.levelCount = 1
                 $0.subresourceRange.layerCount = 1
             },
@@ -109,7 +108,7 @@ class Renderer {
                 dstQueueFamilyIndex: VK_QUEUE_FAMILY_IGNORED,  // ignore
                 image: self.renderTexture.image,
                 subresourceRange: .init(
-                    aspectMask: VK_IMAGE_ASPECT_COLOR_BIT.rawValue,
+                    aspectMask: VK_IMAGE_ASPECT_COLOR_BIT.u32,
                     baseMipLevel: 0,
                     levelCount: 1,
                     baseArrayLayer: 0,
@@ -163,7 +162,7 @@ class Renderer {
         // var address: SIMD2<UInt32> = [800, 600]
         // vkCmdPushConstants(
         //     commandBuffer, pipeline.pipelineLayout,
-        //     VK_SHADER_STAGE_VERTEX_BIT.rawValue | VK_SHADER_STAGE_FRAGMENT_BIT.rawValue,
+        //     VK_SHADER_STAGE_VERTEX_BIT.u32 | VK_SHADER_STAGE_FRAGMENT_BIT.u32,
         //     0,
         //     UInt32(MemoryLayout<SIMD2<UInt32>>.size),
         //     &address
@@ -195,7 +194,7 @@ class Renderer {
             $0.oldLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL
             $0.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
             $0.image = image
-            $0.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT.rawValue
+            $0.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT.u32
             $0.subresourceRange.levelCount = 1
             $0.subresourceRange.layerCount = 1
         }
@@ -213,7 +212,7 @@ class Renderer {
         // Submit
         let waitStages = Box(
             VkPipelineStageFlags(
-                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT.rawValue))
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT.u32))
         let presentSemaphore = Box(
             optional: swapChain.presentSemaphores[frameIndex])
         let renderSemaphore = Box(

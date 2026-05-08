@@ -1,31 +1,57 @@
 import Composition
+
 import Foundation
-import Wayland
 
-@MainActor
-func setupCompositor() throws -> Compositor {
-    let display = try Display()
-    display.monitorEvents()
+import Swinit
 
-    let window: RawWindow = RawWindow(display: display, title: "yomama")
-    window.show()
+class Responder: Swinit.Responder {
+    typealias EventLoop = Swinit.EventLoop
+    var onResumed: ((Compositor) -> Void)?
 
-    let token = RunLoop.main.addListener(on: [.beforeWaiting]) { _ in
-        // print("Will sleep")
-        display.dispatchPending()
-        display.flush()
+    var window: Window? = nil
+
+    func resumed(eventLoop: EventLoop) {
+        window = eventLoop.createWindow(title: "Playground")
+
+        #if os(Linux)
+            // TODO: mova wl stuff out
+            let vulkanState = VulkanState(
+                waylandDisplay: display.display,
+                waylandSurface: window.surface.surface
+            )
+        #endif
+
+        #if os(Windows)
+            let vulkanState = VulkanState(
+                hinstance: window!.hInstance,
+                hwnd: window!.handle
+            )
+        // window?.backdropStyle = .mica
+        #endif  // canImport(SwinitWin32)
+
+        DispatchQueue.main.async { [onResumed] in
+            let compositor = Compositor(state: vulkanState)
+        }
+        // onResumed?(compositor)
     }
-    Unmanaged.passRetained(token)
 
-    // TODO: mova wl stuff out
-    let vulkanState = VulkanState(
-        waylandDisplay: display.display,
-        waylandSurface: window.surface.surface
-    )
+    func windowEvent(
+        eventLoop: EventLoop, windowId: Swinit.WindowId, event: Swinit.WindowEvent
+    ) {
+        switch event {
+        case .closeRequested:
+            self.window = nil
+            eventLoop.stop()
 
-    let compositor = Compositor(state: vulkanState)
-    let task = compositor.start()
-
-    return compositor
+        default:
+            print(event)
+        }
+    }
 }
-
+@MainActor
+func withCompositor(_ block: @escaping (Compositor) -> Void) throws {
+    let eventLoop = EventLoop()!
+    let r = Responder()
+    r.onResumed = block
+    eventLoop.run(r)
+}

@@ -10,7 +10,7 @@ public class Compositor: @unchecked Sendable {
 
     let renderer: Renderer
     public let textureRegistry: RenderTextureRegistry
-    public let textRenderer = TextRenderer()
+    // public let textRenderer = TextRenderer()
     var size: SIMD2<UInt32>
 
     var animationFrameControllers: [ObjectIdentifier: AnimationFrameController] = [:]
@@ -336,7 +336,7 @@ private func writeDrawCommands(
             vkCmdPushConstants(
                 cmdBuffer,
                 pipeline.pipelineLayout,
-                VK_SHADER_STAGE_VERTEX_BIT.rawValue | VK_SHADER_STAGE_FRAGMENT_BIT.rawValue,
+                VK_SHADER_STAGE_VERTEX_BIT.u32 | VK_SHADER_STAGE_FRAGMENT_BIT.u32,
                 0,
                 UInt32(MemoryLayout<SIMD2<UInt32>>.size),
                 &address

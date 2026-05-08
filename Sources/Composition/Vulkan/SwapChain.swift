@@ -182,7 +182,7 @@ final class SwapChain {
                 $0.imageColorSpace = surfaceFormat.colorSpace
                 $0.imageExtent = extent
                 $0.imageArrayLayers = 1
-                $0.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT.rawValue
+                $0.imageUsage = numericCast(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT.rawValue)
                 $0.presentMode = presentMode
 
                 $0.preTransform = supportDetails.capabilities.currentTransform
@@ -231,7 +231,7 @@ final class SwapChain {
                 $0.components.b = VK_COMPONENT_SWIZZLE_IDENTITY
                 $0.components.a = VK_COMPONENT_SWIZZLE_IDENTITY
 
-                $0.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT.rawValue
+                $0.subresourceRange.aspectMask = numericCast(VK_IMAGE_ASPECT_COLOR_BIT.rawValue)
                 $0.subresourceRange.baseMipLevel = 0
                 $0.subresourceRange.levelCount = 1
                 $0.subresourceRange.baseArrayLayer = 0
@@ -251,7 +251,7 @@ final class SwapChain {
         var fenceCI = VkFenceCreateInfo(
             sType: VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
             pNext: nil,
-            flags: VK_FENCE_CREATE_SIGNALED_BIT.rawValue
+            flags: numericCast(VK_FENCE_CREATE_SIGNALED_BIT.rawValue)
         )
 
         var semaphoreCI = VkSemaphoreCreateInfo(

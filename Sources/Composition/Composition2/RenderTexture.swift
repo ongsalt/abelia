@@ -33,8 +33,8 @@ public class RenderTexture {
         actualSize: SIMD2<UInt32>? = nil,
         index: UInt32,
         edgeSampling: VkSamplerAddressMode = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT,
-        usages: VkImageUsageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT.rawValue
-            | VK_IMAGE_USAGE_SAMPLED_BIT.rawValue,
+        usages: VkImageUsageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT.u32
+            | VK_IMAGE_USAGE_SAMPLED_BIT.u32,
         samples: VkSampleCountFlagBits = VK_SAMPLE_COUNT_4_BIT,
         format: VkFormat? = nil,
         unnormalizedCoordinates: VkBool32 = false
@@ -61,7 +61,7 @@ public class RenderTexture {
         }
 
         var bufferAllocCI = VmaAllocationCreateInfo(
-            flags: VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT.rawValue,
+            flags: VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT.u32,
             usage: VMA_MEMORY_USAGE_AUTO,
             requiredFlags: 0,
             preferredFlags: 0,
@@ -89,7 +89,7 @@ public class RenderTexture {
             $0.viewType = VK_IMAGE_VIEW_TYPE_2D
             $0.format = format
             $0.subresourceRange = VkImageSubresourceRange(
-                aspectMask: VK_IMAGE_ASPECT_COLOR_BIT.rawValue,
+                aspectMask: VK_IMAGE_ASPECT_COLOR_BIT.u32,
                 baseMipLevel: 0,
                 levelCount: 1,
                 baseArrayLayer: 0,
@@ -159,7 +159,7 @@ public class RenderTexture {
             $0.oldLayout = currentLayout
             $0.newLayout = targetLayout
             $0.image = self.image
-            $0.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT.rawValue
+            $0.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT.u32
             $0.subresourceRange.levelCount = 1
             $0.subresourceRange.layerCount = 1
             $0.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED

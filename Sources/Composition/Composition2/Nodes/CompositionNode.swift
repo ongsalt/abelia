@@ -42,7 +42,7 @@ extension CompositionNode {
     // func writeVertexData(to buffer: some Writable) {
     // }
 
-    @_optimize(speed)
+    // @_optimize(speed)
     func writeVertexData(to buffer: inout some Writable & ~Copyable) {
         // func writeVertexData(ptr: UnsafeMutableRawPointer, offset: inout UInt64) {
         let rootSize = parent!.rasterizationRoot.size  // this need to be cached
