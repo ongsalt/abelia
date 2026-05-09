@@ -126,6 +126,6 @@ public struct DirtyFlags: OptionSet, Sendable {
 
 extension DirtyFlags {
     var shouldUpdate: Bool {
-        rawValue != 0
+        !self.isEmpty
     }
 }

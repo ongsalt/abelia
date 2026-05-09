@@ -1,5 +1,3 @@
-import Composition
-
 // Task {
 // @MainActor
 // func drawText(text: String, compositor: Compositor) async -> RenderTexture {
@@ -20,6 +18,8 @@ import Composition
 //     return texture
 // }
 
+import Composition
+
 import Foundation
 
 import Reactivity
@@ -28,6 +28,8 @@ import Swinit
 
 import UI
 
+import CWin32
+
 class Responder: Swinit.Responder, @unchecked Sendable {
     typealias EventLoop = Swinit.EventLoop
     var window: Window? = nil
@@ -35,9 +37,11 @@ class Responder: Swinit.Responder, @unchecked Sendable {
     var compositor: Compositor?
 
     func resumed(eventLoop: EventLoop) {
-        window = eventLoop.createWindow(title: "Playground")
+        // we should do window.show()
 
         #if os(Linux)
+            window = eventLoop.createWindow(attributes: .init(title: "nah"))
+
             // TODO: mova wl stuff out
             let vulkanState = VulkanState(
                 waylandDisplay: display.display,
@@ -46,18 +50,22 @@ class Responder: Swinit.Responder, @unchecked Sendable {
         #endif
 
         #if os(Windows)
+            window = eventLoop.createWindow(attributes: .init(title: "nah", noRedirectionBitmap: true))
+            window?.drawUnderTitleBar = true
+            // window?.backdropStyle = .mica
+
             let vulkanState = VulkanState(
                 hinstance: window!.hInstance,
                 hwnd: window!.handle
             )
-            // window?.backdropStyle = .acrylic
         #endif
 
-        Task { @MainActor in
+        MainActor.assumeIsolated {
             self.compositor = Compositor(state: vulkanState)
-
-            setupScene(root: compositor!.root, offset: 0.0)
             compositor?.start()
+            setupScene(root: compositor!.root, offset: 0.0)
+
+            animateRect(compositor: compositor!)
         }
     }
 
@@ -69,8 +77,7 @@ class Responder: Swinit.Responder, @unchecked Sendable {
             self.window = nil
             eventLoop.stop()
         default:
-            do {}
-        //     print(event)
+            print(event)
         }
     }
 }
@@ -78,6 +85,16 @@ class Responder: Swinit.Responder, @unchecked Sendable {
 struct Playground {
     static func main() {
         let eventLoop = EventLoop()!
+
+        Task {
+            var i = 0
+            while !Task.isCancelled {
+                i += 1
+                print(i)
+                try await Task.sleep(for: .seconds(1))
+            }
+        }
+
         eventLoop.run(Responder())
     }
 }

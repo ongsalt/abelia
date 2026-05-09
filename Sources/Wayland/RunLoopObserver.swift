@@ -1,7 +1,6 @@
 import CoreFoundation
 
 
-// TODO: actully getting CFRunLoop from a RunLoop
 public class RunLoopObserver {
     let observer: CFRunLoopObserver
     let runLoop: CFRunLoop

@@ -191,11 +191,11 @@ final class SwapChain {
                 // VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR is not available on windows???
                 // well we only need this to make render window frame on wayland
                 // TODO: transparent window on windows
-                #if os(Linux)
-                    $0.compositeAlpha = VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR
-                #endif
+                // TODO: check for vkGetPhysicalDeviceSurfaceCapabilitiesKHR on windows
                 #if os(Windows)
                     $0.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR
+                #else
+                    $0.compositeAlpha = VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR
                 #endif
                 $0.clipped = true
 

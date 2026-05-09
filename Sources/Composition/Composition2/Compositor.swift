@@ -1,5 +1,7 @@
 @preconcurrency import CVulkan
+
 import Foundation
+
 import Pointer  // for pointers
 
 @MainActor
@@ -169,7 +171,6 @@ public class Compositor: @unchecked Sendable {
         let controller = AnimationFrameController(callback, self)
         self.animationFrameControllers[controller.id] = controller
     }
-
 }
 
 @MainActor
@@ -185,7 +186,7 @@ private class DirtyNotifier: RenderNode {
 
     override init() {
         super.init()
-        self.dirty = []
+        self.dirty = .source
     }
 }
 
@@ -276,8 +277,9 @@ private func writeDrawCommands(
             $0.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL
             $0.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR
             $0.storeOp = VK_ATTACHMENT_STORE_OP_STORE
+            
             // $0.clearValue.color.float32 = (1.0, 0.0, 0.0, 0.5)
-            // $0.clearValue.color.float32 = (0.0, 0.0, 0.0, 0.0)
+            $0.clearValue.color.float32 = (0.0, 0.0, 0.0, 0.0)
 
             if let swapChainImageView {
                 // Log.debug(.compositor, "has swapChainImageView: \(swapChainImageView)")
@@ -367,7 +369,6 @@ private func writeDrawCommands(
 
     Log.debug(.compositor, "Done")
 }
-
 private func setViewport(_ size: SIMD2<UInt32>, commandBuffer: VkCommandBuffer) {
     var viewport = VkViewport(
         x: 0,

@@ -14,3 +14,5 @@
     - so nuke `pango`
 - make this run on windows
 - unfuck threading -> remove @MainActor
+- windows resize
+- transparency on windows: DirectComposition swapchain
