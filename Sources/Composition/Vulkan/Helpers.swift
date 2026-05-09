@@ -3,8 +3,10 @@
 import Pointer
 
 extension RawRepresentable where RawValue: BinaryInteger {
+    // enum is i32 on windows for some reason
+    // this is a shitty fix
     var u32: UInt32 {
-        numericCast(self.rawValue)
+        unsafeBitCast(self.rawValue, to: UInt32.self)
     }
 }
 
