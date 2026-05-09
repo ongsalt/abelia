@@ -456,10 +456,10 @@ public class VulkanState: @unchecked Sendable {
         return (commandPool, commandBuffers.unwrapPointer())
     }
 
-    deinit {
-        // TODO: wait for idle
-        destroy()
-    }
+    // deinit {
+    //     // TODO: wait for idle
+    //     destroy()
+    // }
 }
 extension VulkanState {
     /// Warning: this do blocks

@@ -1,8 +1,86 @@
 import Composition
+
+// Task {
+// @MainActor
+// func drawText(text: String, compositor: Compositor) async -> RenderTexture {
+//     let (ink, logical) = compositor.textRenderer.measure(text: text)
+//     // TODO: transfer this to gpu
+//     let buffer = UnsafeMutableBufferPointer<UInt8>.allocate(
+//         capacity: Int(logical.height * logical.width))
+//     buffer.initialize(repeating: 0)
+//     _ = compositor.textRenderer.render(
+//         text, to: buffer, width: logical.width, height: logical.height)
+
+//     let texture = await compositor.textureRegistry.createStaticTexture(
+//         from: buffer,
+//         size: [UInt32(logical.width), UInt32(logical.height)],
+//         format: .init(9)  // VK_FORMAT_R8_UNORM
+//     )
+
+//     return texture
+// }
+
 import Foundation
+
 import Reactivity
+
+import Swinit
+
 import UI
 
+class Responder: Swinit.Responder, @unchecked Sendable {
+    typealias EventLoop = Swinit.EventLoop
+    var window: Window? = nil
+
+    var compositor: Compositor?
+
+    func resumed(eventLoop: EventLoop) {
+        window = eventLoop.createWindow(title: "Playground")
+
+        #if os(Linux)
+            // TODO: mova wl stuff out
+            let vulkanState = VulkanState(
+                waylandDisplay: display.display,
+                waylandSurface: window!.surface.surface
+            )
+        #endif
+
+        #if os(Windows)
+            let vulkanState = VulkanState(
+                hinstance: window!.hInstance,
+                hwnd: window!.handle
+            )
+            // window?.backdropStyle = .acrylic
+        #endif
+
+        Task { @MainActor in
+            self.compositor = Compositor(state: vulkanState)
+
+            setupScene(root: compositor!.root, offset: 0.0)
+            compositor?.start()
+        }
+    }
+
+    func windowEvent(
+        eventLoop: EventLoop, windowId: Swinit.WindowId, event: Swinit.WindowEvent
+    ) {
+        switch event {
+        case .closeRequested:
+            self.window = nil
+            eventLoop.stop()
+        default:
+            do {}
+        //     print(event)
+        }
+    }
+}
+@main
+struct Playground {
+    static func main() {
+        let eventLoop = EventLoop()!
+        eventLoop.run(Responder())
+    }
+}
 @MainActor
 func Counter() -> View {
     @State
@@ -26,41 +104,10 @@ func Counter() -> View {
         }
         // .padding(.px(12))
         .background("red")
-        .padding(12.px)
+        // .padding(12.px)
     }
 }
-
 typealias Px = Int
-extension Int {
-    var px: Px {
-        Px(self)
-    }
-}
-
-@main
-struct Playground {
-    public static func main() throws {
-        withCompositor { compositor in
-            _ = Unmanaged.passRetained(compositor)
-        }
-        // let node = Counter()
-
-        // node.renderNode.print()
-
-        // let compositor = try setupCompositor()
-        // Task {
-        //     while !Task.isCancelled {
-        //         compositor.root.children = []
-        //         for i in 0..<200 {
-        //             setupScene(root: compositor.root, offset: Float(2 * i))
-        //         }
-        //         // await Task.yield()
-        //         try await Task.sleep(for: .seconds(1))
-        //     }
-        // }
-    }
-}
-
 @MainActor
 func setupScene(root: CompositionNode, offset: Float) {
     let colors: [Color] = [
@@ -85,27 +132,6 @@ func setupScene(root: CompositionNode, offset: Float) {
         root.addChild(node)
     }
 }
-
-// Task {
-// @MainActor
-// func drawText(text: String, compositor: Compositor) async -> RenderTexture {
-//     let (ink, logical) = compositor.textRenderer.measure(text: text)
-//     // TODO: transfer this to gpu
-//     let buffer = UnsafeMutableBufferPointer<UInt8>.allocate(
-//         capacity: Int(logical.height * logical.width))
-//     buffer.initialize(repeating: 0)
-//     _ = compositor.textRenderer.render(
-//         text, to: buffer, width: logical.width, height: logical.height)
-
-//     let texture = await compositor.textureRegistry.createStaticTexture(
-//         from: buffer,
-//         size: [UInt32(logical.width), UInt32(logical.height)],
-//         format: .init(9)  // VK_FORMAT_R8_UNORM
-//     )
-
-//     return texture
-// }
-
 @MainActor
 func makeCard(compositor: Compositor) async {
     let card = CompositionNode()
@@ -129,7 +155,6 @@ func makeCard(compositor: Compositor) async {
     // nameNode.fillColor = .black.multiply(opacity: 0.5)
     // card.addChild(nameNode)
 }
-
 @MainActor
 func animateRect(compositor: Compositor) {
     let node = CompositionNode()
