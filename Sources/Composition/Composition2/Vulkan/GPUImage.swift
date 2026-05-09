@@ -66,9 +66,9 @@ class GPUImage {
         )
     }
 
-    deinit {
-        vmaUnmapMemory(allocator, allocation)
-        vmaDestroyImage(allocator, image, allocation)
-    }
+    // deinit {
+    //     vmaUnmapMemory(allocator, allocation)
+    //     vmaDestroyImage(allocator, image, allocation)
+    // }
 
 }

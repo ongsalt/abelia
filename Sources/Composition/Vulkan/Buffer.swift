@@ -108,10 +108,10 @@ class GPUBuffer<BufferData> {
         mapped.initialize(from: data)
     }
 
-    deinit {
-        vmaUnmapMemory(vmaAllocator, vmaAllocation)
-        vmaDestroyBuffer(vmaAllocator, buffer, vmaAllocation)
-    }
+    // deinit {
+    //     vmaUnmapMemory(vmaAllocator, vmaAllocation)
+    //     vmaDestroyBuffer(vmaAllocator, buffer, vmaAllocation)
+    // }
 
 }
 
@@ -217,8 +217,8 @@ final class RawGPUBuffer {
         return MemoryLayout<BufferData>.stride
     }
 
-    deinit {
-        vmaUnmapMemory(vmaAllocator, vmaAllocation)
-        vmaDestroyBuffer(vmaAllocator, buffer, vmaAllocation)
-    }
+    // deinit {
+    //     vmaUnmapMemory(vmaAllocator, vmaAllocation)
+    //     vmaDestroyBuffer(vmaAllocator, buffer, vmaAllocation)
+    // }
 }

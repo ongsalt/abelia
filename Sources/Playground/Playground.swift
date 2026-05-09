@@ -41,7 +41,7 @@ extension Int {
 struct Playground {
     public static func main() throws {
         withCompositor { compositor in
-
+            _ = Unmanaged.passRetained(compositor)
         }
         // let node = Counter()
 

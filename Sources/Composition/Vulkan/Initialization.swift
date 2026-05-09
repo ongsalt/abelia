@@ -24,21 +24,27 @@ private let instanceLayers = CStringArray {
 }
 private let instanceExtensions = CStringArray {
     "VK_KHR_get_physical_device_properties2"
-    "VK_KHR_external_fence_capabilities"
     "VK_KHR_surface"
+    "VK_KHR_external_fence_capabilities"
     #if os(Windows)
-        "VK_KHR_wayland_surface"
+        "VK_KHR_win32_surface"
     #endif
     #if os(Linux)
-        "VK_KHR_win32_surface"
+        "VK_KHR_wayland_surface"
     #endif
 }
 private let deviceLayers: CStringArray = []
-private let deviceExtensions: CStringArray = [
-    "VK_KHR_swapchain",
-    "VK_KHR_external_fence",
-    "VK_KHR_external_fence_fd",
-]
+private let deviceExtensions = CStringArray {
+    "VK_KHR_swapchain"
+    "VK_KHR_external_fence"
+    #if os(Linux)
+        "VK_KHR_external_fence_fd"
+    #endif
+    #if os(Windows)
+        "VK_KHR_external_memory"
+        "VK_KHR_external_memory_win32"
+    #endif
+}
 private func createInstance() -> VkInstance {
     volkInitialize()
     var instance: VkInstance! = VkInstance(bitPattern: 0)
@@ -122,30 +128,30 @@ private func createInstance() -> VkInstance {
 #endif
 
 #if os(Windows)
-private func createWin32Surface(
-    instance: VkInstance,
-    hinstance: WinSDK.HINSTANCE,
-    hwnd: WinSDK.HWND,
-) -> VkSurfaceKHR {
-    var ci = VkWin32SurfaceCreateInfoKHR(
-        sType: VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR,
-        pNext: nil,
-        flags: VkWin32SurfaceCreateFlagsKHR(),
-        hinstance: hinstance,
-        hwnd: hwnd
-    )
+    private func createWin32Surface(
+        instance: VkInstance,
+        hinstance: WinSDK.HINSTANCE,
+        hwnd: WinSDK.HWND,
+    ) -> VkSurfaceKHR {
+        var ci = VkWin32SurfaceCreateInfoKHR(
+            sType: VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
+            pNext: nil,
+            flags: VkWin32SurfaceCreateFlagsKHR(),
+            hinstance: hinstance,
+            hwnd: hwnd
+        )
 
-    var surface: VkSurfaceKHR? = nil
-    
-    vkCreateWin32SurfaceKHR(
-        instance,
-        &ci,
-        nil,
-        &surface
-    ).expect("Cannot create win32 surface")
+        var surface: VkSurfaceKHR? = nil
 
-    return surface!
-}
+        vkCreateWin32SurfaceKHR(
+            instance,
+            &ci,
+            nil,
+            &surface
+        ).expect("Cannot create win32 surface")
+
+        return surface!
+    }
 #endif
 
 private func pickPhysicalDevice(instance: VkInstance) -> (

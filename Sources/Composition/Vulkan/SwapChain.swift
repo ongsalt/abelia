@@ -1,5 +1,7 @@
 @preconcurrency import CVulkan
+
 import Foundation
+
 import Pointer
 
 final class SwapChain {
@@ -68,7 +70,7 @@ final class SwapChain {
         // - Iced wgpu backend fails with Vulkan: https://github.com/niri-wm/niri/issues/1910
         // - Zed: https://github.com/niri-wm/niri/issues/2335
         // TODO: recreate swapchain maybe
-        
+
         return (images[Int(imageIndex)], imageViews[Int(imageIndex)], imageIndex)
     }
 
@@ -94,14 +96,14 @@ final class SwapChain {
         vkDestroySwapchainKHR(device, swapChain, nil)
     }
 
-    deinit {
-        destroy()
-    }
+    // deinit {
+    //     destroy()
+    // }
 
     private static func chooseSwapSurfaceFormat(from availableFormats: [VkSurfaceFormatKHR])
         -> VkSurfaceFormatKHR
     {
-        // Use UNORM format instead of SRGB so the GPU doesn't auto-apply an additional SRGB gamma curve 
+        // Use UNORM format instead of SRGB so the GPU doesn't auto-apply an additional SRGB gamma curve
         // to our already calculated (or manually passed) linear / un-gamma-corrected color values.
         let format = availableFormats.first {
             $0.format == VK_FORMAT_B8G8R8A8_UNORM
@@ -186,7 +188,15 @@ final class SwapChain {
                 $0.presentMode = presentMode
 
                 $0.preTransform = supportDetails.capabilities.currentTransform
-                $0.compositeAlpha = VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR
+                // VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR is not available on windows???
+                // well we only need this to make render window frame on wayland
+                // TODO: transparent window on windows
+                #if os(Linux)
+                    $0.compositeAlpha = VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR
+                #endif
+                #if os(Windows)
+                    $0.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR
+                #endif
                 $0.clipped = true
 
                 if indices.graphicsFamily != indices.presentFamily {

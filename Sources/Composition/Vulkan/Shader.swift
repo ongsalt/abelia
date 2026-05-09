@@ -33,8 +33,8 @@ class Shader {
         self.shaderModule = shaderModule!
     }
     
-    deinit {
-        vkDestroyShaderModule(device, shaderModule, nil)
-        buffer.deallocate()
-    }
+    // deinit {
+    //     vkDestroyShaderModule(device, shaderModule, nil)
+    //     buffer.deallocate()
+    // }
 }
