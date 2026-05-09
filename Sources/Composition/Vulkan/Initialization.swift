@@ -121,10 +121,11 @@ private func createInstance() -> VkInstance {
     }
 #endif
 
+#if os(Windows)
 private func createWin32Surface(
     instance: VkInstance,
-    hinstance: HINSTANCE,
-    hwnd: HWND,
+    hinstance: WinSDK.HINSTANCE,
+    hwnd: WinSDK.HWND,
 ) -> VkSurfaceKHR {
     var ci = VkWin32SurfaceCreateInfoKHR(
         sType: VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR,
@@ -145,6 +146,8 @@ private func createWin32Surface(
 
     return surface!
 }
+#endif
+
 private func pickPhysicalDevice(instance: VkInstance) -> (
     device: VkPhysicalDevice, properties: VkPhysicalDeviceProperties,
     features: VkPhysicalDeviceFeatures
@@ -338,22 +341,26 @@ public class VulkanState: @unchecked Sendable {
 
     #if os(Linux)
         public convenience init(waylandDisplay: OpaquePointer, waylandSurface: OpaquePointer) {
+            let instance = createInstance()
             self.init(
+                instance: instance,
                 surface: createWaylandSurface(
                     instance: instance,
                     waylandDisplay: waylandDisplay,
                     waylandSurface: waylandSurface
-                )
+                ),
             )
         }
     #endif
 
     #if os(Windows)
         public convenience init(
-            hinstance: HINSTANCE,
-            hwnd: HWND,
+            hinstance: WinSDK.HINSTANCE,
+            hwnd: WinSDK.HWND,
         ) {
+            let instance = createInstance()
             self.init(
+                instance: instance,
                 surface: createWin32Surface(
                     instance: instance,
                     hinstance: hinstance,
@@ -363,8 +370,8 @@ public class VulkanState: @unchecked Sendable {
         }
     #endif
 
-    public init(surface: VkSurfaceKHR) {
-        instance = createInstance()
+    public init(instance: VkInstance, surface: VkSurfaceKHR) {
+        self.instance = instance
         self.surface = surface
 
         let selectedDeviceInfo = pickPhysicalDevice(instance: instance)
