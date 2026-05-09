@@ -48,8 +48,9 @@ class Responder: Swinit.Responder {
         }
     }
 }
+
 @MainActor
-func withCompositor(_ block: @escaping (Compositor) -> Void) throws {
+func withCompositor(_ block: @escaping (Compositor) -> Void) {
     let eventLoop = EventLoop()!
     let r = Responder()
     r.onResumed = block

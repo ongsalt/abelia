@@ -6,7 +6,10 @@ import CompilerPluginSupport
 import PackageDescription
 import Foundation
 
-var vulkanIncludePath: [CSetting] = []
+var vulkanIncludePath: [CSetting] = [
+    .define("VK_USE_PLATFORM_WAYLAND_KHR", .when(platforms: [.linux])),
+    .define("VK_USE_PLATFORM_WIN32_KHR", .when(platforms: [.windows])),
+]
 if let vulkanSDK = ProcessInfo.processInfo.environment["VULKAN_SDK"] {
     // vulkanSearchPath.append
     // let includePath = "\(vulkanSDK)/Include"
@@ -40,9 +43,7 @@ let package = Package(
         .systemLibrary(name: "CPango", pkgConfig: "pangoft2"),
         .target(
             name: "CVulkan",
-            cSettings: [
-                .define("VK_USE_PLATFORM_WAYLAND_KHR", .when(platforms: [.linux])),
-            ] + vulkanIncludePath,
+            cSettings: vulkanIncludePath,
         ),
 
         // .target(name: "Signal"),
@@ -82,9 +83,7 @@ let package = Package(
             resources: [
                 .copy("Resources/Compiled")
             ],
-            cSettings: [
-                .define("VK_USE_PLATFORM_WAYLAND_KHR", .when(platforms: [.linux]))
-            ],
+            cSettings: vulkanIncludePath,
         ),
 
         .executableTarget(
@@ -95,9 +94,6 @@ let package = Package(
                 "Reactivity",
                 .product(name: "Swinit", package: "swinit"),
             ],
-            // cSettings: [
-            //     .define("VK_USE_PLATFORM_WAYLAND_KHR", .when(platforms: [.linux]))
-            // ],
         ),
 
     ]

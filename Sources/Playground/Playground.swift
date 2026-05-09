@@ -40,6 +40,9 @@ extension Int {
 @main
 struct Playground {
     public static func main() throws {
+        withCompositor { compositor in
+
+        }
         // let node = Counter()
 
         // node.renderNode.print()
@@ -55,7 +58,6 @@ struct Playground {
         //         try await Task.sleep(for: .seconds(1))
         //     }
         // }
-        RunLoop.main.run()
     }
 }
 

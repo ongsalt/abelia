@@ -1,12 +1,8 @@
 # Dependencies not included
 - wayland devel stuff
-- freetype
-- vulkan header
-
-## Shader compiler
-use [naga](https://github.com/gfx-rs/wgpu/tree/trunk/naga) to compile wgsl to spirv
-
-ok, it doesnt support push constant, use glslc instead
+- pango
+- vulkan stuff
+- glslc
 
 ## TODO
 - padding, margin
@@ -18,8 +14,3 @@ ok, it doesnt support push constant, use glslc instead
     - so nuke `pango`
 - make this run on windows
 - unfuck threading -> remove @MainActor
-
-## Note
-- query required gpu features (and optionally provide fallback)
-    - VK_EXT_blend_operation_advanced is not supported on my machine (or any amd card) 
-
