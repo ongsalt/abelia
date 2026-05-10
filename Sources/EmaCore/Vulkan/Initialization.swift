@@ -56,33 +56,3 @@ func createVulkanInstance(appName: String, engineName: String = "Ema") -> VkInst
   return instance!
 }
 
-
-func createVMA(
-  instance: VkInstance,
-  physicalDevice: VkPhysicalDevice,
-  logicalDevice: VkDevice,
-) -> VmaAllocator {
-  var vmaCi = Box(uninitializedMemory(of: VmaAllocatorCreateInfo.self)) {
-    $0.physicalDevice = physicalDevice
-    $0.device = logicalDevice
-    $0.instance = instance
-    $0.vulkanApiVersion = Vulkan.apiVersion
-    $0.flags =
-      VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT.u32
-      | VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT.u32
-      | VMA_ALLOCATOR_CREATE_EXT_MEMORY_PRIORITY_BIT.u32
-    #if os(Windows)
-      $0.flags |= VMA_ALLOCATOR_CREATE_KHR_EXTERNAL_MEMORY_WIN32_BIT.u32
-    #endif
-  }
-
-  let vulkanFunctions = Box(VmaVulkanFunctions())
-  vmaImportVulkanFunctionsFromVolk(vmaCi.ptr, vulkanFunctions.mut)
-  vmaCi.value.pVulkanFunctions = vulkanFunctions.ptr
-
-  var allocator: VmaAllocator?
-  vmaCreateAllocator(vmaCi.ptr, &allocator).expect("Cannot create vma")
-
-  return allocator!
-}
-

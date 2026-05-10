@@ -3,22 +3,11 @@
         {
             "type": "swift",
             "request": "launch",
+            "name": "Launch Playground",
+            "program": "${workspaceRoot}/.build/debug/Playground",
             "args": [],
-            "cwd": "${workspaceFolder:graphics-101}",
-            "name": "Debug graphics-101",
-            "target": "graphics-101",
-            "configuration": "debug",
-            "preLaunchTask": "swift: Build Debug graphics-101"
-        },
-        {
-            "type": "swift",
-            "request": "launch",
-            "args": [],
-            "cwd": "${workspaceFolder:graphics-101}",
-            "name": "Release graphics-101",
-            "target": "graphics-101",
-            "configuration": "release",
-            "preLaunchTask": "swift: Build Release graphics-101"
+            "env": {},
+            "cwd": "${workspaceRoot}"
         },
         {
             "type": "swift",
@@ -39,26 +28,6 @@
             "target": "Playground",
             "configuration": "release",
             "preLaunchTask": "swift: Build Release Playground"
-        },
-        {
-            "type": "swift",
-            "request": "launch",
-            "args": [],
-            "cwd": "${workspaceFolder:graphics-101}",
-            "name": "Debug Composition",
-            "target": "Composition",
-            "configuration": "debug",
-            "preLaunchTask": "swift: Build Debug Composition"
-        },
-        {
-            "type": "swift",
-            "request": "launch",
-            "args": [],
-            "cwd": "${workspaceFolder:graphics-101}",
-            "name": "Release Composition",
-            "target": "Composition",
-            "configuration": "release",
-            "preLaunchTask": "swift: Build Release Composition"
         }
     ]
 }

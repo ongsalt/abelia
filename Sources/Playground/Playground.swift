@@ -22,12 +22,9 @@ class Responder: Swinit.Responder, @unchecked Sendable {
             window?.backdropStyle = .mica
         #endif
 
-        // var context = GraphicsContext(appName: "Playground")
-        // let surface: Surface = context.createSurface(for: window!)
-        // let device = context.initDevice(comptibleWith: surface)
-
-        // _ = Unmanaged.passRetained(device)
-        // _ = Unmanaged.passRetained(surface)
+        var context = GraphicsContext(appName: "Playground")
+        let surface = context.createSurface(for: window!)
+        let device = context.initDevice(compatibleWith: surface)
     }
 
     func windowEvent(
@@ -37,10 +34,10 @@ class Responder: Swinit.Responder, @unchecked Sendable {
         case .closeRequested:
             self.window = nil
             eventLoop.stop()
-        case .resized(let size):
-            print("resized to", size)
-            let w = size.width
-            let h = size.height
+        // case .resized(let size):
+        //     print("resized to", size)
+        //     let w = size.width
+        //     let h = size.height
         default:
             do {}
         // print(event)

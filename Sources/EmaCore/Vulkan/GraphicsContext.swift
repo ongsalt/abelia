@@ -17,7 +17,7 @@ extension GraphicsContext {
   }
 
   @discardableResult
-  public mutating func initDevice(comptibleWith surface: Surface) -> GraphicsDevice {
+  public mutating func initDevice(compatibleWith surface: Surface) -> GraphicsDevice {
     self.device = GraphicsDevice(instance: instance, compatibleWith: surface)
     return self.device!
   }

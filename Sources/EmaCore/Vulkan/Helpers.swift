@@ -1,4 +1,5 @@
-import CVulkan
+@preconcurrency import CVulkan
+import Pointer
 
 extension RawRepresentable where RawValue: BinaryInteger {
   // enum is i32 on windows for some reason
@@ -31,13 +32,13 @@ extension VkResult {
   }
 
   func expect(_ message: String, line: Int = #line, file: String = #file) {
+    let m = "\(message), code: \(self.rawValue) at \(file):\(line)"
     if self.rawValue < 0 {
-      let m = "\(message), code: \(self.rawValue) at \(file):\(line)"
-      // Log.error(.vulkan, "error code: \(self.rawValue)")
+      Log.error(.vulkan, m)
       fatalError(m)
     }
     if self != VK_SUCCESS {
-      // Log.warn(.vulkan, "Not VK_SUCCESS: \(self.rawValue)")
+      Log.warn(.vulkan, "Not VK_SUCCESS (\(self.rawValue)) at \(file):\(line)")
     }
   }
 
@@ -84,7 +85,7 @@ extension Vulkan {
   static let apiVersion = apiVersion1_3
 
   static func enumerate<T>(
-    defaultValue: T = uninitializedMemory(of: T.self),
+    defaultValue: T = Mem.zeroed(of: T.self),
     line: Int = #line,
     file: String = #file,
     _ fn: (UnsafeMutablePointer<UInt32>, UnsafeMutablePointer<T>?) -> VkResult
@@ -100,7 +101,7 @@ extension Vulkan {
   }
 
   static func enumerate<T>(
-    defaultValue: T = uninitializedMemory(of: T.self),
+    defaultValue: T = Mem.zeroed(of: T.self),
     _ fn: (UnsafeMutablePointer<UInt32>, UnsafeMutablePointer<T>?) -> Void
   ) -> [T] {
     enumerate(defaultValue: defaultValue) { count, arr in
@@ -111,8 +112,16 @@ extension Vulkan {
 
 }
 
-func uninitializedMemory<T>(of type: T.Type) -> T {
-  withUnsafeTemporaryAllocation(of: type, capacity: 1) { buffer in
-    buffer[0]
+enum Mem {}
+
+extension Mem {
+  static func uninitialized<T>(of type: T.Type) -> T {
+    withUnsafeTemporaryAllocation(of: type, capacity: 1) { buffer in
+      buffer[0]
+    }
+  }
+
+  static func zeroed<T>(of type: T.Type) -> T {
+    createZeroedStruct(of: type)
   }
 }

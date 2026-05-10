@@ -11,8 +11,9 @@ public class GraphicsDevice {
     self.physicalDevice = selected.0
     self.logicalDevice = createDevice(physicalDevice: selected.0, queues: selected.1)
 
-    self.vma = createVMA(
-      instance: instance, physicalDevice: physicalDevice, logicalDevice: logicalDevice)
+    print("physicalDevice = \(physicalDevice), logicalDevice = \(logicalDevice)")
+
+    self.vma = createVMA(instance: instance, physicalDevice: physicalDevice, logicalDevice: logicalDevice)
   }
 
   deinit {
@@ -20,7 +21,6 @@ public class GraphicsDevice {
   }
 }
 
-private let deviceLayers: CStringArray = []
 private let deviceExtensions = CStringArray {
   "VK_KHR_swapchain"
   "VK_KHR_external_fence"
@@ -77,8 +77,9 @@ private func createDevice(physicalDevice: VkPhysicalDevice, queues: SelectedQueu
     flags: 0,
     queueCreateInfoCount: queueCi.count,
     pQueueCreateInfos: queueCi.ptr,
-    enabledLayerCount: deviceLayers.count,
-    ppEnabledLayerNames: deviceLayers.ptr,
+    // device layer is deprecated
+    enabledLayerCount: 0,
+    ppEnabledLayerNames: nil,
     enabledExtensionCount: deviceExtensions.count,
     ppEnabledExtensionNames: deviceExtensions.ptr,
     pEnabledFeatures: nil
@@ -86,15 +87,10 @@ private func createDevice(physicalDevice: VkPhysicalDevice, queues: SelectedQueu
   var device: VkDevice?
   vkCreateDevice(physicalDevice, &ci, nil, &device).expect("Cannot create device")
 
+  volkLoadDevice(device)
+
   return device!
 }
-
-// private struct PhysicalDeviceRequirements {
-//   let graphics: UInt32
-//   // let compute: UInt32
-//   let present: UInt32
-//   let transfer: UInt32
-// }
 
 private func selectPhysicalDevice(instance: VkInstance, compatibleWith surface: Surface) -> (
   VkPhysicalDevice, SelectedQueues
@@ -184,4 +180,33 @@ private func getQueues(device: VkPhysicalDevice, surface: Surface) -> SelectedQu
   } else {
     nil
   }
+}
+
+func createVMA(
+  instance: VkInstance,
+  physicalDevice: VkPhysicalDevice,
+  logicalDevice: VkDevice,
+) -> VmaAllocator {
+    var vmaCi = Box(Mem.zeroed(of: VmaAllocatorCreateInfo.self)) {
+      $0.physicalDevice = physicalDevice
+      $0.device = logicalDevice
+      $0.instance = instance
+      $0.vulkanApiVersion = Vulkan.apiVersion
+      $0.flags =
+        VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT.u32
+        | VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT.u32
+        | VMA_ALLOCATOR_CREATE_EXT_MEMORY_PRIORITY_BIT.u32
+      #if os(Windows)
+        $0.flags |= VMA_ALLOCATOR_CREATE_KHR_EXTERNAL_MEMORY_WIN32_BIT.u32
+      #endif
+    }
+
+    let vulkanFunctions = Box(VmaVulkanFunctions())
+    vmaImportVulkanFunctionsFromVolk(vmaCi.ptr, vulkanFunctions.mut).expect("Cannot import vulkan fns from volk")
+    vmaCi.value.pVulkanFunctions = vulkanFunctions.ptr
+
+    var allocator: VmaAllocator?
+    vmaCreateAllocator(vmaCi.ptr, &allocator).expect("Cannot create vma")
+
+    return allocator!
 }

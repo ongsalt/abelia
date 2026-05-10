@@ -11,11 +11,13 @@ var vulkanIncludePath: [CSetting] = [
     .define("VK_USE_PLATFORM_WAYLAND_KHR", .when(platforms: [.linux])),
     .define("VK_USE_PLATFORM_WIN32_KHR", .when(platforms: [.windows])),
 ]
+
 if let vulkanSDK = ProcessInfo.processInfo.environment["VULKAN_SDK"] {
     // vulkanSearchPath.append
     // let includePath = "\(vulkanSDK)/Include"
     vulkanIncludePath.append(.unsafeFlags(["-I\(vulkanSDK)/Include"]))
 }
+
 let package = Package(
     name: "graphics-101",
     dependencies: [
@@ -26,15 +28,13 @@ let package = Package(
     targets: [
         // bruh, how do i do this on windows
         // .systemLibrary(name: "CPango", pkgConfig: "pangoft2"),
+        .target(name: "Reactivity"),
+        .target(name: "Pointer"),
+
         .target(
             name: "CVulkan",
             cSettings: vulkanIncludePath,
         ),
-
-        // .target(name: "Signal"),
-        .target(name: "Reactivity"),
-        .target(name: "Pointer"),
-        // .executableTarget(name: "Signal"),
 
         .target(
             name: "EmaCore",
@@ -53,7 +53,6 @@ let package = Package(
                 "EmaCore",
                 .product(name: "Swinit", package: "swinit"),
             ],
-            // cSettings: vulkanIncludePath
         ),
 
         .macro(
