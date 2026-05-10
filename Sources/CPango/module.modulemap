@@ -1,3 +1,0 @@
-module CPango {
-    umbrella header "CPango.h"
-}
