@@ -3,12 +3,12 @@ public final class Signal<T> {
     let node: Node = Node(label: String(describing: Signal<T>.self))
 
     public var value: T {
-        get {
+        _read {
             TrackingContext.current?.reportRead(node)
-            return self._value
+            yield self._value
         }
-        set {
-            self._value = newValue
+        _modify {
+            yield &self._value
             node.markDirty()
         }
     }

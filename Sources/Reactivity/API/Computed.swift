@@ -3,18 +3,22 @@ public final class Computed<T> {
     let node: Node = Node(label: String(describing: Computed<T>.self))
 
     public var value: T {
-        TrackingContext.current?.reportRead(node)
+        _read {
+            TrackingContext.current?.reportRead(node)
 
-        if !node.dirty {
-            return _value!
+            if !node.dirty {
+                yield _value!
+                return
+            }
+
+            node.clearDependencies()
+            let deps = TrackingContext.track {
+                _value = computation()
+            }
+            node.markClean()
+            node.addDependency(deps)
+            yield _value!
         }
-        node.clearDependencies()
-        let deps = TrackingContext.track {
-            _value = computation()
-        }
-        node.markClean()
-        node.addDependency(deps)
-        return _value!
     }
 
     var _value: T?
@@ -35,7 +39,6 @@ public final class Computed<T> {
         self.init(wrappedValue)
     }
 }
-
 extension Computed: CustomStringConvertible {
     public var description: String {
         "\(Computed<T>.self)(\(value))"
