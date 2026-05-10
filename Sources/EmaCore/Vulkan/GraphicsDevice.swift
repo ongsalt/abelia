@@ -5,13 +5,31 @@ public class GraphicsDevice {
   let physicalDevice: VkPhysicalDevice
   let logicalDevice: VkDevice
   let vma: VmaAllocator
+  private let selectedQueueIndexes: SelectedQueues
+
+  let presentQueue: VkQueue
+  let graphicsQueue: VkQueue
+  let transferQueue: VkQueue
+
+  let cleanupQueue = CleanUpQueue()
 
   init(instance: VkInstance, compatibleWith surface: Surface) {
     let selected = selectPhysicalDevice(instance: instance, compatibleWith: surface)
+    self.selectedQueueIndexes = selected.1
     self.physicalDevice = selected.0
     self.logicalDevice = createDevice(physicalDevice: selected.0, queues: selected.1)
 
-    print("physicalDevice = \(physicalDevice), logicalDevice = \(logicalDevice)")
+    var presentQueue: VkQueue?
+    vkGetDeviceQueue(self.logicalDevice, UInt32(selectedQueueIndexes.present), 0, &presentQueue)
+    self.presentQueue = presentQueue!
+
+    var graphicsQueue: VkQueue?
+    vkGetDeviceQueue(self.logicalDevice, UInt32(selectedQueueIndexes.graphics), 0, &graphicsQueue)
+    self.graphicsQueue = graphicsQueue!
+
+    var transferQueue: VkQueue?
+    vkGetDeviceQueue(self.logicalDevice, UInt32(selectedQueueIndexes.transfer), 0, &transferQueue)
+    self.transferQueue = transferQueue!
 
     self.vma = createVMA(instance: instance, physicalDevice: physicalDevice, logicalDevice: logicalDevice)
   }

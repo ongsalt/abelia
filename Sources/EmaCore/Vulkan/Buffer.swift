@@ -9,7 +9,7 @@ struct BufferUsages: OptionSet {
 
 class Buffer {
   let cleanUpQueue: CleanUpQueue
-  init(cleanUpQueue: CleanUpQueue) {
+  init(cleanUpQueue: CleanUpQueue, usages: BufferUsages) {
     self.cleanUpQueue = cleanUpQueue
   }
 

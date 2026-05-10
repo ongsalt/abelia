@@ -10,17 +10,14 @@ struct TextureUsages: OptionSet {
 
 
 class Texture {
-  let cleanUpQueue: CleanUpQueue
+  // let cleanUpQueue: CleanUpQueue
   var size: Size<UInt32> = .zero 
   // var size: Size<UInt32> = .zero 
 
-  init(cleanUpQueue: CleanUpQueue) {
-    self.cleanUpQueue = cleanUpQueue
+  init(size: Size<UInt32>, usages: TextureUsages) {
+    
   }
 
-  deinit {
-    cleanUpQueue.schedule {
-
-    }
-  }
+  // deinit {
+  // }
 }
