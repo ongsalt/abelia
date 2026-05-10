@@ -1,10 +1,10 @@
 enum APIDesign {}
 
 extension APIDesign {
-    class Node {  // basically SpriteVisual -> currently our CompositionNode
+    class Layer {  // basically SpriteVisual -> currently our CompositionLayer
         // transform/offset/opacity
-        var parent: Node?
-        var children: [Node] = []
+        var parent: Layer?
+        var children: [Layer] = []
 
         var comment: String?
         var brush: Brush?
@@ -33,37 +33,37 @@ extension APIDesign {
         // }
     }
 
-    class ShapeNode: Node {  // new node that wont ever cache its content.
+    class ShapeLayer: Layer {  // new Layer that wont ever cache its content.
         struct Shape {
             let brush: Brush
             // let kind
         }
     }
 
-    class ScrollNode: Node {  // only redraw diff
+    class ScrollLayer: Layer {  // only redraw diff
     }
 
     struct DropShadow {
         var color: Color
-        var opacity: Float
         var blur: Float
         var renderMode: RenderMode = .sdf
 
         enum RenderMode {
             // case path(Path)
-            case sdf  // based on parent Node
+            case sdf  // based on parent Layer
             case content  // look at content pixel coverage and fucking blur it
         }
     }
 
-    enum Brush {
+    enum Brush { // 4f, 1f (index), imageIndex:4f:4f, ONEeffect(max=8f):samplerIndex 
+        // so 1f tag + 9f for brush
         case solid(Color)
         case gradient(Gradient)  // -> image/gradient1d/vertex interpolation
         case image(any Surface, ninegrid: SIMD4<Float>, crop: SIMD4<Float>)
-        // well well well, this still require grouping node into layer
+        // well well well, this still require grouping Layer into layer
         // and this shouldnt sample layer outside its rasterizationRoot anyways
         // this is the current behavior
-        case effect([ImageFilter])  // -> image
+        case effect(ImageFilter)  // -> image
     }
 
     // 1d texture lookup for simple case
@@ -75,13 +75,17 @@ extension APIDesign {
     struct Path {}
 }
 
+enum ImageFilter {
+    case blur(radius: Float)
+}
+
 // this is kinda complex we might need proper render graph now
 
-enum IntermediateNode {
+enum IntermediateLayer {
     enum Pipeline {
         // uber shader
         //  - draw shape with brush mainly
-        //  - currently our CompositionNode
+        //  - currently our CompositionLayer
         //  - gonna add ability to draw shape later?
         //  - effect (but there are too many effect)
         // brush mode
@@ -89,24 +93,25 @@ enum IntermediateNode {
         // - gradient1d(source)
         // - image(source, ninegrid, crop)
         case main
-        case gradient1d
+
+        // case gradient1d
         // case custom(Shader)
     }
 
     enum RenderTask {
         case shape
         case shadow
-        case gradient1d
+        // case gradient1d
         // case gradient2d
         case effect
-
+        // case customEffect()
         case textureLoading
 
         var pipeline: Pipeline? {
             switch self {
             case .shape: .main
             case .shadow: .main
-            case .gradient1d: .gradient1d
+            // case .gradient1d: .gradient1d
             case .effect: .main
             case .textureLoading: nil
             }
@@ -128,4 +133,10 @@ extension DirtyFlags {
     var shouldUpdate: Bool {
         !self.isEmpty
     }
+}
+
+enum DrawCommand {
+    case composite
+    case effect
+    case waitTransfer
 }

@@ -16,3 +16,4 @@
 - unfuck threading -> remove @MainActor
 - windows resize
 - transparency on windows: DirectComposition swapchain
+- multi windows support

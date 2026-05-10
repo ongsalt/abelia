@@ -3,8 +3,9 @@
 
 import CompilerPluginSupport
 
-import PackageDescription
 import Foundation
+
+import PackageDescription
 
 var vulkanIncludePath: [CSetting] = [
     .define("VK_USE_PLATFORM_WAYLAND_KHR", .when(platforms: [.linux])),
@@ -15,30 +16,14 @@ if let vulkanSDK = ProcessInfo.processInfo.environment["VULKAN_SDK"] {
     // let includePath = "\(vulkanSDK)/Include"
     vulkanIncludePath.append(.unsafeFlags(["-I\(vulkanSDK)/Include"]))
 }
-
 let package = Package(
     name: "graphics-101",
-    // products: [
-    //     .executable(name: "Composition", targets: ["Composition"]),
-    // ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-numerics", from: "1.0.0"),
         .package(url: "https://github.com/swiftlang/swift-syntax", from: "602.0.0"),
         .package(url: "https://github.com/ongsalt/swinit", branch: "main"),
     ],
     targets: [
-        .target(name: "CWayland2"),
-        .target(
-            name: "Wayland",
-            dependencies: [
-                .target(name: "CWayland2"),
-                "Pointer",
-            ],
-            swiftSettings: [
-                .interoperabilityMode(.C)
-            ]
-        ),
-
         // bruh, how do i do this on windows
         .systemLibrary(name: "CPango", pkgConfig: "pangoft2"),
         .target(
@@ -51,6 +36,13 @@ let package = Package(
         .target(name: "Pointer"),
         .target(name: "UI", dependencies: ["Composition", "DSLMacro"]),
         // .executableTarget(name: "Signal"),
+
+        .target(
+            name: "EmaCore",
+            dependencies: [
+                "Reactivity"
+            ]
+        ),
 
         .macro(
             name: "DSLMacro",

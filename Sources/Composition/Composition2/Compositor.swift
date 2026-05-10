@@ -83,6 +83,14 @@ public class Compositor: @unchecked Sendable {
         }
     }
 
+    public func resize(to size: SIMD2<UInt32>) {
+        self.size = size
+        self.root.size = SIMD2(size)
+        self.root.compositorPrivate.absoluteRect.size = SIMD2(size)
+        self.dirtyNotifier.compositorPrivate.absoluteRect.size = SIMD2(size)
+        self.state.swapChain.resize(to: size)
+    }
+
     private func recomposite() async {
         // TODO: fix race condition
 

@@ -18,6 +18,8 @@
 //     return texture
 // }
 
+import CWin32
+
 import Composition
 
 import Foundation
@@ -27,8 +29,6 @@ import Reactivity
 import Swinit
 
 import UI
-
-import CWin32
 
 class Responder: Swinit.Responder, @unchecked Sendable {
     typealias EventLoop = Swinit.EventLoop
@@ -50,7 +50,8 @@ class Responder: Swinit.Responder, @unchecked Sendable {
         #endif
 
         #if os(Windows)
-            window = eventLoop.createWindow(attributes: .init(title: "nah", noRedirectionBitmap: true))
+            window = eventLoop.createWindow(
+                attributes: .init(title: "nah", noRedirectionBitmap: true))
             window?.drawUnderTitleBar = true
             // window?.backdropStyle = .mica
 
@@ -76,8 +77,16 @@ class Responder: Swinit.Responder, @unchecked Sendable {
         case .closeRequested:
             self.window = nil
             eventLoop.stop()
+        case .resized(let size):
+            print("resized to", size)
+            let w = size.width
+            let h = size.height
+            MainActor.assumeIsolated { [self] in
+                self.compositor?.resize(to: .init(w, h))
+            }
         default:
-            print(event)
+            do {}
+        // print(event)
         }
     }
 }

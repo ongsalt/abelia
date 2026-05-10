@@ -1,5 +1,6 @@
 @preconcurrency import CVulkan
 
+// TODO: refactor this to allow it to be replace with D3D11 swapchain
 import Foundation
 
 import Pointer
@@ -9,6 +10,10 @@ final class SwapChain {
     var surfaceFormat: VkSurfaceFormatKHR
     var swapChain: VkSwapchainKHR
     var extent: VkExtent2D
+
+    private let surface: VkSurfaceKHR
+    private var physicalDevice: VkPhysicalDevice
+    private var families: SelectedQueuesIndices
 
     // this is our frame in flight
     var fences: [VkFence]
@@ -24,13 +29,16 @@ final class SwapChain {
     // var perFrameStorage: [T] = []
 
     init(
-        surface: VkSurfaceKHR,
+        surface: VkSurfaceKHR,  // this is per windows tho
         physicalDevice: VkPhysicalDevice,
         logicalDevice device: VkDevice,
         families: SelectedQueuesIndices,
         preferredSize: SIMD2<UInt32> = SIMD2(800, 600)
     ) {
         self.device = device
+        self.surface = surface
+        self.physicalDevice = physicalDevice
+        self.families = families
         let (swapChain, swapChainSurfaceFormat, extent) = Self.createSwapChain(
             surface: surface,
             physicalDevice: physicalDevice,
@@ -55,6 +63,35 @@ final class SwapChain {
         self.fences = c.fences
         self.presentSemaphores = c.present
         self.renderSemaphore = c.render
+    }
+
+    func resize(to size: SIMD2<UInt32>) {
+        // cleanup TODO
+        // for iv in imageViews {
+        //     vkDestroyImageView()
+        // }
+
+        // recreate
+        let (swapChain, swapChainSurfaceFormat, extent) = Self.createSwapChain(
+            surface: surface,
+            physicalDevice: physicalDevice,
+            logicalDevice: device,
+            preferredSize: size,
+            indices: families,
+            oldSwapchain: self.swapChain
+        )
+
+        self.swapChain = swapChain
+        self.surfaceFormat = swapChainSurfaceFormat
+        self.extent = extent
+
+        images = Vulkan.getArray(of: VkImage?.self) { [device, swapChain] count, arr in
+            vkGetSwapchainImagesKHR(device, swapChain, count, arr)
+        }.unwrapPointer()
+
+        imageViews = Self.createImageViews(
+            device: device, swapChainImages: images, swapChainSurfaceFormat: swapChainSurfaceFormat)
+
     }
 
     func acquireNextImage() -> (VkImage, VkImageView, UInt32) {

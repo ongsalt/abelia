@@ -15,6 +15,11 @@ class Effect {
         node.dirtyCallback?()
     }
 
+    func stop() {
+        node.dirtyCallback = nil
+        node.clearDependencies()
+    }
+
     deinit {
         node.dirtyCallback = nil
         node.clearDependencies()

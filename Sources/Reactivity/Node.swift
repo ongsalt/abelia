@@ -13,18 +13,7 @@ public class Node {
         self.dirtyCallback = dirtyCallback
     }
 
-    // if we mark self 2 time then we fucked up?
-    func markDirty() {
-        var marked: Set<ObjectIdentifier> = []
-        markDirty(marked: &marked)
-    }
-
-    func markDirty(marked: inout Set<ObjectIdentifier>) {
-        if marked.contains(self.id) {
-            // print("Cycle detected at \(self) [\(self.id)]")
-            fatalError("Cycle detected at \(self) [\(self.id)]")
-        }
-        marked.insert(self.id)
+    public func markDirty() {
         dirty = true
         // idk which should run first
         if let dirtyCallback {
@@ -36,17 +25,17 @@ public class Node {
         }
     }
 
-    func markClean() {
+    public func markClean() {
         dirty = false
     }
 
-    func addDependency(_ dep: some Sequence<Node>) {
+    public func addDependency(_ dep: some Sequence<Node>) {
         for d in dep {
             self.addDependency(d)
         }
     }
 
-    func addDependency(_ dep: Node) {
+    public func addDependency(_ dep: Node) {
         // we should have a toggle for this
         // check if dep IS depending on current node or not
 
@@ -55,18 +44,18 @@ public class Node {
         dep.dependants.insert(self)
     }
 
-    func removeDependency(_ dep: some Sequence<Node>) {
+    public func removeDependency(_ dep: some Sequence<Node>) {
         for d in dep {
             self.removeDependency(d)
         }
     }
 
-    func removeDependency(_ dep: Node) {
+    public func removeDependency(_ dep: Node) {
         self.dependencies.remove(dep)
         dep.dependants.remove(self)
     }
 
-    func clearDependencies() {
+    public func clearDependencies() {
         for d in self.dependencies {
             d.dependants.remove(self)
         }
@@ -74,7 +63,7 @@ public class Node {
     }
 
     deinit {
-        print("droping \(self)")
+        // print("droping \(self)")
     }
 }
 
