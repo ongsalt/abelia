@@ -125,8 +125,11 @@ public struct DirtyFlags: OptionSet, Sendable {
         self.rawValue = rawValue
     }
 
+    /// Need to update gpu buffer
     public static let source = DirtyFlags(rawValue: 1 << 0)
-    public static let overlapped = DirtyFlags(rawValue: 1 << 1)
+
+    /// No need, just for propagation
+    public static let parent = DirtyFlags(rawValue: 1 << 1)
 }
 
 extension DirtyFlags {

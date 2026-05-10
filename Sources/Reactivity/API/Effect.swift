@@ -1,8 +1,8 @@
-class Effect {
+public class Effect {
     let node: Node = Node(label: String(describing: Effect.self))
 
     @discardableResult
-    init(_ block: @escaping () -> Void) {
+    public init(_ block: @escaping () -> Void) {
         node.dirtyCallback = { [weak node] in
             node?.clearDependencies()
             let deps = TrackingContext.track {
@@ -15,7 +15,7 @@ class Effect {
         node.dirtyCallback?()
     }
 
-    func stop() {
+    public func stop() {
         node.dirtyCallback = nil
         node.clearDependencies()
     }

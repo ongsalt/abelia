@@ -19,7 +19,7 @@ public struct FnBindings<T>: Bindings {
     }
 
     let getter: () -> T
-    let setter: @escaping (T) -> Void
+    let setter: (T) -> Void
 
     init(getter: @escaping () -> T, setter: @escaping (T) -> Void) {
         self.getter = getter
@@ -28,7 +28,7 @@ public struct FnBindings<T>: Bindings {
 }
 
 protocol Bindings<Value> {
-    typealias Value
+    associatedtype Value
     var value: Value { get set }
 }
 
