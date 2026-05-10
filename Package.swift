@@ -25,7 +25,7 @@ let package = Package(
     ],
     targets: [
         // bruh, how do i do this on windows
-        .systemLibrary(name: "CPango", pkgConfig: "pangoft2"),
+        // .systemLibrary(name: "CPango", pkgConfig: "pangoft2"),
         .target(
             name: "CVulkan",
             cSettings: vulkanIncludePath,
@@ -42,7 +42,9 @@ let package = Package(
                 "Reactivity",
                 "Pointer",
                 "DSLMacro",
-            ]
+                "CVulkan"
+            ],
+            cSettings: vulkanIncludePath
         ),
 
         .target(
@@ -50,7 +52,8 @@ let package = Package(
             dependencies: [
                 "EmaCore",
                 .product(name: "Swinit", package: "swinit"),
-            ]
+            ],
+            cSettings: vulkanIncludePath
         ),
 
         .macro(
@@ -73,20 +76,20 @@ let package = Package(
         //     capability: .buildTool(),
         // ),
 
-        .target(
-            name: "Composition",
-            dependencies: [
-                .product(name: "Numerics", package: "swift-numerics"),
-                "CVulkan",
-                // "FreeType",
-                .target(name: "CPango", condition: .when(platforms: [.linux])),
-                "Pointer",
-            ],
-            resources: [
-                .copy("Resources/Compiled")
-            ],
-            cSettings: vulkanIncludePath,
-        ),
+        // .target(
+        //     name: "Composition",
+        //     dependencies: [
+        //         .product(name: "Numerics", package: "swift-numerics"),
+        //         "CVulkan",
+        //         // "FreeType",
+        //         .target(name: "CPango", condition: .when(platforms: [.linux])),
+        //         "Pointer",
+        //     ],
+        //     resources: [
+        //         .copy("Resources/Compiled")
+        //     ],
+        //     cSettings: vulkanIncludePath,
+        // ),
 
         .executableTarget(
             name: "Playground",
