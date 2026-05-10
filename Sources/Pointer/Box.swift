@@ -24,6 +24,10 @@ public struct Box<T>: ~Copyable {
         mut.initialize(to: value)
     }
 
+    public init(pointingTo ptr: UnsafeMutablePointer<T>) {
+        self.mut = ptr
+    }
+
     public init<K>(optional value: K) where T == K? {
         self.init(value)
     }

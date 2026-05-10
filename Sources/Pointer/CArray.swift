@@ -2,7 +2,7 @@
 
 public final class CArray<Element> {
     public let buffer: UnsafeMutableBufferPointer<Element>
-    public var ptr: UnsafeMutablePointer<Element>? {
+    public var mut: UnsafeMutablePointer<Element>? {
         buffer.baseAddress
     }
 
@@ -10,8 +10,8 @@ public final class CArray<Element> {
         UInt32(buffer.count)
     }
 
-    public var readonly: UnsafePointer<Element>? {
-        UnsafePointer(ptr)
+    public var ptr: UnsafePointer<Element>? {
+        UnsafePointer(mut)
     }
 
     public init(_ array: [Element]) {

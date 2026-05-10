@@ -5,7 +5,7 @@
 #endif
 
 public class Surface {
-  let surface: VkSurfaceKHR
+  let handle: VkSurfaceKHR
 
   #if os(linux)
     // init() {}
@@ -33,16 +33,9 @@ public class Surface {
         &surface
       ).expect("Cannot create win32 surface")
 
-      self.surface = surface!
+      self.handle = surface!
     }
   #endif
 
 }
 
-class Swapchain {
-
-}
-
-class SwapchainImage {
-
-}

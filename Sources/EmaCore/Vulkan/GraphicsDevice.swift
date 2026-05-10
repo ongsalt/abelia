@@ -2,36 +2,36 @@
 import Pointer
 
 public class GraphicsDevice {
-  let physicalDevice: VkPhysicalDevice
-  let logicalDevice: VkDevice
-  let vma: VmaAllocator
-  private let selectedQueueIndexes: SelectedQueues
+  private let physicalDevice: VkPhysicalDevice
+  let handle: VkDevice
+  private let vma: VmaAllocator
+  let selectedQueueIndexes: SelectedQueues
 
   let presentQueue: VkQueue
   let graphicsQueue: VkQueue
   let transferQueue: VkQueue
 
-  let cleanupQueue = CleanUpQueue()
+  private let cleanupQueue = CleanUpQueue()
 
   init(instance: VkInstance, compatibleWith surface: Surface) {
     let selected = selectPhysicalDevice(instance: instance, compatibleWith: surface)
     self.selectedQueueIndexes = selected.1
     self.physicalDevice = selected.0
-    self.logicalDevice = createDevice(physicalDevice: selected.0, queues: selected.1)
+    self.handle = createDevice(physicalDevice: selected.0, queues: selected.1)
 
     var presentQueue: VkQueue?
-    vkGetDeviceQueue(self.logicalDevice, UInt32(selectedQueueIndexes.present), 0, &presentQueue)
+    vkGetDeviceQueue(self.handle, UInt32(selectedQueueIndexes.present), 0, &presentQueue)
     self.presentQueue = presentQueue!
 
     var graphicsQueue: VkQueue?
-    vkGetDeviceQueue(self.logicalDevice, UInt32(selectedQueueIndexes.graphics), 0, &graphicsQueue)
+    vkGetDeviceQueue(self.handle, UInt32(selectedQueueIndexes.graphics), 0, &graphicsQueue)
     self.graphicsQueue = graphicsQueue!
 
     var transferQueue: VkQueue?
-    vkGetDeviceQueue(self.logicalDevice, UInt32(selectedQueueIndexes.transfer), 0, &transferQueue)
+    vkGetDeviceQueue(self.handle, UInt32(selectedQueueIndexes.transfer), 0, &transferQueue)
     self.transferQueue = transferQueue!
 
-    self.vma = createVMA(instance: instance, physicalDevice: physicalDevice, logicalDevice: logicalDevice)
+    self.vma = createVMA(instance: instance, physicalDevice: physicalDevice, logicalDevice: handle)
   }
 
   deinit {
@@ -131,7 +131,7 @@ private func selectPhysicalDevice(instance: VkInstance, compatibleWith surface: 
   return suitableDevices[0]
 }
 
-private struct SelectedQueues {
+struct SelectedQueues {
   var graphics: Int
   var present: Int
   // var compute: Int
@@ -186,7 +186,7 @@ private func getQueues(device: VkPhysicalDevice, surface: Surface) -> SelectedQu
     }
 
     var presentSupported: VkBool32 = false
-    vkGetPhysicalDeviceSurfaceSupportKHR(device, UInt32(index), surface.surface, &presentSupported)
+    vkGetPhysicalDeviceSurfaceSupportKHR(device, UInt32(index), surface.handle, &presentSupported)
       .unwrap()
     if presentSupported.isTrue() && selectedQueues.present == -1 {
       selectedQueues.present = index

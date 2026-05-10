@@ -19,7 +19,8 @@ class Responder: Swinit.Responder, @unchecked Sendable {
             window = eventLoop.createWindow(
                 attributes: .init(title: "nah", noRedirectionBitmap: true))
             window?.drawUnderTitleBar = true
-            window?.backdropStyle = .mica
+            window?.backdropStyle = .acrylic
+            // TODO: support darkmode
         #endif
 
         var context = GraphicsContext(appName: "Playground")
