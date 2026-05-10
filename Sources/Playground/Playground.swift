@@ -1,4 +1,7 @@
 import Ema
+
+import EmaCore
+
 import Foundation
 
 import Swinit
@@ -18,6 +21,13 @@ class Responder: Swinit.Responder, @unchecked Sendable {
             window?.drawUnderTitleBar = true
             window?.backdropStyle = .mica
         #endif
+
+        // var context = GraphicsContext(appName: "Playground")
+        // let surface: Surface = context.createSurface(for: window!)
+        // let device = context.initDevice(comptibleWith: surface)
+
+        // _ = Unmanaged.passRetained(device)
+        // _ = Unmanaged.passRetained(surface)
     }
 
     func windowEvent(

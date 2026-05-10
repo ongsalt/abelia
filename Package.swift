@@ -53,7 +53,7 @@ let package = Package(
                 "EmaCore",
                 .product(name: "Swinit", package: "swinit"),
             ],
-            cSettings: vulkanIncludePath
+            // cSettings: vulkanIncludePath
         ),
 
         .macro(
@@ -95,6 +95,7 @@ let package = Package(
             name: "Playground",
             dependencies: [
                 "Ema",
+                "EmaCore",
                 .product(name: "Swinit", package: "swinit"),
             ],
         ),

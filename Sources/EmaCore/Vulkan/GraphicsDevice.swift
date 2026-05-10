@@ -1,0 +1,187 @@
+@preconcurrency import CVulkan
+import Pointer
+
+public class GraphicsDevice {
+  let physicalDevice: VkPhysicalDevice
+  let logicalDevice: VkDevice
+  let vma: VmaAllocator
+
+  init(instance: VkInstance, compatibleWith surface: Surface) {
+    let selected = selectPhysicalDevice(instance: instance, compatibleWith: surface)
+    self.physicalDevice = selected.0
+    self.logicalDevice = createDevice(physicalDevice: selected.0, queues: selected.1)
+
+    self.vma = createVMA(
+      instance: instance, physicalDevice: physicalDevice, logicalDevice: logicalDevice)
+  }
+
+  deinit {
+
+  }
+}
+
+private let deviceLayers: CStringArray = []
+private let deviceExtensions = CStringArray {
+  "VK_KHR_swapchain"
+  "VK_KHR_external_fence"
+  #if os(Linux)
+    "VK_KHR_external_fence_fd"
+  #endif
+  #if os(Windows)
+    "VK_KHR_external_memory"
+    "VK_KHR_external_memory_win32"
+  #endif
+}
+
+private func createDevice(physicalDevice: VkPhysicalDevice, queues: SelectedQueues) -> VkDevice {
+  let uniqueIndexes = queues.uniques
+  let property: Box<Float> = Box(1.0)
+  let queueCi = CArray(
+    uniqueIndexes.map { index in
+      return VkDeviceQueueCreateInfo(
+        sType: VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+        pNext: nil,
+        flags: 0,
+        queueFamilyIndex: UInt32(index),
+        queueCount: 1,
+        pQueuePriorities: property.ptr
+      )
+    }
+  )
+
+  var features = VkPhysicalDeviceFeatures()
+  features.samplerAnisotropy = true
+
+  let enabledVk12Features = Box(VkPhysicalDeviceVulkan12Features()) {
+    $0.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES
+    $0.descriptorIndexing = true
+    $0.descriptorBindingVariableDescriptorCount = true
+    $0.descriptorBindingSampledImageUpdateAfterBind = true
+    // $0.descriptorBindingPartiallyBound = true
+    $0.runtimeDescriptorArray = true
+    $0.bufferDeviceAddress = true
+
+    $0.shaderSampledImageArrayNonUniformIndexing = true
+  }
+
+  let enabledVk13Features = Box(VkPhysicalDeviceVulkan13Features()) {
+    $0.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES
+    $0.pNext = enabledVk12Features.rawMut
+    $0.synchronization2 = true
+    $0.dynamicRendering = true
+  }
+
+  var ci = VkDeviceCreateInfo(
+    sType: VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+    pNext: enabledVk13Features.ptr,
+    flags: 0,
+    queueCreateInfoCount: queueCi.count,
+    pQueueCreateInfos: queueCi.ptr,
+    enabledLayerCount: deviceLayers.count,
+    ppEnabledLayerNames: deviceLayers.ptr,
+    enabledExtensionCount: deviceExtensions.count,
+    ppEnabledExtensionNames: deviceExtensions.ptr,
+    pEnabledFeatures: nil
+  )
+  var device: VkDevice?
+  vkCreateDevice(physicalDevice, &ci, nil, &device).expect("Cannot create device")
+
+  return device!
+}
+
+// private struct PhysicalDeviceRequirements {
+//   let graphics: UInt32
+//   // let compute: UInt32
+//   let present: UInt32
+//   let transfer: UInt32
+// }
+
+private func selectPhysicalDevice(instance: VkInstance, compatibleWith surface: Surface) -> (
+  VkPhysicalDevice, SelectedQueues
+) {
+  let devices = Vulkan.enumerate { count, arr in
+    vkEnumeratePhysicalDevices(instance, count, arr)
+  }
+
+  if devices.count == 0 {
+    fatalError("No vulkan device")
+  }
+
+  var suitableDevices: [(VkPhysicalDevice, SelectedQueues)] = []
+  for device in devices {
+    if let queues = getQueues(device: device!, surface: surface) {
+      suitableDevices.append((device!, queues))
+    }
+  }
+
+  return suitableDevices[0]
+}
+
+private struct SelectedQueues {
+  var graphics: Int
+  var present: Int
+  // var compute: Int
+  var transfer: Int
+
+  var isCompleted: Bool {
+    graphics != -1 && present != -1 && transfer != -1
+  }
+
+  var uniques: Set<Int> {
+    Set([graphics, present, transfer])
+  }
+}
+
+private func getQueues(device: VkPhysicalDevice, surface: Surface) -> SelectedQueues? {
+  var p: VkPhysicalDeviceProperties2 = VkPhysicalDeviceProperties2()
+  p.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2
+
+  vkGetPhysicalDeviceProperties2(device, &p)
+
+  let name = String(cStringPointer: &p.properties.deviceName)
+  print("- \(name)")
+
+  // TODO: actually picking the device
+  //  - prioritize need DGPU
+  //  - deprioritize llvmpipe
+  //  - we can ignore swapchain support if we are dealing with DirectComposition
+
+  var tf = VkQueueFamilyProperties2()
+  tf.sType = VK_STRUCTURE_TYPE_QUEUE_FAMILY_PROPERTIES_2
+  let supportedQueues: [VkQueueFamilyProperties2] = Vulkan.enumerate(defaultValue: tf) {
+    count, arr in
+    vkGetPhysicalDeviceQueueFamilyProperties2(device, count, arr)
+  }
+
+  var selectedQueues = SelectedQueues(
+    graphics: -1,
+    present: -1,
+    transfer: -1
+  )
+  for (index, queue) in supportedQueues.enumerated() {
+    if queue.queueFamilyProperties.queueFlags & VK_QUEUE_GRAPHICS_BIT.u32 != 0
+      && selectedQueues.graphics == -1
+    {
+      selectedQueues.graphics = index
+    }
+
+    if queue.queueFamilyProperties.queueFlags & VK_QUEUE_TRANSFER_BIT.u32 != 0
+      && selectedQueues.transfer == -1
+    {
+      selectedQueues.transfer = index
+    }
+
+    var presentSupported: VkBool32 = false
+    vkGetPhysicalDeviceSurfaceSupportKHR(device, UInt32(index), surface.surface, &presentSupported)
+      .unwrap()
+    if presentSupported.isTrue() && selectedQueues.present == -1 {
+      selectedQueues.present = index
+    }
+  }
+
+  return if selectedQueues.isCompleted {
+    selectedQueues
+  } else {
+    nil
+  }
+}

@@ -1,87 +1,60 @@
-public class Box<T> {
-    public let ptr: UnsafeMutablePointer<T>
-    public var readonly: UnsafePointer<T> {
-        UnsafePointer(ptr)
+public struct Box<T>: ~Copyable {
+    public let mut: UnsafeMutablePointer<T>
+    public var ptr: UnsafePointer<T> {
+        UnsafePointer(mut)
     }
     public var opaque: OpaquePointer {
-        OpaquePointer(ptr)
+        OpaquePointer(mut)
     }
 
     public var raw: UnsafeRawPointer {
-        UnsafeRawPointer(ptr)
+        UnsafeRawPointer(mut)
     }
 
-    public init(_ value: T, mutate: ((inout T) -> Void)? = nil) {
+    public var rawMut: UnsafeMutableRawPointer {
+        UnsafeMutableRawPointer(mut)
+    }
+
+    public init(_ value: consuming T, mutate: ((inout T) -> Void)? = nil) {
         var value = value
         if let mutate {
             mutate(&value)
         }
-        ptr = UnsafeMutablePointer.allocate(capacity: 1)
-        ptr.initialize(to: value)
+        mut = UnsafeMutablePointer.allocate(capacity: 1)
+        mut.initialize(to: value)
     }
 
-    public convenience init<K>(optional value: K) where T == K? {
+    public init<K>(optional value: K) where T == K? {
         self.init(value)
     }
 
-    public convenience init(leaking value: T) {
-        self.init(value)
-        self.leak()
-    }
-
-    public convenience init(zeroedStructOf type: T.Type) {
+    public init(zeroedStructOf type: T.Type) {
         self.init(createZeroedStruct(of: type))
     }
 
     public var pointee: T {
-        get {
-            ptr.pointee
+        _read {
+            yield mut.pointee
         }
         _modify {
-            yield &ptr.pointee
-        }
-        set {
-            ptr.pointee = newValue
+            yield &mut.pointee
         }
     }
     public var value: T {
-        get {
-            ptr.pointee
+        _read {
+            yield mut.pointee
         }
         _modify {
-            yield &ptr.pointee
-        }
-        set {
-            ptr.pointee = newValue
-        }
-    }
-    public subscript() -> T {
-        get {
-            ptr.pointee
-        }
-        _modify {
-            yield &ptr.pointee
-        }
-        set {
-            ptr.pointee = newValue
+            yield &mut.pointee
         }
     }
 
-    public func mutate(_ block: (inout T) -> Void) {
+    public mutating func mutate(_ block: (inout T) -> Void) {
         block(&pointee)
     }
 
-    // lmao
-    @discardableResult
-    public func leak() -> Box<T> {
-        Unmanaged.passRetained(self)
-
-        return self
-    }
-
     deinit {
-        ptr.deinitialize(count: 1)
-        ptr.deallocate()
-        // print("[Pin] wrapper for \(T.self) \(pointee) dropped")
+        mut.deinitialize(count: 1)
+        mut.deallocate()
     }
 }
