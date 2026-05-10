@@ -1,5 +1,5 @@
 @propertyWrapper
-public final class Signal<T> {
+public struct Signal<T> {
     let node: Node = Node(label: String(describing: Signal<T>.self))
 
     public var value: T {
@@ -31,7 +31,7 @@ public final class Signal<T> {
         }
     }
 
-    public convenience init(wrappedValue: T) {
+    public init(wrappedValue: T) {
         self.init(wrappedValue)
     }
 }

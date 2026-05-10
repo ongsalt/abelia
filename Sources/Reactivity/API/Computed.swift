@@ -1,5 +1,5 @@
 @propertyWrapper
-public final class Computed<T> {
+public struct Computed<T> {
     let node: Node = Node(label: String(describing: Computed<T>.self))
 
     public var value: T {
@@ -7,21 +7,21 @@ public final class Computed<T> {
             TrackingContext.current?.reportRead(node)
 
             if !node.dirty {
-                yield _value!
+                yield storage.value!
                 return
             }
 
             node.clearDependencies()
             let deps = TrackingContext.track {
-                _value = computation()
+                storage.value = computation()
             }
             node.markClean()
             node.addDependency(deps)
-            yield _value!
+            yield storage.value!
         }
     }
 
-    var _value: T?
+    private var storage: Cell<T?> = Cell(nil)
     var computation: () -> T
 
     public init(_ computation: @escaping () -> T) {
@@ -35,12 +35,18 @@ public final class Computed<T> {
     }
 
     // this is cursed
-    public convenience init(wrappedValue: @autoclosure @escaping () -> T) {
+    public init(wrappedValue: @autoclosure @escaping () -> T) {
         self.init(wrappedValue)
     }
 }
 extension Computed: CustomStringConvertible {
     public var description: String {
         "\(Computed<T>.self)(\(value))"
+    }
+}
+private class Cell<T> {
+    var value: T
+    init(_ value: T) {
+        self.value = value
     }
 }
