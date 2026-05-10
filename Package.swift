@@ -34,13 +34,22 @@ let package = Package(
         // .target(name: "Signal"),
         .target(name: "Reactivity"),
         .target(name: "Pointer"),
-        .target(name: "UI", dependencies: ["Composition", "DSLMacro"]),
         // .executableTarget(name: "Signal"),
 
         .target(
             name: "EmaCore",
             dependencies: [
-                "Reactivity"
+                "Reactivity",
+                "Pointer",
+                "DSLMacro",
+            ]
+        ),
+
+        .target(
+            name: "Ema",
+            dependencies: [
+                "EmaCore",
+                .product(name: "Swinit", package: "swinit"),
             ]
         ),
 
@@ -57,7 +66,8 @@ let package = Package(
             name: "ReactivityTests",
             dependencies: [
                 "Reactivity"
-            ]),
+            ]
+        ),
         // .plugin(
         //     name: "ShaderCompilation",
         //     capability: .buildTool(),
@@ -81,9 +91,7 @@ let package = Package(
         .executableTarget(
             name: "Playground",
             dependencies: [
-                "UI",
-                "Composition",
-                "Reactivity",
+                "Ema",
                 .product(name: "Swinit", package: "swinit"),
             ],
         ),

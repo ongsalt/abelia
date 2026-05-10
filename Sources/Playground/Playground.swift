@@ -1,73 +1,23 @@
-// Task {
-// @MainActor
-// func drawText(text: String, compositor: Compositor) async -> RenderTexture {
-//     let (ink, logical) = compositor.textRenderer.measure(text: text)
-//     // TODO: transfer this to gpu
-//     let buffer = UnsafeMutableBufferPointer<UInt8>.allocate(
-//         capacity: Int(logical.height * logical.width))
-//     buffer.initialize(repeating: 0)
-//     _ = compositor.textRenderer.render(
-//         text, to: buffer, width: logical.width, height: logical.height)
-
-//     let texture = await compositor.textureRegistry.createStaticTexture(
-//         from: buffer,
-//         size: [UInt32(logical.width), UInt32(logical.height)],
-//         format: .init(9)  // VK_FORMAT_R8_UNORM
-//     )
-
-//     return texture
-// }
-
-import CWin32
-
-import Composition
-
+import Ema
 import Foundation
 
-import Reactivity
-
 import Swinit
-
-import UI
 
 class Responder: Swinit.Responder, @unchecked Sendable {
     typealias EventLoop = Swinit.EventLoop
     var window: Window? = nil
 
-    var compositor: Compositor?
-
     func resumed(eventLoop: EventLoop) {
-        // we should do window.show()
-
         #if os(Linux)
             window = eventLoop.createWindow(attributes: .init(title: "nah"))
-
-            // TODO: mova wl stuff out
-            let vulkanState = VulkanState(
-                waylandDisplay: display.display,
-                waylandSurface: window!.surface.surface
-            )
         #endif
 
         #if os(Windows)
             window = eventLoop.createWindow(
                 attributes: .init(title: "nah", noRedirectionBitmap: true))
             window?.drawUnderTitleBar = true
-            // window?.backdropStyle = .mica
-
-            let vulkanState = VulkanState(
-                hinstance: window!.hInstance,
-                hwnd: window!.handle
-            )
+            window?.backdropStyle = .mica
         #endif
-
-        MainActor.assumeIsolated {
-            self.compositor = Compositor(state: vulkanState)
-            compositor?.start()
-            setupScene(root: compositor!.root, offset: 0.0)
-
-            animateRect(compositor: compositor!)
-        }
     }
 
     func windowEvent(
@@ -81,9 +31,6 @@ class Responder: Swinit.Responder, @unchecked Sendable {
             print("resized to", size)
             let w = size.width
             let h = size.height
-            MainActor.assumeIsolated { [self] in
-                self.compositor?.resize(to: .init(w, h))
-            }
         default:
             do {}
         // print(event)
@@ -107,102 +54,122 @@ struct Playground {
         eventLoop.run(Responder())
     }
 }
-@MainActor
-func Counter() -> View {
-    @State
-    var count = 0
+// @MainActor
+// func Counter() -> View {
+//     @State
+//     var count = 0
 
-    Task {
-        while !Task.isCancelled {
-            try await Task.sleep(for: .seconds(1))
-            count += 1
-        }
-    }
+//     Task {
+//         while !Task.isCancelled {
+//             try await Task.sleep(for: .seconds(1))
+//             count += 1
+//         }
+//     }
 
-    return Row {
-        Text("idk")
-        Column {
-            Text("count = \(count)")
-        }
+//     return Row {
+//         Text("idk")
+//         Column {
+//             Text("count = \(count)")
+//         }
 
-        Box {
-            Text("Increment")
-        }
-        // .padding(.px(12))
-        .background("red")
-        // .padding(12.px)
-    }
-}
-typealias Px = Int
-@MainActor
-func setupScene(root: CompositionNode, offset: Float) {
-    let colors: [Color] = [
-        // .red, .orange,
-        .red, .orange, .yellow, .green, .mint, .teal, .cyan, .blue, .indigo, .purple, .pink, .brown,
-    ]
+//         Box {
+//             Text("Increment")
+//         }
+//         // .padding(.px(12))
+//         .background("red")
+//         // .padding(12.px)
+//     }
+// }
+// typealias Px = Int
+// @MainActor
+// func setupScene(root: CompositionNode, offset: Float) {
+//     let colors: [Color] = [
+//         // .red, .orange,
+//         .red, .orange, .yellow, .green, .mint, .teal, .cyan, .blue, .indigo, .purple, .pink, .brown,
+//     ]
 
-    for (index, c) in colors.enumerated() {
-        let node = CompositionNode()
-        // node.shouldRasterize = true
-        node.size = [96, 96]
-        node.fillColor = c
-        node.position = [24 * Float(index), 24 * Float(index) + offset]
-        node.cornerRadius = 24
+//     for (index, c) in colors.enumerated() {
+//         let node = CompositionNode()
+//         // node.shouldRasterize = true
+//         node.size = [96, 96]
+//         node.fillColor = c
+//         node.position = [24 * Float(index), 24 * Float(index) + offset]
+//         node.cornerRadius = 24
 
-        node.shadowBlur = 18
-        node.shadowColor = .black.multiply(opacity: 0.4)
+//         node.shadowBlur = 18
+//         node.shadowColor = .black.multiply(opacity: 0.4)
 
-        // node.borderWidth = 0.5
-        // node.borderColor = .black
+//         // node.borderWidth = 0.5
+//         // node.borderColor = .black
 
-        root.addChild(node)
-    }
-}
-@MainActor
-func makeCard(compositor: Compositor) async {
-    let card = CompositionNode()
-    card.size = [240, 240]
-    card.fillColor = .white
-    card.position = [220, 60]  // Centered-ish in the window
-    card.cornerRadius = 32
-    card.shadowBlur = 28
-    card.shadowOffset = [0, 16]
-    card.shadowColor = .black.multiply(opacity: 0.15)
-    // card.scale = [1, 1.1]
-    compositor.root.addChild(card)
+//         root.addChild(node)
+//     }
+// }
+// @MainActor
+// func makeCard(compositor: Compositor) async {
+//     let card = CompositionNode()
+//     card.size = [240, 240]
+//     card.fillColor = .white
+//     card.position = [220, 60]  // Centered-ish in the window
+//     card.cornerRadius = 32
+//     card.shadowBlur = 28
+//     card.shadowOffset = [0, 16]
+//     card.shadowColor = .black.multiply(opacity: 0.15)
+//     // card.scale = [1, 1.1]
+//     compositor.root.addChild(card)
 
-    // // Name
-    // let nameTex = await drawText(text: "asfjhisdkfuh", compositor: compositor)
-    // let nameNode = CompositionNode()
-    // nameNode.contents = nameTex
-    // nameNode.size = SIMD2(nameTex.size)
-    // nameNode.position = [(240 - Float(nameTex.size.x)) / 2, 100]  // Centered text
-    // nameNode.tintColor = .black
-    // nameNode.fillColor = .black.multiply(opacity: 0.5)
-    // card.addChild(nameNode)
-}
-@MainActor
-func animateRect(compositor: Compositor) {
-    let node = CompositionNode()
-    node.shouldRasterize = true
-    node.size = [96, 96]
-    node.fillColor = .red
-    node.position = [0, 200]
-    node.cornerRadius = 24
-    node.opacity = 0
-    compositor.root.addChild(node)
+//     // // Name
+//     // let nameTex = await drawText(text: "asfjhisdkfuh", compositor: compositor)
+//     // let nameNode = CompositionNode()
+//     // nameNode.contents = nameTex
+//     // nameNode.size = SIMD2(nameTex.size)
+//     // nameNode.position = [(240 - Float(nameTex.size.x)) / 2, 100]  // Centered text
+//     // nameNode.tintColor = .black
+//     // nameNode.fillColor = .black.multiply(opacity: 0.5)
+//     // card.addChild(nameNode)
+// }
+// @MainActor
+// func animateRect(compositor: Compositor) {
+//     let node = CompositionNode()
+//     node.shouldRasterize = true
+//     node.size = [96, 96]
+//     node.fillColor = .red
+//     node.position = [0, 200]
+//     node.cornerRadius = 24
+//     node.opacity = 0
+//     compositor.root.addChild(node)
 
-    let clock = ContinuousClock()
-    let start = clock.now
+//     let clock = ContinuousClock()
+//     let start = clock.now
 
-    compositor.requestAnimationFrame { controller in
-        var progress = (clock.now - start) / .milliseconds(400)
-        if progress >= 1 {
-            progress = 1
-            controller.stop()
-        }
-        let animProgress = Float(1 - pow(1 - progress, 3))
-        node.opacity = animProgress
-        node.position.x = animProgress * 100
-    }
-}
+//     compositor.requestAnimationFrame { controller in
+//         var progress = (clock.now - start) / .milliseconds(400)
+//         if progress >= 1 {
+//             progress = 1
+//             controller.stop()
+//         }
+//         let animProgress = Float(1 - pow(1 - progress, 3))
+//         node.opacity = animProgress
+//         node.position.x = animProgress * 100
+//     }
+// }
+
+// Task {
+// @MainActor
+// func drawText(text: String, compositor: Compositor) async -> RenderTexture {
+//     let (ink, logical) = compositor.textRenderer.measure(text: text)
+//     // TODO: transfer this to gpu
+//     let buffer = UnsafeMutableBufferPointer<UInt8>.allocate(
+//         capacity: Int(logical.height * logical.width))
+//     buffer.initialize(repeating: 0)
+//     _ = compositor.textRenderer.render(
+//         text, to: buffer, width: logical.width, height: logical.height)
+
+//     let texture = await compositor.textureRegistry.createStaticTexture(
+//         from: buffer,
+//         size: [UInt32(logical.width), UInt32(logical.height)],
+//         format: .init(9)  // VK_FORMAT_R8_UNORM
+//     )
+
+//     return texture
+// }
