@@ -6,7 +6,6 @@ public func If(_ condition: Prop<Bool>, @ViewBuilder then thenBlock: @escaping (
   let groupingNode = NonLayoutNode()
 
   TemplateEffect {
-    // TODO: cleanup somehow 
     groupingNode.removeAllChild()
 
     if (condition.value) {

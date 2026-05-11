@@ -16,7 +16,7 @@ extension GraphicsContext {
     self.init(instance: instance)
   }
 
-  public mutating func initDevice(compatibleWith surface: Surface) -> GraphicsDevice {
+  public mutating func createDevice(compatibleWith surface: Surface) -> GraphicsDevice {
     GraphicsDevice(instance: instance, compatibleWith: surface)
   }
 }

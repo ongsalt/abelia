@@ -1,9 +1,3 @@
-// should we do newtype
-
-// TODO: Variadic Generics
-
-// doing modifier here?
-
 @resultBuilder
 public struct ViewBuilder {
   public static func buildBlock() -> Body {

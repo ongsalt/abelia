@@ -7,6 +7,8 @@ public class GraphicsDevice {
   private let vma: VmaAllocator
   let selectedQueueIndexes: SelectedQueues
 
+  let capabilities: VkSurfaceCapabilitiesKHR
+
   let presentQueue: VkQueue
   let graphicsQueue: VkQueue
   let transferQueue: VkQueue
@@ -17,6 +19,7 @@ public class GraphicsDevice {
     let selected = selectPhysicalDevice(instance: instance, compatibleWith: surface)
     self.selectedQueueIndexes = selected.1
     self.physicalDevice = selected.0
+    self.capabilities = selected.2
     self.handle = createDevice(physicalDevice: selected.0, queues: selected.1)
 
     var presentQueue: VkQueue?
@@ -34,8 +37,11 @@ public class GraphicsDevice {
     self.vma = createVMA(instance: instance, physicalDevice: physicalDevice, logicalDevice: handle)
   }
 
-  deinit {
+  func createShit() {
 
+  }
+
+  deinit {
   }
 }
 
@@ -111,7 +117,7 @@ private func createDevice(physicalDevice: VkPhysicalDevice, queues: SelectedQueu
 }
 
 private func selectPhysicalDevice(instance: VkInstance, compatibleWith surface: Surface) -> (
-  VkPhysicalDevice, SelectedQueues
+  VkPhysicalDevice, SelectedQueues, VkSurfaceCapabilitiesKHR
 ) {
   let devices = Vulkan.enumerate { count, arr in
     vkEnumeratePhysicalDevices(instance, count, arr)
@@ -121,10 +127,13 @@ private func selectPhysicalDevice(instance: VkInstance, compatibleWith surface: 
     fatalError("No vulkan device")
   }
 
-  var suitableDevices: [(VkPhysicalDevice, SelectedQueues)] = []
+  var suitableDevices: [(VkPhysicalDevice, SelectedQueues, VkSurfaceCapabilitiesKHR)] = []
   for device in devices {
     if let queues = getQueues(device: device!, surface: surface) {
-      suitableDevices.append((device!, queues))
+      var capabilities = VkSurfaceCapabilitiesKHR()
+      vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface.handle, &capabilities)
+        .unwrap()
+      suitableDevices.append((device!, queues, capabilities))
     }
   }
 

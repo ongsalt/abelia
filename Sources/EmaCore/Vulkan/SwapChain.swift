@@ -62,7 +62,7 @@ private func createSwapchain(
     $0.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR
     $0.oldSwapchain = previous
     $0.surface = surface.handle
-    $0.minImageCount = 3  // TODO: get this from what device reported
+    $0.minImageCount = device.capabilities.minImageCount  // TODO: get this from what device reported
 
     $0.imageExtent = size.asExtent
     // TODO: check support

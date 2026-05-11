@@ -9,4 +9,7 @@ func TemplateEffect(_ block: @escaping () -> Void) {
   }
 
   Runtime.current?.runOnFrame { c.value }
+  // onDestroy {
+  //   c.cleanup?
+  // }
 }

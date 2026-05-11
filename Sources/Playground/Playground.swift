@@ -26,7 +26,7 @@ class Responder: Swinit.Responder, @unchecked Sendable {
 
         var context = GraphicsContext(appName: "Playground")
         let surface = context.createSurface(for: window!)
-        let device = context.initDevice(compatibleWith: surface)
+        let device = context.createDevice(compatibleWith: surface)
     }
 
     func windowEvent(
@@ -48,52 +48,51 @@ class Responder: Swinit.Responder, @unchecked Sendable {
 }
 @main
 struct Playground {
-    static func main() {
-        @Signal
-        var w: Float = 213
-        let runtime = runApp(size: SIMD2(800, 600)) {
-            Row {
-                Box(alignment: .center) {
-                    Box()
-                        .width(w)
-                        .height(67)
-                }
-                .fillMaxHeight()
-                .width(400)
-
-                Column {
-                    Box()
-                        .fillMaxWidth()
-                        .height(67)
-                }
-
-            }
-            .fillMaxSize()
-        }
-
-        runtime.flushOnFrame()
-        runtime.root.printTree()
-
-        w = 500
-        
-        runtime.flushOnFrame()
-        runtime.root.printTree()
-
-    }
     // static func main() {
-    //     let eventLoop = EventLoop()!
+    //     @Signal
+    //     var w: Float = 213
+    //     let runtime = runApp(size: SIMD2(800, 600)) {
+    //         Row {
+    //             Box(alignment: .center) {
+    //                 Box()
+    //                     .width(w)
+    //                     .height(67)
+    //             }
+    //             .fillMaxHeight()
+    //             .width(400)
+    //             Column {
+    //                 Box()
+    //                     .fillMaxWidth()
+    //                     .height(67)
+    //             }
 
-    //     Task {
-    //         var i = 0
-    //         while !Task.isCancelled {
-    //             i += 1
-    //             print(i)
-    //             try await Task.sleep(for: .seconds(1))
     //         }
+    //         .fillMaxSize()
     //     }
 
-    //     eventLoop.run(Responder())
+    //     runtime.flushOnFrame()
+    //     runtime.root.printTree()
+
+    //     w = 500
+        
+    //     runtime.flushOnFrame()
+    //     runtime.root.printTree()
+
     // }
+    static func main() {
+        let eventLoop = EventLoop()!
+
+        Task {
+            var i = 0
+            while !Task.isCancelled {
+                i += 1
+                print(i)
+                try await Task.sleep(for: .seconds(1))
+            }
+        }
+
+        eventLoop.run(Responder())
+    }
 }
 // @MainActor
 // func Counter() -> View {
