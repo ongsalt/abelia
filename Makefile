@@ -1,5 +1,5 @@
 all: shaders
 
 shaders:
-	glslc Sources/Composition/Resources/Shaders/composite.frag -o Sources/Composition/Resources/Compiled/composite.frag.spv
-	glslc Sources/Composition/Resources/Shaders/composite.vert -o Sources/Composition/Resources/Compiled/composite.vert.spv
+	slangc Sources/EmaCore/Resources/Shaders/composite.slang -target spirv -profile spirv_1_3 -emit-spirv-directly -fvk-use-entrypoint-name -entry vertMain -entry fragMain -o Sources/EmaCore/Generated/Resources/Shaders/composite.spv
+	

@@ -1,5 +1,13 @@
 // // recreate swapchain -> mark only top level
 
+// private func compositorStartup() {
+//   createCompositionPipeline()
+//   createEffectPipeline()
+//   createBackingTextures()
+//   createLayerStorage()
+//   create
+// }
+
 // private func renderLoop() {
 
 //   while root.dirty {

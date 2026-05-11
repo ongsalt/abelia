@@ -11,13 +11,11 @@ var vulkanIncludePath: [CSetting] = [
     .define("VK_USE_PLATFORM_WAYLAND_KHR", .when(platforms: [.linux])),
     .define("VK_USE_PLATFORM_WIN32_KHR", .when(platforms: [.windows])),
 ]
-
 if let vulkanSDK = ProcessInfo.processInfo.environment["VULKAN_SDK"] {
     // vulkanSearchPath.append
     // let includePath = "\(vulkanSDK)/Include"
     vulkanIncludePath.append(.unsafeFlags(["-I\(vulkanSDK)/Include"]))
 }
-
 let package = Package(
     name: "graphics-101",
     dependencies: [
@@ -42,9 +40,13 @@ let package = Package(
                 "Reactivity",
                 "Pointer",
                 "DSLMacro",
-                "CVulkan"
+                "CVulkan",
             ],
-            cSettings: vulkanIncludePath
+            resources: [
+                .copy("Generated/Resources"),
+                // .ignore("Resources/Shaders"),
+            ],
+            cSettings: vulkanIncludePath,
         ),
 
         .target(
@@ -71,7 +73,7 @@ let package = Package(
                 "Reactivity"
             ]
         ),
-        
+
         .testTarget(
             name: "EmaTests",
             dependencies: [
@@ -107,6 +109,6 @@ let package = Package(
                 .product(name: "Swinit", package: "swinit"),
             ],
         ),
-
-    ]
+    ],
+    cLanguageStandard: .c2x
 )

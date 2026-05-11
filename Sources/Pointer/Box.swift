@@ -1,4 +1,4 @@
-public struct Box<T>: ~Copyable {
+public final class Box<T> {
     public let mut: UnsafeMutablePointer<T>
     public var ptr: UnsafePointer<T> {
         UnsafePointer(mut)
@@ -28,11 +28,11 @@ public struct Box<T>: ~Copyable {
         self.mut = ptr
     }
 
-    public init<K>(optional value: K) where T == K? {
+    public convenience init<K>(optional value: K) where T == K? {
         self.init(value)
     }
 
-    public init(zeroedStructOf type: T.Type) {
+    public convenience init(zeroedStructOf type: T.Type) {
         self.init(createZeroedStruct(of: type))
     }
 
@@ -53,8 +53,16 @@ public struct Box<T>: ~Copyable {
         }
     }
 
-    public mutating func mutate(_ block: (inout T) -> Void) {
+    public func mutate(_ block: (inout T) -> Void) {
         block(&pointee)
+    }
+
+    // public func addDeps<Other>(_ other: consuming Box<Other>) -> BoxWithDeps<T> {
+    //     BoxWithDeps(self).addDeps(other)
+    // }
+
+    public func addDeps(_ other: consuming AnyObject) -> WithDeps<Box<T>> {
+        WithDeps(self).addDeps(other)
     }
 
     deinit {

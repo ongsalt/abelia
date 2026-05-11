@@ -30,8 +30,10 @@ class Responder: Swinit.Responder, @unchecked Sendable {
 
         // TODO: swinit: expose window size
         let swapchain = device.createSwapchain(for: surface)
+        let compositePipeline = device.createCompositionPipeline(compatibleWith: swapchain)
 
         Unmanaged.passRetained(swapchain)
+        Unmanaged.passRetained(compositePipeline)
     }
 
     func windowEvent(
