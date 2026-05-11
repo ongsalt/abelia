@@ -93,7 +93,7 @@ private func createSwapchain(
     $0.pQueueFamilyIndices = pQueueFamilyIndices.ptr
 
     // TODO: get this from device support
-    // $0.preTransform
+    $0.preTransform = device.capabilities.currentTransform
     $0.clipped = true
   }
 
