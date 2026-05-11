@@ -71,6 +71,14 @@ let package = Package(
                 "Reactivity"
             ]
         ),
+        
+        .testTarget(
+            name: "EmaTests",
+            dependencies: [
+                "Ema",
+                "EmaCore",
+            ]
+        ),
         // .plugin(
         //     name: "ShaderCompilation",
         //     capability: .buildTool(),

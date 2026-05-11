@@ -1,5 +1,5 @@
 import Testing
-@testable import Reactivity
+@testable @_spi(EmaInternal) import Reactivity
 
 @Test func computedSmth() {
     let a = Signal(1)

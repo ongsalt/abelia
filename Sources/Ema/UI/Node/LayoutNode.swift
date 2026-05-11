@@ -93,7 +93,7 @@ public class LayoutNode: NonLayoutNode {
   lazy var _constraints: Computed<Constraints> = Computed { [unowned self] in
     // if parent did not exist, this node is either root or an orphan
     // i will provide a subclass RootNode to override this behavior
-    layoutParent?.childrenConstraints[self.id] ?? Constraints.infinity
+    layoutParent?.childrenConstraintsMap[self.id]?.value ?? Constraints.infinity
   }
 
   // depends on parent exposed constrants
@@ -113,42 +113,42 @@ public class LayoutNode: NonLayoutNode {
   lazy var _absolutePosition: Computed<Position<Float>> = Computed { [unowned self] in
     // print("layoutParent = \(layoutParent)")
     // print("layoutParent?.childrenOffset = \(layoutParent?.childrenOffset)")
-    return (layoutParent?.childrenOffset[self.id] ?? .zero) + offset
+    return (layoutParent?.childrenOffsetMap[self.id]?.value ?? .zero) + offset
   }
 
   // depends on children size
-  var childrenConstraints: [ObjectIdentifier: Constraints] { _childrenConstraints.value }
-  lazy var _childrenConstraints: Computed<[ObjectIdentifier: Constraints]> = Computed {
+  var childrenConstraintsMap: [ObjectIdentifier: Computed<Constraints>] { _childrenConstraintsMap.value }
+  lazy var _childrenConstraintsMap: Computed<[ObjectIdentifier: Computed<Constraints>]> = Computed {
     [unowned self] in
-    calculateChildrenConstraints()
+    calculateChildrenConstraintsMap()
   }
 
   // this fn will be override
-  func calculateChildrenConstraints() -> [ObjectIdentifier: Constraints] {
-    var childrenConstraints: [ObjectIdentifier: Constraints] = [:]
+  func calculateChildrenConstraintsMap() -> [ObjectIdentifier: Computed<Constraints>] {
+    var map: [ObjectIdentifier: Computed<Constraints>] = [:]
     for c in layoutChildren {
-      childrenConstraints[c.id] = self.constraints
+      map[c.id] = Computed { [unowned self] in self.constraints }
     }
 
-    return childrenConstraints
+    return map
   }
 
   // also depends on children size
-  var childrenOffset: [ObjectIdentifier: Position<Float>] { _childrenOffset.value }
-  lazy var _childrenOffset: Computed<[ObjectIdentifier: Position<Float>]> = Computed {
+  var childrenOffsetMap: [ObjectIdentifier: Computed<Position<Float>>] { _childrenOffsetMap.value }
+  lazy var _childrenOffsetMap: Computed<[ObjectIdentifier: Computed<Position<Float>>]> = Computed {
     [unowned self] in
-    calculateChildrenOffsets()
+    calculateChildrenOffsetsMap()
   }
 
   // this fn will be override
-  func calculateChildrenOffsets() -> [ObjectIdentifier: Position<Float>] {
-    var childrenOffset: [ObjectIdentifier: Position<Float>] = [:]
+  func calculateChildrenOffsetsMap() -> [ObjectIdentifier: Computed<Position<Float>>] {
+    var map: [ObjectIdentifier: Computed<Position<Float>>] = [:]
 
     for c in layoutChildren {
-      childrenOffset[c.id] = .zero
+      map[c.id] = Computed { .zero }
     }
 
-    return childrenOffset
+    return map
   }
 }
 
@@ -157,29 +157,31 @@ public class BoxNode: LayoutNode {
   /// Main axis
   var alignment: BoxAlignment = .topLeft
 
-  override func calculateChildrenOffsets() -> [ObjectIdentifier: Position<Float>] {
-    var childrenOffset: [ObjectIdentifier: Position<Float>] = [:]
+  override func calculateChildrenOffsetsMap() -> [ObjectIdentifier: Computed<Position<Float>>] {
+    var map: [ObjectIdentifier: Computed<Position<Float>>] = [:]
 
     for c in layoutChildren {
-      switch self.alignment {
-      case .topLeft:
-        childrenOffset[c.id] = .zero
-      case .topCenter:
-        childrenOffset[c.id] = Position((self.size.x - c.size.x) / 2, 0)
-      case .topRight:
-        childrenOffset[c.id] = Position(self.size.x - c.size.x, 0)
-      case .center:
-        childrenOffset[c.id] = Position((self.size.x - c.size.x) / 2, (self.size.y - c.size.y) / 2)
-      case .bottomLeft:
-        childrenOffset[c.id] = Position(0, self.size.y - c.size.y)
-      case .bottomCenter:
-        childrenOffset[c.id] = Position((self.size.x - c.size.x) / 2, self.size.y - c.size.y)
-      case .bottomRight:
-        childrenOffset[c.id] = Position(self.size.x - c.size.x, self.size.y - c.size.y)
+      map[c.id] = Computed { [unowned self] in
+        switch self.alignment {
+        case .topLeft:
+          return .zero
+        case .topCenter:
+          return Position((self.size.x - c.size.x) / 2, 0)
+        case .topRight:
+          return Position(self.size.x - c.size.x, 0)
+        case .center:
+          return Position((self.size.x - c.size.x) / 2, (self.size.y - c.size.y) / 2)
+        case .bottomLeft:
+          return Position(0, self.size.y - c.size.y)
+        case .bottomCenter:
+          return Position((self.size.x - c.size.x) / 2, self.size.y - c.size.y)
+        case .bottomRight:
+          return Position(self.size.x - c.size.x, self.size.y - c.size.y)
+        }
       }
     }
 
-    return childrenOffset
+    return map
   }
 }
 public class RootNode: BoxNode {
@@ -206,7 +208,7 @@ extension NonLayoutNode {
     self.appendChildren(body.childNodes)
   }
 
-  public func printTree(indent: Int = 0) {
+  public func dumpTree(indent: Int = 0) -> String {
     let prefix = String(repeating: "  ", count: indent)
     var info = "\(type(of: self))"
     if let layoutNode = self as? LayoutNode {
@@ -214,10 +216,15 @@ extension NonLayoutNode {
       let size = layoutNode.size
       info += " pos=(\(pos.x), \(pos.y)) size=(\(size.x), \(size.y))"
     }
-    print("\(prefix)- \(info)")
+    var result = "\(prefix)- \(info)\n"
     for child in children {
-      child.printTree(indent: indent + 1)
+      result += child.dumpTree(indent: indent + 1)
     }
+    return result
+  }
+
+  public func printTree(indent: Int = 0) {
+    print(dumpTree(indent: indent), terminator: "")
   }
 
 }

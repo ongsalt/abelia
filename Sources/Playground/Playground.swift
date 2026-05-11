@@ -1,4 +1,5 @@
 import Ema
+import Reactivity
 
 import EmaCore
 
@@ -48,11 +49,13 @@ class Responder: Swinit.Responder, @unchecked Sendable {
 @main
 struct Playground {
     static func main() {
+        @Signal
+        var w: Float = 213
         let runtime = runApp(size: SIMD2(800, 600)) {
             Row {
                 Box(alignment: .center) {
                     Box()
-                        .width(213)
+                        .width(w)
                         .height(67)
                 }
                 .fillMaxHeight()
@@ -70,6 +73,12 @@ struct Playground {
 
         runtime.flushOnFrame()
         runtime.root.printTree()
+
+        w = 500
+        
+        runtime.flushOnFrame()
+        runtime.root.printTree()
+
     }
     // static func main() {
     //     let eventLoop = EventLoop()!
