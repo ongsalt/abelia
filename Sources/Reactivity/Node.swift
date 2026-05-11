@@ -1,10 +1,26 @@
+import Foundation
+
+@attached(member, names: named(RawValue), named(rawValue), named(`init`), arbitrary)
+@attached(extension, conformances: OptionSet)
+public macro OptionSet<RawType>() =
+        #externalMacro(module: "SwiftMacros", type: "OptionSetMacro")
+
 // auto retracking is universal property
 // but we should allow the user to set it -> its not pure then
 
+@OptionSet<UInt8>
+public struct DirtyFlags: Sendable {
+    private enum Options: Int {
+        case dirty
+        case maybeDirty
+    }
+}
+
 public class Node {
     public var label: String?
-    private(set) var dirty: Bool = false  // we need to do `maybeDirty`
+    private(set) var dirty: DirtyFlags = []  // we need to do `maybeDirty`
     var dirtyCallback: (() -> Void)?
+    public var ref: AnyClass?
     private(set) var dependencies: Set<Node> = []
     private(set) var dependants: Set<Node> = []
 
@@ -13,20 +29,28 @@ public class Node {
         self.dirtyCallback = dirtyCallback
     }
 
-    public func markDirty(immediate: Bool = true) {
-        dirty = true
+    public func markDirty(flag: DirtyFlags = .dirty) {
+        if self.dirty == flag {
+            return
+        }
+
+        self.dirty = flag
         // idk which should run first
         if let dirtyCallback {
             // call some shi???
             dirtyCallback()
         }
+        self.markChildrenDirty(flag: flag)
+    }
+
+    public func markChildrenDirty(flag: DirtyFlags = .dirty) {
         for d in dependants {
-            d.markDirty(immediate: false)
+            d.markDirty(flag: .maybeDirty)
         }
     }
 
     public func markClean() {
-        dirty = false
+        dirty = []
     }
 
     public func addDependency(_ dep: some Sequence<Node>) {
@@ -66,21 +90,17 @@ public class Node {
         // print("droping \(self)")
     }
 }
-
 extension Node: CustomStringConvertible {
     public var description: String {
-        "Node(label: \(label ?? "nil"))"   
+        "Node(label: \(label ?? "nil"))"
     }
 }
-
 extension Node: Identifiable {}
-
 extension Node: Equatable {
     public static func == (lhs: Node, rhs: Node) -> Bool {
         lhs.id == rhs.id
     }
 }
-
 extension Node: Hashable {
     public func hash(into hasher: inout Hasher) {
         hasher.combine(self.id)

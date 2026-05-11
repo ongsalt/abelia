@@ -9,7 +9,7 @@ public struct Signal<T> {
         }
         _modify {
             yield &self._value
-            node.markDirty()
+            node.markChildrenDirty()
         }
     }
 
@@ -23,11 +23,11 @@ public struct Signal<T> {
     // this fucked up where T: Equatable
     // i probably need a custom property wrapper macro
     public var wrappedValue: T {
-        get {
-            value
+        _read {
+            yield value
         }
-        set {
-            value = newValue
+        _modify {
+            yield &value
         }
     }
 
@@ -38,14 +38,16 @@ public struct Signal<T> {
 
 extension Signal where T: Equatable {
     public var value: T {
-        get {
+        _read {
             TrackingContext.current?.reportRead(node)
-            return self._value
+            yield self._value
         }
-        set {
+        _modify {
+            var newValue = self._value
+            yield &newValue
             if self._value != newValue {
                 self._value = newValue
-                node.markDirty()
+                node.markChildrenDirty()
             }
         }
     }
