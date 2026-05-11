@@ -17,6 +17,11 @@ import EmaCore
 import Reactivity
 
 public class NonLayoutNode: Identifiable {
+  // i really need to make this @MainActor
+  nonisolated(unsafe) static var current: NonLayoutNode?
+
+  var runtime: Runtime?
+
   // MARL: Tree
   @Signal
   var parent: NonLayoutNode?
@@ -24,7 +29,9 @@ public class NonLayoutNode: Identifiable {
   @Signal
   private(set) var children: [NonLayoutNode] = []
 
-  public init() {}
+  public init() {
+    self.runtime = Runtime.current
+  }
 
   public func appendChild(_ node: NonLayoutNode, after position: Int? = nil) {
     // self.renderNode.addChild(node.renderNode)
@@ -203,11 +210,6 @@ public enum BoxAlignment {
   case bottomLeft, bottomCenter, bottomRight
 }
 extension NonLayoutNode {
-  func setBody(_ body: Body) {
-    self.removeAllChild()
-    self.appendChildren(body.childNodes)
-  }
-
   public func dumpTree(indent: Int = 0) -> String {
     let prefix = String(repeating: "  ", count: indent)
     var info = "\(type(of: self))"

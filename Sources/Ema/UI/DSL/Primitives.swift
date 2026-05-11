@@ -8,7 +8,7 @@ public func Box(
   let node = BoxNode()
   TemplateEffect { node.alignment = alignment.value }
 
-  node.setBody(body())
+  node.replaceChildren(body)
   return View(node)
 }
 
@@ -24,7 +24,7 @@ public func Row(
   TemplateEffect { node.verticalAlignment = verticalAlignment.value }
   TemplateEffect { node.gap = gap.value }
 
-  node.setBody(body())
+  node.replaceChildren(body)
   return View(node)
 }
 
@@ -40,6 +40,6 @@ public func Column(
   TemplateEffect { node.horizontalAlignment = horizontalAlignment.value }
   TemplateEffect { node.gap = gap.value }
 
-  node.setBody(body())
+  node.replaceChildren(body)
   return View(node)
 }

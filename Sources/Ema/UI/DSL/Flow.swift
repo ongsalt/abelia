@@ -11,13 +11,9 @@ public func If(_ condition: Prop<Bool>, @ViewBuilder then thenBlock: @escaping (
 
     if (condition.value) {
       // should we capture some onDestroy
-      groupingNode.appendChildren(untrack {
-        thenBlock().childNodes
-      })
+      groupingNode.replaceChildren(thenBlock)
     } else {
-      groupingNode.appendChildren(untrack {
-        elseBlock().childNodes
-      })
+      groupingNode.replaceChildren(elseBlock)
     }
   }
 
