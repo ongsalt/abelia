@@ -5,14 +5,23 @@ public struct Prop<T> {
         getter()
     }
 
-    var getter: () -> T
+    private var getter: () -> T
 
     init(getter: @escaping () -> T) {
         self.getter = getter
     }
-}
 
-public struct FnBindings<T>: Bindings {
+    public static func `default`(_ value: T) -> Prop<T> {
+        Prop(getter: { value })
+    }
+
+}
+protocol Bindings<Value> {
+    associatedtype Value
+    var value: Value { get set }
+}
+extension Signal: Bindings<T> {}
+public struct Bind<T>: Bindings {
     var value: T {
         get { getter() }
         set { setter(newValue) }
@@ -26,13 +35,3 @@ public struct FnBindings<T>: Bindings {
         self.setter = setter
     }
 }
-
-protocol Bindings<Value> {
-    associatedtype Value
-    var value: Value { get set }
-}
-
-extension Signal: Bindings<T> {}
-
-// TODO: make macro read this
-public typealias Bind<T> = Prop<T>

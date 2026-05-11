@@ -1,7 +1,3 @@
-struct LayoutBox {
-
-}
-
 struct Constraints {
     let minWidth: Float
     let maxWidth: Float
@@ -9,6 +5,7 @@ struct Constraints {
     let maxHeight: Float
 
     static let zero = Constraints(minWidth: 0, maxWidth: 0, minHeight: 0, maxHeight: 0)
+    static let infinity = Constraints(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
 }
 
 extension Constraints {
@@ -28,7 +25,6 @@ extension Constraints {
             maxSize: size
         )
     }
-
 }
 
 extension Constraints {
@@ -41,6 +37,12 @@ extension Constraints {
     }
 
     func clamp(_ size: SIMD2<Float>) -> SIMD2<Float> {
-        size.clamped(lowerBound: minSize, upperBound: maxSize)
+        return size.clamped(lowerBound: minSize, upperBound: maxSize)
     }
+}
+
+enum Aligment {
+    case start
+    case center
+    case end
 }

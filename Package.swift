@@ -51,6 +51,7 @@ let package = Package(
             name: "Ema",
             dependencies: [
                 "EmaCore",
+                "DSLMacro",
                 .product(name: "Swinit", package: "swinit"),
             ],
         ),

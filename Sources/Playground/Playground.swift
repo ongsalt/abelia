@@ -20,7 +20,7 @@ class Responder: Swinit.Responder, @unchecked Sendable {
                 attributes: .init(title: "nah", noRedirectionBitmap: true))
             window?.drawUnderTitleBar = true
             window?.backdropStyle = .acrylic
-            // TODO: support darkmode
+        // TODO: support darkmode
         #endif
 
         var context = GraphicsContext(appName: "Playground")
@@ -48,19 +48,43 @@ class Responder: Swinit.Responder, @unchecked Sendable {
 @main
 struct Playground {
     static func main() {
-        let eventLoop = EventLoop()!
+        let runtime = runApp(size: SIMD2(800, 600)) {
+            Row {
+                Box(alignment: .center) {
+                    Box()
+                        .width(213)
+                        .height(67)
+                }
+                .fillMaxHeight()
+                .width(400)
 
-        Task {
-            var i = 0
-            while !Task.isCancelled {
-                i += 1
-                print(i)
-                try await Task.sleep(for: .seconds(1))
+                Column {
+                    Box()
+                        .fillMaxWidth()
+                        .height(67)
+                }
+
             }
+            .fillMaxSize()
         }
 
-        eventLoop.run(Responder())
+        runtime.flushOnFrame()
+        runtime.root.printTree()
     }
+    // static func main() {
+    //     let eventLoop = EventLoop()!
+
+    //     Task {
+    //         var i = 0
+    //         while !Task.isCancelled {
+    //             i += 1
+    //             print(i)
+    //             try await Task.sleep(for: .seconds(1))
+    //         }
+    //     }
+
+    //     eventLoop.run(Responder())
+    // }
 }
 // @MainActor
 // func Counter() -> View {

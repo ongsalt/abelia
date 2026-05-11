@@ -87,7 +87,8 @@ struct AutobindMacro: MemberMacro {
         // external name must be the same
         let out = FunctionDeclSyntax(
             attributes: decl.attributes.filter {
-                $0.trimmedDescription != "@Autobind" && $0.trimmedDescription != "@Autobind2"
+                // prevent recursive expansion
+                $0.trimmedDescription != "@Autobind" && $0.trimmedDescription != "@Component"
             },
             modifiers: decl.modifiers,
             name: decl.name,
@@ -169,7 +170,7 @@ struct AutobindMacro: MemberMacro {
                 let label = getOuterName(p)
                 let expr =
                     if bindIndices.contains(index) {
-                        ExprSyntax("Bind(getter: \(getInnerName(p)))")
+                        ExprSyntax("Prop(getter: \(getInnerName(p)))")
                     } else {
                         ExprSyntax("\(getInnerName(p))")
                     }
@@ -205,7 +206,7 @@ struct AutobindMacro: MemberMacro {
         for (index, p) in signature.parameterClause.parameters.enumerated() {
             // only if its bind
             guard let identifierType = p.type.as(IdentifierTypeSyntax.self),
-                "\(identifierType.name)" == "Bind",
+                "\(identifierType.name)" == "Prop",
                 let clause = identifierType.genericArgumentClause,
                 let ty = clause.arguments.first
             else {
@@ -295,3 +296,14 @@ extension AutobindMacro: PeerMacro {
         ]
     }
 }
+
+enum ComponentMacroError: Error {
+    case propsNoType(names: [String])
+    case ellipsisFound
+}
+
+struct AutobindMacroErrorReport: Error {
+    let errors: [ComponentMacroError]
+}
+
+

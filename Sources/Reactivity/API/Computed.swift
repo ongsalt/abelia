@@ -1,6 +1,6 @@
 @propertyWrapper
 public struct Computed<T> {
-    let node: Node = Node(label: String(describing: Computed<T>.self))
+    @_spi(EmaInternal) public let node: Node = Node(label: String(describing: Computed<T>.self))
 
     public var value: T {
         _read {
