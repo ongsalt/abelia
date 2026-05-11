@@ -4,3 +4,8 @@ func with<T>(_ value: consuming T, apply: (inout T) -> Void) -> T {
   return v
 }
 
+extension Numeric where Self: Comparable {
+  func clamped(_ start: Self, _ end: Self) -> Self {
+    min(end, max(start, self))
+  }
+}

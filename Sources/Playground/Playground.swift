@@ -27,6 +27,11 @@ class Responder: Swinit.Responder, @unchecked Sendable {
         var context = GraphicsContext(appName: "Playground")
         let surface = context.createSurface(for: window!)
         let device = context.createDevice(compatibleWith: surface)
+
+        // TODO: swinit: expose window size
+        let swapchain = device.createSwapchain(for: surface)
+
+        Unmanaged.passRetained(swapchain)
     }
 
     func windowEvent(

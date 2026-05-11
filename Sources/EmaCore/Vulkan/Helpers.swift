@@ -9,6 +9,12 @@ extension RawRepresentable where RawValue: BinaryInteger {
   }
 }
 
+extension VkExtent2D {
+  var asSimd: SIMD2<UInt32> {
+    SIMD2(width, height)
+  }
+}
+
 extension VkBool32: @retroactive ExpressibleByBooleanLiteral {
   public init(booleanLiteral value: Bool) {
     self =

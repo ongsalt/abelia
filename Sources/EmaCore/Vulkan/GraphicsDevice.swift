@@ -41,6 +41,10 @@ public class GraphicsDevice {
 
   }
 
+  public func createSwapchain(for surface: Surface) -> Swapchain {
+    Swapchain(for: surface, on: self, size: capabilities.currentExtent.asSimd)
+  }
+
   deinit {
   }
 }
