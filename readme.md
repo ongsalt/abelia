@@ -1,19 +1,15 @@
 # Dependencies not included
 - wayland devel stuff
-- pango
 - vulkan stuff
 - glslc
 
 ## TODO
+- optimized computed dirty masking
+- new property wrapper: behave like signal but allow linking
 - padding, margin
-- clip to parent
 - clip
 - think about pixel perfect stuff
-- distance field of composited(?) shape
 - use `libharfbuzz-gpu`
-    - so nuke `pango`
-- make this run on windows
-- unfuck threading -> remove @MainActor
-- windows resize
+- windows resize (wayland)
 - transparency on windows: DirectComposition swapchain
 - multi windows support

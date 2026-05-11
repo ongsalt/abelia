@@ -13,7 +13,7 @@ public class Node {
         self.dirtyCallback = dirtyCallback
     }
 
-    public func markDirty() {
+    public func markDirty(immediate: Bool = true) {
         dirty = true
         // idk which should run first
         if let dirtyCallback {
@@ -21,7 +21,7 @@ public class Node {
             dirtyCallback()
         }
         for d in dependants {
-            d.markDirty()
+            d.markDirty(immediate: false)
         }
     }
 
