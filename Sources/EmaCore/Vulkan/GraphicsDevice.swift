@@ -82,8 +82,14 @@ private func createDevice(physicalDevice: VkPhysicalDevice, queues: SelectedQueu
   var features = VkPhysicalDeviceFeatures()
   features.samplerAnisotropy = true
 
+  let enabledVk11Features = Box(VkPhysicalDeviceVulkan11Features()) {
+    $0.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES
+    $0.shaderDrawParameters = true
+  }
+
   let enabledVk12Features = Box(VkPhysicalDeviceVulkan12Features()) {
     $0.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES
+    $0.pNext = enabledVk11Features.rawMut
     $0.descriptorIndexing = true
     $0.descriptorBindingVariableDescriptorCount = true
     $0.descriptorBindingSampledImageUpdateAfterBind = true

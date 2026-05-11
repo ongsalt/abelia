@@ -43,7 +43,7 @@ private func createCompositionPipeline(
   let pipelineRenderingCi = createPipelineRenderingCi(format: format)
 
   var ci = VkGraphicsPipelineCreateInfo(
-    sType: VK_STRUCTURE_TYPE_PIPELINE_CREATE_INFO_KHR,
+    sType: VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
     pNext: pipelineRenderingCi.value.raw,
     flags: 0,
     stageCount: UInt32(shaderStages.value.count),
@@ -77,8 +77,8 @@ func createPipelineRenderingCi(format: VkFormat) -> WithDeps<Box<VkPipelineRende
     viewMask: 0,
     colorAttachmentCount: 1,
     pColorAttachmentFormats: format.ptr,
-    depthAttachmentFormat: format.value,  // unused
-    stencilAttachmentFormat: format.value  // unused
+    depthAttachmentFormat: VK_FORMAT_UNDEFINED,  // unused
+    stencilAttachmentFormat: VK_FORMAT_UNDEFINED  // unused
   )
 
   return Box(ci).addDeps(format)
