@@ -79,12 +79,15 @@ private func createDevice(physicalDevice: VkPhysicalDevice, queues: SelectedQueu
     }
   )
 
-  var features = VkPhysicalDeviceFeatures()
-  features.samplerAnisotropy = true
+  let features = Box(VkPhysicalDeviceFeatures()) {
+    // TODO: why do i even need this
+    $0.samplerAnisotropy = true
+  }
 
   let enabledVk11Features = Box(VkPhysicalDeviceVulkan11Features()) {
     $0.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES
     $0.shaderDrawParameters = true
+
   }
 
   let enabledVk12Features = Box(VkPhysicalDeviceVulkan12Features()) {
@@ -118,7 +121,7 @@ private func createDevice(physicalDevice: VkPhysicalDevice, queues: SelectedQueu
     ppEnabledLayerNames: nil,
     enabledExtensionCount: deviceExtensions.count,
     ppEnabledExtensionNames: deviceExtensions.ptr,
-    pEnabledFeatures: nil
+    pEnabledFeatures: features.ptr
   )
   var device: VkDevice?
   vkCreateDevice(physicalDevice, &ci, nil, &device).expect("Cannot create device")
