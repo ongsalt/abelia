@@ -24,10 +24,14 @@ public class Swapchain: @unchecked Sendable {
   private(set) var imageFormat: VkFormat
   private(set) var imageSize: SIMD2<UInt32>
 
-  init(for surface: Surface, on device: GraphicsDevice, initialSize size: SIMD2<UInt32>) {
+  init(
+    for surface: Surface, on device: GraphicsDevice, initialSize size: SIMD2<UInt32>,
+    surfaceCapabilities: VkSurfaceCapabilitiesKHR
+  ) {
     self.surface = surface
     self.device = device
-    let swapchain = createSwapchain(for: surface, on: device, size: size)
+    let swapchain = createSwapchain(
+      for: surface.handle, on: device, size: size, capabilities: surfaceCapabilities)
     self.handle = swapchain
 
     let imageFormat = VK_FORMAT_B8G8R8A8_UNORM
@@ -105,12 +109,13 @@ public class Swapchain: @unchecked Sendable {
     await device.waitIdle()
 
     self.surface.reconfigure()
-    let size = surface.configuredInfo!.capabilities.currentExtent.asSimd
+    let capabilities = surface.configuredInfo!.capabilities
+    let size = capabilities.currentExtent.asSimd
 
     let prev = self.handle
     let prevImageViews = imageViews
-    
-    self.handle = createSwapchain(for: surface, on: device, size: size, previous: prev)
+
+    self.handle = createSwapchain(for: surface.handle, on: device, size: size, capabilities: capabilities, previous: prev)
     self.imageSize = size
 
     for view in prevImageViews {
@@ -156,9 +161,10 @@ private func createImageView(device: VkDevice, image: VkImage, format: VkFormat)
 }
 
 private func createSwapchain(
-  for surface: Surface,
+  for surface: VkSurfaceKHR,
   on device: GraphicsDevice,
   size: SIMD2<UInt32>,
+  capabilities: VkSurfaceCapabilitiesKHR,
   previous: VkSwapchainKHR? = nil
 ) -> VkSwapchainKHR {
 
@@ -169,9 +175,9 @@ private func createSwapchain(
   var ci = with(VkSwapchainCreateInfoKHR()) {
     $0.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR
     $0.oldSwapchain = previous
-    $0.surface = surface.handle
-    $0.minImageCount = (device.capabilities.minImageCount + 1).clamped(
-      device.capabilities.minImageCount, device.capabilities.maxImageCount)  // TODO: get this from what device reported
+    $0.surface = surface
+    $0.minImageCount = (capabilities.minImageCount + 1).clamped(
+      capabilities.minImageCount, capabilities.maxImageCount)  // TODO: get this from what device reported
 
     $0.imageExtent = size.asExtent
     // TODO: check support
@@ -200,7 +206,7 @@ private func createSwapchain(
     }
 
     // TODO: get this from device support
-    $0.preTransform = device.capabilities.currentTransform
+    $0.preTransform = capabilities.currentTransform
     $0.clipped = true
   }
 

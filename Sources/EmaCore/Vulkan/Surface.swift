@@ -4,8 +4,6 @@
   import WinSDK
 #endif
 
-// TODO: wgpu style surface.configure: move state that is PER device PER Surface to this class
-
 struct ConfiguredSurfaceInfo {
   let device: GraphicsDevice
   let swapchain: Swapchain
@@ -53,7 +51,9 @@ public class Surface: @unchecked Sendable {
 
     self.configuredInfo = ConfiguredSurfaceInfo(
       device: device,
-      swapchain: Swapchain(for: self, on: device, initialSize: capabilities.currentExtent.asSimd),
+      swapchain: Swapchain(
+        for: self, on: device, initialSize: capabilities.currentExtent.asSimd,
+        surfaceCapabilities: capabilities),
       capabilities: capabilities
     )
   }

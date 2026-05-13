@@ -8,9 +8,6 @@ public class GraphicsDevice: @unchecked Sendable {
   let vma: VmaAllocator
   let selectedQueueIndexes: SelectedQueues
 
-  // THIS IS PER SURFACE PER DEVICE
-  let capabilities: VkSurfaceCapabilitiesKHR
-
   let presentQueue: VkQueue
   let graphicsQueue: VkQueue
   let transferQueue: VkQueue
@@ -24,7 +21,6 @@ public class GraphicsDevice: @unchecked Sendable {
     let selected = selectPhysicalDevice(instance: instance, compatibleWith: surface)
     self.selectedQueueIndexes = selected.1
     self.physicalDevice = selected.0
-    self.capabilities = selected.2
     self.handle = createDevice(physicalDevice: selected.0, queues: selected.1)
 
     var presentQueue: VkQueue?
