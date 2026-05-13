@@ -23,7 +23,7 @@ actor Renderer {
       compatibleWith: surface.configuredInfo!.swapchain)
 
     self.layerStorageBuffer = device.createBuffer(
-      size: UInt64(MemoryLayout<LayerStorageNode>.size) * 100000, usages: .ssbo)
+      size: UInt64(MemoryLayout<LayerStorageNode>.size) * 100000, usages: .storage)
     self.layerStorage = LayerStorage(layerStorageBuffer)
 
     self.vertexBuffer = device.createBuffer(
@@ -36,7 +36,9 @@ actor Renderer {
     ]
 
     let v = self.vertexBuffer.buffer.assumingMemoryBound(to: VertexData.self)
-    v.initialize(from: vertices)
+    _ = v.initialize(from: vertices)
+
+    let tex = device.createTexture(size: SIMD2(100, 100), usages: .layer)
 
     Task { [self] in
       while !Task.isCancelled {

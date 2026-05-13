@@ -18,7 +18,26 @@ class Texture {
     self.usages = usages
     self.currentQueueIndex = queueIndex
 
-    var ci = VkImageCreateInfo()
+    var ci = with(VkImageCreateInfo()) {
+      $0.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO
+      $0.imageType = VK_IMAGE_TYPE_2D
+      $0.extent.depth = 1
+      $0.extent.width = size.x
+      $0.extent.height = size.y
+      $0.format = VK_FORMAT_R8G8B8A8_UNORM
+      $0.mipLevels = 1
+      $0.arrayLayers = 1
+
+      $0.usage = VK_IMAGE_USAGE_SAMPLED_BIT.u32
+      if usages.contains(.canvas) {
+        $0.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT.u32
+      }
+      if usages.contains(.layer) {
+        $0.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT.u32
+      }
+
+      $0.samples = VK_SAMPLE_COUNT_4_BIT
+    }
     var vmaCi = VmaAllocationCreateInfo(
       flags: 0,
       usage: VMA_MEMORY_USAGE_GPU_ONLY,
@@ -38,7 +57,9 @@ class Texture {
     self.handle = image!
   }
 
-  func transition(to layout: TextureLayout, queueFamily: UInt32? = nil, on commandBuffer: VkCommandBuffer) {
+  func transition(
+    to layout: TextureLayout, queueFamily: UInt32? = nil, on commandBuffer: VkCommandBuffer
+  ) {
     let barrier = Box(VkImageMemoryBarrier2()) {
       $0.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2
       $0.image = self.handle

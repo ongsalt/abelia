@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <stdint.h>
 
 struct VertexData {
@@ -31,3 +32,7 @@ struct EffectVertexData {
   float positionX;
   float positionY;
 };
+
+// struct ViewPortSize {
+//   uint32_t size[2];
+// };

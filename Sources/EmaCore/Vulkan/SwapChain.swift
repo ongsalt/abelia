@@ -45,7 +45,6 @@ public class Swapchain: @unchecked Sendable {
 
     // TODO: actually selecting format
     self.imageFormat = imageFormat
-    // we shuold actually query window size then clamp it to capabilities.[min|max]ImageExtent
     self.imageSize = size
 
     self.renderFinishedSemaphores = (0..<images.count).map { _ in
