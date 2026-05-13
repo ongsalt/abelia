@@ -38,13 +38,14 @@ extension VkResult {
   }
 
   func expect(_ message: String, line: Int = #line, file: String = #file) {
-    let m = "\(message), code: \(self.rawValue) at \(file):\(line)"
+    let s = String(cString: string_VkResult(self))
+    let m = "\(message), \(s) at \(file):\(line)"
     if self.rawValue < 0 {
       Log.error(.vulkan, m)
       fatalError(m)
     }
     if self != VK_SUCCESS {
-      Log.warn(.vulkan, "Not VK_SUCCESS (\(self.rawValue)) at \(file):\(line)")
+      Log.warn(.vulkan, "\(s) at \(file):\(line)")
     }
   }
 
@@ -59,7 +60,8 @@ extension VkResult {
       try block()
     }
     if self != VK_SUCCESS {
-      // Log.warn(.vulkan, "Not VK_SUCCESS: \(self.rawValue)")
+      let s = String(cString: string_VkResult(self))
+      Log.warn(.vulkan, "\(s) at \(file):\(line)")
     }
   }
 
