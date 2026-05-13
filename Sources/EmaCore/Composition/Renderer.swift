@@ -5,8 +5,11 @@ actor Renderer {
   private let graphicsContext: GraphicsContext
   private let device: GraphicsDevice
   private let surface: Surface
-  private let swapchain: Swapchain
   private let compositionPipeline: CompositionPipeline
+
+  private var swapchain: Swapchain {
+    surface.configuredInfo!.swapchain
+  }
 
   // private let layerStorage: LayerStorage
 
@@ -15,8 +18,7 @@ actor Renderer {
     self.surface = surface
     // TODO: swinit: expose window size
     self.device = device
-    self.swapchain = device.createSwapchain(for: surface)
-    self.compositionPipeline = device.createCompositionPipeline(compatibleWith: swapchain)
+    self.compositionPipeline = device.createCompositionPipeline(compatibleWith: surface.configuredInfo!.swapchain)
 
     Task { [self] in
       while !Task.isCancelled {

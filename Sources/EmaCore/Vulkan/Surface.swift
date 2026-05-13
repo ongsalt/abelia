@@ -4,8 +4,17 @@
   import WinSDK
 #endif
 
+// TODO: wgpu style surface.configure: move state that is PER device PER Surface to this class
+
+struct ConfiguredSurfaceInfo {
+  let device: GraphicsDevice
+  let swapchain: Swapchain
+  var capabilities: VkSurfaceCapabilitiesKHR
+}
+
 public class Surface: @unchecked Sendable {
   let handle: VkSurfaceKHR
+  var configuredInfo: ConfiguredSurfaceInfo?
 
   #if os(linux)
     // init() {}
@@ -37,5 +46,28 @@ public class Surface: @unchecked Sendable {
     }
   #endif
 
-}
+  public func configure(associateWith device: GraphicsDevice, config: Void = ()) {
+    var capabilities = VkSurfaceCapabilitiesKHR()
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device.physicalDevice, self.handle, &capabilities)
+      .unwrap()
 
+    self.configuredInfo = ConfiguredSurfaceInfo(
+      device: device,
+      swapchain: Swapchain(for: self, on: device, initialSize: capabilities.currentExtent.asSimd),
+      capabilities: capabilities
+    )
+  }
+
+  func reconfigure() {
+    guard let configuredInfo else {
+      fatalError("Not yet configured")
+    }
+
+    var caps = configuredInfo.capabilities
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+      configuredInfo.device.physicalDevice, self.handle, &caps
+    )
+    .unwrap()
+    self.configuredInfo!.capabilities = caps
+  }
+}

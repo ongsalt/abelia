@@ -24,7 +24,7 @@ public class Swapchain: @unchecked Sendable {
   private(set) var imageFormat: VkFormat
   private(set) var imageSize: SIMD2<UInt32>
 
-  init(for surface: Surface, on device: GraphicsDevice, size: Size<UInt32>) {
+  init(for surface: Surface, on device: GraphicsDevice, initialSize size: SIMD2<UInt32>) {
     self.surface = surface
     self.device = device
     let swapchain = createSwapchain(for: surface, on: device, size: size)
@@ -32,10 +32,9 @@ public class Swapchain: @unchecked Sendable {
 
     let imageFormat = VK_FORMAT_B8G8R8A8_UNORM
 
-    let images = Vulkan.enumerate { count, arr in
+    self.images = Vulkan.enumerate { count, arr in
       vkGetSwapchainImagesKHR(device.handle, swapchain, count, arr)
     }.compactMap { $0 }
-    self.images = images
     self.imageViews = images.map {
       createImageView(device: device.handle, image: $0, format: imageFormat)
     }
@@ -67,18 +66,25 @@ public class Swapchain: @unchecked Sendable {
     nonisolated(unsafe) let presentCompletedSemaphore = self.presentCompletedSemaphores[
       currentFrameInFlightIndex]
 
-    await withUnsafeContinuation { continuation in
+    let res = await withUnsafeContinuation { continuation in
       DispatchQueue.global(qos: .background).async {
-        vkAcquireNextImageKHR(
+        let res = vkAcquireNextImageKHR(
           deviceHandle,
           handle,
           UInt64.max,  // timeout nanosec
           presentCompletedSemaphore,  // the one to NOTIFY after we are done
           nil,
           &swapchainImageIndex
-        ).unwrap()
-        continuation.resume()
+        )
+        continuation.resume(returning: res)
       }
+    }
+
+    if res == VK_SUBOPTIMAL_KHR {
+      await self.recreate()
+      return await self.acquireNextImage()
+    } else {
+      res.unwrap()
     }
 
     self.currentFrameInFlightIndex = (self.currentFrameInFlightIndex + 1) % Self.maxFramesInFlight
@@ -90,16 +96,33 @@ public class Swapchain: @unchecked Sendable {
       renderFinishedSemaphore: self.renderFinishedSemaphores[Int(swapchainImageIndex)],
       presentCompletedSemaphore: presentCompletedSemaphore,
       inFlightFence: inFlightFence,
-      swapChainHandle: handle,
+      swapChainHandle: self.handle,
       presentQueue: device.presentQueue
     )
   }
 
-  func recreate(size: Size<UInt32>) {
+  func recreate() async {
+    await device.waitIdle()
+
+    self.surface.reconfigure()
+    let size = surface.configuredInfo!.capabilities.currentExtent.asSimd
+
     let prev = self.handle
+    let prevImageViews = imageViews
+    
     self.handle = createSwapchain(for: surface, on: device, size: size, previous: prev)
     self.imageSize = size
-    destroySwapchain(prev)
+
+    for view in prevImageViews {
+      vkDestroyImageView(device.handle, view, nil)
+    }
+
+    self.images = Vulkan.enumerate { count, arr in
+      vkGetSwapchainImagesKHR(device.handle, self.handle, count, arr)
+    }.compactMap { $0 }
+    self.imageViews = images.map {
+      createImageView(device: device.handle, image: $0, format: imageFormat)
+    }
   }
 }
 
@@ -135,7 +158,7 @@ private func createImageView(device: VkDevice, image: VkImage, format: VkFormat)
 private func createSwapchain(
   for surface: Surface,
   on device: GraphicsDevice,
-  size: Size<UInt32>,
+  size: SIMD2<UInt32>,
   previous: VkSwapchainKHR? = nil
 ) -> VkSwapchainKHR {
 
@@ -190,10 +213,6 @@ private func createSwapchain(
   ).unwrap()
 
   return swapchain!
-}
-
-private func destroySwapchain(_ handle: VkSwapchainKHR) {
-
 }
 
 private func createSemaphore(device: VkDevice) -> VkSemaphore {

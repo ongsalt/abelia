@@ -22,7 +22,10 @@ public class Compositor {
   }
 
   public func resize(to size: Size<UInt32>) {
-
+    // windows fuck you
+    // Task.detached {
+    //   await self.renderer.resize(to: size)
+    // }
   }
 }
 

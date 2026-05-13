@@ -3,11 +3,12 @@ import Foundation
 import Pointer
 
 public class GraphicsDevice: @unchecked Sendable {
-  private let physicalDevice: VkPhysicalDevice
+  let physicalDevice: VkPhysicalDevice
   let handle: VkDevice
   let vma: VmaAllocator
   let selectedQueueIndexes: SelectedQueues
 
+  // THIS IS PER SURFACE PER DEVICE
   let capabilities: VkSurfaceCapabilitiesKHR
 
   let presentQueue: VkQueue
@@ -62,10 +63,6 @@ public class GraphicsDevice: @unchecked Sendable {
     self.commandBuffer = commandBuffer!
   }
 
-  public func createSwapchain(for surface: Surface) -> Swapchain {
-    Swapchain(for: surface, on: self, size: capabilities.currentExtent.asSimd)
-  }
-
   public func createCompositionPipeline(compatibleWith swapchain: borrowing Swapchain)
     -> CompositionPipeline
   {
@@ -89,6 +86,16 @@ public class GraphicsDevice: @unchecked Sendable {
       }
     }
     vkResetFences(device, 1, &fence).unwrap()
+  }
+
+  func waitIdle() async {
+    nonisolated(unsafe) let handle = handle
+    await withUnsafeContinuation { continuation in
+      DispatchQueue.global(qos: .background).async {
+        vkDeviceWaitIdle(handle).unwrap()
+        continuation.resume()
+      }
+    }
   }
 }
 
@@ -270,7 +277,7 @@ func createVMA(
   physicalDevice: VkPhysicalDevice,
   logicalDevice: VkDevice,
 ) -> VmaAllocator {
-  var vmaCi = Box(Mem.zeroed(of: VmaAllocatorCreateInfo.self)) {
+  let vmaCi = Box(Mem.zeroed(of: VmaAllocatorCreateInfo.self)) {
     $0.physicalDevice = physicalDevice
     $0.device = logicalDevice
     $0.instance = instance

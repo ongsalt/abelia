@@ -80,13 +80,16 @@ struct TextureUsages: OptionSet {
 
   static let layer = TextureUsages(rawValue: 1 << 0)
   static let `static` = TextureUsages(rawValue: 2 << 0)
-  static let swapchain = TextureUsages(rawValue: 3 << 0)
+  // static let swapchain = TextureUsages(rawValue: 3 << 0)
+  // cpu drawn
+  static let canvas = TextureUsages(rawValue: 4 << 0)
 }
 
 enum TextureLayout {
   case undefined
   case renderAttachment
   case sampling
+  case copyTarget
 
   var accessMask: VkAccessFlags2 {
     switch self {
@@ -94,6 +97,8 @@ enum TextureLayout {
       VK_ACCESS_2_SHADER_READ_BIT
     case .renderAttachment:
       VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT
+    case .copyTarget:
+      VK_ACCESS_2_TRANSFER_WRITE_BIT
     case .undefined:
       VK_ACCESS_2_NONE
     }
@@ -106,7 +111,7 @@ enum TextureLayout {
       VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT
     case .renderAttachment:
       VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT
-    case .undefined:
+    case .undefined, .copyTarget:
       VK_PIPELINE_STAGE_2_NONE
     }
   }
@@ -117,6 +122,8 @@ enum TextureLayout {
       VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL
     case .renderAttachment:
       VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL
+    case .copyTarget:
+      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
     case .undefined:
       VK_IMAGE_LAYOUT_UNDEFINED
     }

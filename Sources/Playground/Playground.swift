@@ -12,6 +12,9 @@ class Responder: Swinit.Responder, @unchecked Sendable {
     typealias EventLoop = Swinit.EventLoop
     var window: Window? = nil
 
+    @MainActor
+    var compositor: Compositor?
+
     func resumed(eventLoop: EventLoop) {
         #if os(Linux)
             window = eventLoop.createWindow(attributes: .init(title: "nah"))
@@ -27,11 +30,12 @@ class Responder: Swinit.Responder, @unchecked Sendable {
 
         var context = GraphicsContext(appName: "Playground")
         let surface = context.createSurface(for: window!)
-        let device: GraphicsDevice = context.createDevice(compatibleWith: surface)
+        let device = context.createDevice(compatibleWith: surface)
+        
+        surface.configure(associateWith: device)
 
         MainActor.assumeIsolated {
-            let compositor = Compositor(graphicsContext: context, surface: surface, device: device)
-            Unmanaged.passRetained(compositor)
+            self.compositor = Compositor(graphicsContext: context, surface: surface, device: device)
         }
     }
 
@@ -42,10 +46,13 @@ class Responder: Swinit.Responder, @unchecked Sendable {
         case .closeRequested:
             self.window = nil
             eventLoop.stop()
-        // case .resized(let size):
-        //     print("resized to", size)
-        //     let w = size.width
-        //     let h = size.height
+        case .resized(let size):
+            // print("resized to", size)
+            let w = size.width
+            let h = size.height
+            MainActor.assumeIsolated {
+                compositor?.resize(to: SIMD2(w, h))
+            }
         default:
             do {}
         // print(event)

@@ -1,6 +1,6 @@
 import Reactivity
 
-class Layer: Identifiable {
+class Layer: Identifiable, @unchecked Sendable { // TODO: make this @MainActor
   var compositor: Compositor
   var label: String? {
     didSet {
@@ -78,6 +78,11 @@ class Layer: Identifiable {
   public var absolutePosition: Position<Float> { _absolutePosition.value }
   private lazy var _absolutePosition: Computed<Position<Float>> = Computed { [self] in
     (self.parent?.absolutePosition ?? .zero) + self.position
+  }
+
+  public var rootRelativePosition: Position<Float> { _rootRelativePosition.value }
+  private lazy var _rootRelativePosition: Computed<Position<Float>> = Computed { [self] in
+    (self.rasterizationRoot?.absolutePosition ?? .zero) + self.position
   }
 
   // public var accumulatedAffine: Position<Float> { _accumulatedAffine.value }
