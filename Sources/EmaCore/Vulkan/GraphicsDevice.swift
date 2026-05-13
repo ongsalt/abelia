@@ -1,7 +1,7 @@
 @preconcurrency import CVulkan
 import Pointer
 
-public class GraphicsDevice {
+public class GraphicsDevice: @unchecked Sendable {
   private let physicalDevice: VkPhysicalDevice
   let handle: VkDevice
   private let vma: VmaAllocator

@@ -12,7 +12,11 @@ class LayerStorage {
   }
 
   func index(of layer: borrowing Layer) -> UInt64 {
-    var index = indexMap[layer.id]
+    index(of: layer.id)
+  }
+
+  func index(of layerId: ObjectIdentifier) -> UInt64 {
+    var index = indexMap[layerId]
     if index == nil {
       if let availableSlot = recycledSlots.first {  // well its random index, but who care
         index = availableSlot
@@ -20,15 +24,19 @@ class LayerStorage {
         index = currentIndex
         currentIndex += 1
       }
-      indexMap[layer.id] = index
+      indexMap[layerId] = index
     }
 
     return index!
   }
 
   func remove(_ layer: borrowing Layer) {
-    if let index = indexMap[layer.id] {
-      indexMap[layer.id] = nil
+    remove(layer.id)
+  }
+
+  func remove(_ layerId: ObjectIdentifier) {
+    if let index = indexMap[layerId] {
+      indexMap[layerId] = nil
       recycledSlots.insert(index)
     }
   }

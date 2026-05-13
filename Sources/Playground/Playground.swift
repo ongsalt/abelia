@@ -26,14 +26,11 @@ class Responder: Swinit.Responder, @unchecked Sendable {
 
         var context = GraphicsContext(appName: "Playground")
         let surface = context.createSurface(for: window!)
-        let device = context.createDevice(compatibleWith: surface)
+        let device: GraphicsDevice = context.createDevice(compatibleWith: surface)
 
-        // TODO: swinit: expose window size
-        let swapchain = device.createSwapchain(for: surface)
-        let compositePipeline = device.createCompositionPipeline(compatibleWith: swapchain)
+        let compositor = Compositor(graphicsContext: context, surface: surface, device: device)
 
-        Unmanaged.passRetained(swapchain)
-        Unmanaged.passRetained(compositePipeline)
+        Unmanaged.passRetained(compositor)
     }
 
     func windowEvent(

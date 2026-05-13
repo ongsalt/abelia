@@ -5,7 +5,7 @@ import Pointer
   import WinSDK
 #endif
 
-public struct GraphicsContext {
+public struct GraphicsContext: @unchecked Sendable {
   let instance: VkInstance
 }
 

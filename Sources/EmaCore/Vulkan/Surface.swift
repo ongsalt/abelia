@@ -4,7 +4,7 @@
   import WinSDK
 #endif
 
-public class Surface {
+public class Surface: @unchecked Sendable {
   let handle: VkSurfaceKHR
 
   #if os(linux)
