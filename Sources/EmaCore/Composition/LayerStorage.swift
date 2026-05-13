@@ -7,8 +7,12 @@ class LayerStorage {
   // [layer.id : slotIndex]
   private var indexMap: [ObjectIdentifier: UInt64] = [:]
 
-  init(in buffer: UnsafeMutableBufferPointer<LayerStorageNode>) {
+  init(mutating buffer: UnsafeMutableBufferPointer<LayerStorageNode>) {
     self.buffer = buffer
+  }
+
+  convenience init(_ buffer: GPUBuffer) {
+    self.init(mutating: buffer.buffer.assumingMemoryBound(to: LayerStorageNode.self))
   }
 
   func index(of layer: borrowing Layer) -> UInt64 {
@@ -44,7 +48,7 @@ class LayerStorage {
   func update(_ layer: borrowing Layer) {
     let index = index(of: layer)
     buffer[Int(index)] = layer.asStorageNode
-    
+
   }
 }
 

@@ -3,6 +3,7 @@ import Foundation
 import Pointer
 
 public class GraphicsDevice: @unchecked Sendable {
+  private let context: GraphicsContext
   let physicalDevice: VkPhysicalDevice
   let handle: VkDevice
   let vma: VmaAllocator
@@ -17,8 +18,9 @@ public class GraphicsDevice: @unchecked Sendable {
 
   private let cleanupQueue = CleanUpQueue()
 
-  init(instance: VkInstance, compatibleWith surface: Surface) {
-    let selected = selectPhysicalDevice(instance: instance, compatibleWith: surface)
+  init(context: GraphicsContext, compatibleWith surface: Surface) {
+    self.context = context
+    let selected = selectPhysicalDevice(instance: context.instance, compatibleWith: surface)
     self.selectedQueueIndexes = selected.1
     self.physicalDevice = selected.0
     self.handle = createDevice(physicalDevice: selected.0, queues: selected.1)
@@ -35,7 +37,7 @@ public class GraphicsDevice: @unchecked Sendable {
     vkGetDeviceQueue(self.handle, UInt32(selectedQueueIndexes.transfer), 0, &transferQueue)
     self.transferQueue = transferQueue!
 
-    self.vma = createVMA(instance: instance, physicalDevice: physicalDevice, logicalDevice: handle)
+    self.vma = createVMA(instance: context.instance, physicalDevice: physicalDevice, logicalDevice: handle)
 
     var commandPool: VkCommandPool?
     var commandPoolCi = VkCommandPoolCreateInfo(
@@ -69,6 +71,10 @@ public class GraphicsDevice: @unchecked Sendable {
     Texture(
       device: self, size: size, usages: usages,
       queueIndex: UInt32(self.selectedQueueIndexes.graphics))
+  }
+
+  func createBuffer(size: UInt64, usages: BufferUsages) -> GPUBuffer {
+    GPUBuffer(device: self, size: size, usages: usages)
   }
 
   func wait(for fence: VkFence) async {

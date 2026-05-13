@@ -5,19 +5,16 @@ import Pointer
   import WinSDK
 #endif
 
-public struct GraphicsContext: @unchecked Sendable {
+public class GraphicsContext: @unchecked Sendable {
   let instance: VkInstance
-}
 
-extension GraphicsContext {
   public init(appName: String) {
-    let instance = createVulkanInstance(appName: appName)
+    self.instance = createVulkanInstance(appName: appName)
     // TODO: might setup vulkan debugger
-    self.init(instance: instance)
   }
 
-  public mutating func createDevice(compatibleWith surface: Surface) -> GraphicsDevice {
-    GraphicsDevice(instance: instance, compatibleWith: surface)
+  public func createDevice(compatibleWith surface: Surface) -> GraphicsDevice {
+    GraphicsDevice(context: self, compatibleWith: surface)
   }
 }
 

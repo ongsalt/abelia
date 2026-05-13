@@ -12,8 +12,6 @@ var vulkanIncludePath: [CSetting] = [
     .define("VK_USE_PLATFORM_WIN32_KHR", .when(platforms: [.windows])),
 ]
 if let vulkanSDK = ProcessInfo.processInfo.environment["VULKAN_SDK"] {
-    // vulkanSearchPath.append
-    // let includePath = "\(vulkanSDK)/Include"
     vulkanIncludePath.append(.unsafeFlags(["-I\(vulkanSDK)/Include"]))
 }
 let package = Package(
@@ -43,7 +41,7 @@ let package = Package(
                 "CVulkan",
             ],
             resources: [
-                .copy("Generated/Resources"),
+                .copy("Generated/Resources")
                 // .ignore("Resources/Shaders"),
             ],
             cSettings: vulkanIncludePath,

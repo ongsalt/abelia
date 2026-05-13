@@ -2,23 +2,41 @@
 import Pointer
 
 actor Renderer {
-  private let graphicsContext: GraphicsContext
   private let device: GraphicsDevice
   private let surface: Surface
   private let compositionPipeline: CompositionPipeline
+
+  private let vertexBuffer: GPUBuffer
+
+  private let layerStorageBuffer: GPUBuffer
+  private let layerStorage: LayerStorage
 
   private var swapchain: Swapchain {
     surface.configuredInfo!.swapchain
   }
 
-  // private let layerStorage: LayerStorage
-
-  init(graphicsContext: GraphicsContext, surface: Surface, device: GraphicsDevice) {
-    self.graphicsContext = graphicsContext
+  init(surface: Surface, device: GraphicsDevice) {
+    self.device = device
     self.surface = surface
     // TODO: swinit: expose window size
-    self.device = device
-    self.compositionPipeline = device.createCompositionPipeline(compatibleWith: surface.configuredInfo!.swapchain)
+    self.compositionPipeline = device.createCompositionPipeline(
+      compatibleWith: surface.configuredInfo!.swapchain)
+
+    self.layerStorageBuffer = device.createBuffer(
+      size: UInt64(MemoryLayout<LayerStorageNode>.size) * 100000, usages: .ssbo)
+    self.layerStorage = LayerStorage(layerStorageBuffer)
+
+    self.vertexBuffer = device.createBuffer(
+      size: UInt64(MemoryLayout<VertexData>.size) * 100000, usages: .vertex)
+
+    let vertices: [VertexData] = [
+      .init(layoutNodeIndex: 238773, position: (0.0, 0.5)),
+      .init(layoutNodeIndex: 20837873, position: (0.5, -0.5)),
+      .init(layoutNodeIndex: 94898945, position: (-0.5, -0.5)),
+    ]
+
+    let v = self.vertexBuffer.buffer.assumingMemoryBound(to: VertexData.self)
+    v.initialize(from: vertices)
 
     Task { [self] in
       while !Task.isCancelled {
@@ -43,7 +61,6 @@ actor Renderer {
       pInheritanceInfo: nil
     )
     vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo).unwrap()
-
 
     // Transition the swapchain image
     swapchainImage.prepareRendering(commandBuffer: commandBuffer)
@@ -70,7 +87,6 @@ actor Renderer {
     // MARK: actual rendering
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, compositionPipeline.handle)
 
-    // vkCmdSetScissor()
     var viewport = VkViewport(
       x: 0,
       y: 0,
@@ -81,9 +97,12 @@ actor Renderer {
     )
     vkCmdSetViewport(commandBuffer, 0, 1, &viewport)
 
-    // TODO: dirty rect generation
     var rects = [VkRect2D(offset: .init(), extent: swapchain.imageSize.asExtent)]
     vkCmdSetScissor(commandBuffer, 0, 1, &rects)
+
+    var vertexBuffer: VkBuffer? = vertexBuffer.handle
+    var p: UInt64 = 0
+    vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer, &p)
 
     vkCmdDraw(commandBuffer, 3, 1, 0, 0)
 

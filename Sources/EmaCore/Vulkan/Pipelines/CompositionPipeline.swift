@@ -24,14 +24,8 @@ private func createCompositionPipeline(
 
   let dynamicStateCi = createDynamicStateCi()
   let vertexInputStateCi = createVertexInputStateCi(
-    bindings: [
-      // .init(binding: UInt32, stride: UInt32, inputRate: VkVertexInputRate)
-    ], 
-    attributes: [
-      // .init(
-      //   location: UInt32, binding: UInt32, format: VkFormat, offset: UInt32
-      // )
-    ]
+    bindings: [VertexData.bindingDescription],
+    attributes: VertexData.attributeDescriptions
   )
   let inputAssemblyStateCi = createInputAssemblyStateCi()
   let viewportStateCi = createViewportStateCi()
@@ -108,7 +102,7 @@ func createRasterizationStateCi() -> WithDeps<Box<VkPipelineRasterizationStateCr
     depthClampEnable: false,
     rasterizerDiscardEnable: false,
     polygonMode: VK_POLYGON_MODE_FILL,
-    cullMode: VK_CULL_MODE_BACK_BIT.u32,  // should be none?
+    cullMode: VK_CULL_MODE_NONE.u32,  // should be none?
     frontFace: VK_FRONT_FACE_CLOCKWISE,
     depthBiasEnable: false,
     depthBiasConstantFactor: 0,

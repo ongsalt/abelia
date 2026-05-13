@@ -2,12 +2,11 @@
 
 struct VertexData {
   uint32_t layoutNodeIndex;
-  float positionX;
-  float positionY;
+  float position[2];
 };
 
 // TODO: wait what if its kawase blur
-enum __attribute__((enum_extensibility(closed))) EffectKind: uint32_t {
+enum __attribute__((enum_extensibility(closed))) EffectKind : uint32_t {
   blurX,
   blurY,
   colorMatrix,

@@ -28,14 +28,14 @@ class Responder: Swinit.Responder, @unchecked Sendable {
         // TODO: support darkmode
         #endif
 
-        var context = GraphicsContext(appName: "Playground")
+        let context = GraphicsContext(appName: "Playground")
         let surface = context.createSurface(for: window!)
         let device = context.createDevice(compatibleWith: surface)
         
         surface.configure(associateWith: device)
 
         MainActor.assumeIsolated {
-            self.compositor = Compositor(graphicsContext: context, surface: surface, device: device)
+            self.compositor = Compositor(surface: surface, device: device)
         }
     }
 

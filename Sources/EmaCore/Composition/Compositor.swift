@@ -5,8 +5,8 @@ public class Compositor {
   private let renderer: Renderer
   // private var layerStorage: GPULayerStorage
 
-  public init(graphicsContext: GraphicsContext, surface: Surface, device: GraphicsDevice) {
-    self.renderer = Renderer(graphicsContext: graphicsContext, surface: surface, device: device)
+  public init(surface: Surface, device: GraphicsDevice) {
+    self.renderer = Renderer(surface: surface, device: device)
     _ = self.root
   }
 
