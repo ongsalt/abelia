@@ -19,7 +19,9 @@ actor Renderer {
     self.compositionPipeline = device.createCompositionPipeline(compatibleWith: swapchain)
 
     Task { [self] in
-      await self.render()
+      while !Task.isCancelled {
+        await self.render()
+      }
     }
   }
 
@@ -28,22 +30,23 @@ actor Renderer {
   }
 
   private func render() async {
+    let swapchainImage = await swapchain.acquireNextImage()
+
     // TODO: reuse this. raii?
     let commandBuffer = device.commandBuffer
     var commandBufferBeginInfo = VkCommandBufferBeginInfo(
-      sType: VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, 
-      pNext: nil, 
-      flags: 0, 
+      sType: VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+      pNext: nil,
+      flags: 0,
       pInheritanceInfo: nil
     )
     vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo).unwrap()
 
-    let swapchainTexture = await swapchain.acquireNextImage()
 
     // Transition the swapchain image
-    swapchainTexture.prepareRendering(commandBuffer: commandBuffer)
+    swapchainImage.prepareRendering(commandBuffer: commandBuffer)
 
-    let swapChainImageView = swapchainTexture.imageView
+    let swapChainImageView = swapchainImage.imageView
     nonisolated(unsafe) let renderingAttachmentInfo = Box(VkRenderingAttachmentInfo()) {
       $0.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO
       $0.imageView = swapChainImageView
@@ -62,6 +65,7 @@ actor Renderer {
     }
     vkCmdBeginRendering(commandBuffer, &renderingInfo)
 
+    // MARK: actual rendering
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, compositionPipeline.handle)
 
     // vkCmdSetScissor()
@@ -83,14 +87,13 @@ actor Renderer {
 
     vkCmdEndRendering(commandBuffer)
 
-    swapchainTexture.preparePresent(commandBuffer: commandBuffer)
+    swapchainImage.preparePresent(commandBuffer: commandBuffer)
 
     vkEndCommandBuffer(commandBuffer).unwrap()
 
-    // submit command buffer
-
-    let presentCompletedSemaphore = swapchainTexture.presentCompletedSemaphore
-    let renderFinishedSemaphore = swapchainTexture.renderFinishedSemaphore
+    // MARK: submit command buffer
+    let presentCompletedSemaphore = swapchainImage.presentCompletedSemaphore
+    let renderFinishedSemaphore = swapchainImage.renderFinishedSemaphore
     nonisolated(unsafe) let waitSemaphoreInfos = Box(VkSemaphoreSubmitInfo()) {
       $0.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO
       // we wait the same wait the same presentCompleteSemaphore that we notify
@@ -116,8 +119,8 @@ actor Renderer {
       $0.signalSemaphoreInfoCount = 1
       $0.pSignalSemaphoreInfos = signalSemaphoreInfo.ptr
     }
-    vkQueueSubmit2(device.graphicsQueue, 1, &submitInfo , nil).unwrap()
+    vkQueueSubmit2(device.graphicsQueue, 1, &submitInfo, swapchainImage.inFlightFence).unwrap()
 
-    swapchainTexture.present()
+    swapchainImage.present()
   }
 }

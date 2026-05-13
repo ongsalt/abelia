@@ -52,12 +52,15 @@ public class Swapchain: @unchecked Sendable {
       createSemaphore(device: device.handle)
     }
     self.inFlightFences = (0..<Self.maxFramesInFlight).map { _ in
-      createFence(device: device.handle)
+      createFence(device: device.handle, signaled: true)
     }
   }
 
   // async maybe?
   public func acquireNextImage() async -> SwapchainImage {
+    let inFlightFence = self.inFlightFences[currentFrameInFlightIndex]
+    await device.wait(for: inFlightFence)
+
     nonisolated(unsafe) var swapchainImageIndex: UInt32 = 0
     nonisolated(unsafe) let deviceHandle = device.handle
     nonisolated(unsafe) let handle = self.handle
@@ -86,6 +89,7 @@ public class Swapchain: @unchecked Sendable {
       imageIndex: swapchainImageIndex,
       renderFinishedSemaphore: self.renderFinishedSemaphores[Int(swapchainImageIndex)],
       presentCompletedSemaphore: presentCompletedSemaphore,
+      inFlightFence: inFlightFence,
       swapChainHandle: handle,
       presentQueue: device.presentQueue
     )
@@ -218,6 +222,7 @@ public struct SwapchainImage: ~Copyable {
   let imageIndex: UInt32
   let renderFinishedSemaphore: VkSemaphore
   let presentCompletedSemaphore: VkSemaphore
+  let inFlightFence: VkFence
   let swapChainHandle: VkSwapchainKHR
   let presentQueue: VkQueue
 

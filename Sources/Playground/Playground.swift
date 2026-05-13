@@ -1,9 +1,10 @@
 import Ema
-import Reactivity
 
 import EmaCore
 
 import Foundation
+
+import Reactivity
 
 import Swinit
 
@@ -79,7 +80,7 @@ struct Playground {
     //     runtime.root.printTree()
 
     //     w = 500
-        
+
     //     runtime.flushOnFrame()
     //     runtime.root.printTree()
 

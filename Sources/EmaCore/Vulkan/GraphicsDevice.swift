@@ -84,6 +84,7 @@ public class GraphicsDevice: @unchecked Sendable {
     await withUnsafeContinuation { continuation in
       DispatchQueue.global(qos: .background).async {
         vkWaitForFences(device, 1, &fence, true, UInt64.max).unwrap()
+        // how tf is it VK_TIMEOUT
         continuation.resume()
       }
     }
