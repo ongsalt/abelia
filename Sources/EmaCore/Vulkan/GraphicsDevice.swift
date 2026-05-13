@@ -1,10 +1,11 @@
 @preconcurrency import CVulkan
+import Foundation
 import Pointer
 
 public class GraphicsDevice: @unchecked Sendable {
   private let physicalDevice: VkPhysicalDevice
   let handle: VkDevice
-  private let vma: VmaAllocator
+  let vma: VmaAllocator
   let selectedQueueIndexes: SelectedQueues
 
   let capabilities: VkSurfaceCapabilitiesKHR
@@ -12,6 +13,9 @@ public class GraphicsDevice: @unchecked Sendable {
   let presentQueue: VkQueue
   let graphicsQueue: VkQueue
   let transferQueue: VkQueue
+
+  let commandPool: VkCommandPool
+  let commandBuffer: VkCommandBuffer
 
   private let cleanupQueue = CleanUpQueue()
 
@@ -35,6 +39,27 @@ public class GraphicsDevice: @unchecked Sendable {
     self.transferQueue = transferQueue!
 
     self.vma = createVMA(instance: instance, physicalDevice: physicalDevice, logicalDevice: handle)
+
+    var commandPool: VkCommandPool?
+    var commandPoolCi = VkCommandPoolCreateInfo(
+      sType: VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+      pNext: nil,
+      flags: VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT.u32,
+      queueFamilyIndex: UInt32(selectedQueueIndexes.graphics)
+    )
+    vkCreateCommandPool(self.handle, &commandPoolCi, nil, &commandPool).unwrap()
+    self.commandPool = commandPool!
+
+    var commandBuffer: VkCommandBuffer?
+    var commandBufferCi = VkCommandBufferAllocateInfo(
+      sType: VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+      pNext: nil,
+      commandPool: commandPool,
+      level: VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+      commandBufferCount: 1
+    )
+    vkAllocateCommandBuffers(self.handle, &commandBufferCi, &commandBuffer).unwrap()
+    self.commandBuffer = commandBuffer!
   }
 
   public func createSwapchain(for surface: Surface) -> Swapchain {
@@ -47,7 +72,22 @@ public class GraphicsDevice: @unchecked Sendable {
     CompositionPipeline(device: self, swapchain: swapchain)
   }
 
-  deinit {
+  func createTexture(size: SIMD2<UInt32>, usages: TextureUsages) -> Texture {
+    Texture(
+      device: self, size: size, usages: usages,
+      queueIndex: UInt32(self.selectedQueueIndexes.graphics))
+  }
+
+  func wait(for fence: VkFence) async {
+    nonisolated(unsafe) let device = self.handle
+    nonisolated(unsafe) var fence: VkFence? = fence
+    await withUnsafeContinuation { continuation in
+      DispatchQueue.global(qos: .background).async {
+        vkWaitForFences(device, 1, &fence, true, UInt64.max).unwrap()
+        continuation.resume()
+      }
+    }
+    vkResetFences(device, 1, &fence).unwrap()
   }
 }
 

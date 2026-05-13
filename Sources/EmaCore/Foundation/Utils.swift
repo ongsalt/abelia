@@ -9,3 +9,7 @@ extension Numeric where Self: Comparable {
     min(end, max(start, self))
   }
 }
+
+func todo<T>(_ message: String = "Todo", file: String = #file, line: Int = #line) -> T {
+  fatalError("\(message) at \(file):\(line)")
+}

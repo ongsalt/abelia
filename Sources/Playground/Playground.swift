@@ -28,9 +28,10 @@ class Responder: Swinit.Responder, @unchecked Sendable {
         let surface = context.createSurface(for: window!)
         let device: GraphicsDevice = context.createDevice(compatibleWith: surface)
 
-        let compositor = Compositor(graphicsContext: context, surface: surface, device: device)
-
-        Unmanaged.passRetained(compositor)
+        MainActor.assumeIsolated {
+            let compositor = Compositor(graphicsContext: context, surface: surface, device: device)
+            Unmanaged.passRetained(compositor)
+        }
     }
 
     func windowEvent(
