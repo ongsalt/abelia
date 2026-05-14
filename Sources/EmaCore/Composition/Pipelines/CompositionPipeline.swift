@@ -3,18 +3,20 @@ import Pointer
 
 public class CompositionPipeline {
   let handle: VkPipeline
+  let layout: VkPipelineLayout
   let device: GraphicsDevice
 
   init(device: GraphicsDevice, swapchain: borrowing Swapchain) {
     self.device = device
-    handle = createCompositionPipeline(device: device, format: swapchain.imageFormat)
+    (self.handle, self.layout) = createCompositionPipeline(
+      device: device, format: swapchain.imageFormat)
   }
 }
 
 private func createCompositionPipeline(
   device: GraphicsDevice,
   format: VkFormat
-) -> VkPipeline {
+) -> (VkPipeline, VkPipelineLayout) {
   let shaderModule = ShaderModule(device: device, filename: "composite")!
 
   let shaderStages = createShaderStateCi([
@@ -60,7 +62,7 @@ private func createCompositionPipeline(
 
   var pipeline: VkPipeline?
   vkCreateGraphicsPipelines(device.handle, nil, 1, &ci, nil, &pipeline).unwrap()
-  return pipeline!
+  return (pipeline!, pipelineLayout)
 }
 
 func createPipelineRenderingCi(format: VkFormat) -> WithDeps<Box<VkPipelineRenderingCreateInfo>> {
@@ -79,14 +81,100 @@ func createPipelineRenderingCi(format: VkFormat) -> WithDeps<Box<VkPipelineRende
 }
 
 private func createCompositePipelineLayout(device: GraphicsDevice) -> VkPipelineLayout {
+  let descriptorSet1Bindings = CArray([
+    // default sampler
+    VkDescriptorSetLayoutBinding(
+      binding: 0,
+      descriptorType: VK_DESCRIPTOR_TYPE_SAMPLER,
+      descriptorCount: 1,
+      stageFlags: VK_SHADER_STAGE_FRAGMENT_BIT.u32,
+      pImmutableSamplers: nil
+    ),
+
+    // node storage
+    VkDescriptorSetLayoutBinding(
+      binding: 1,
+      descriptorType: VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+      descriptorCount: 1,
+      stageFlags: VK_SHADER_STAGE_FRAGMENT_BIT.u32,
+      pImmutableSamplers: nil
+    ),
+  ])
+
+  var descriptorSetLayout1CreateInfo =
+    VkDescriptorSetLayoutCreateInfo(
+      sType: VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+      pNext: nil,
+      // so we gonna have 1 big descriptor containing every rasterization root
+      flags: VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT.u32,
+      bindingCount: descriptorSet1Bindings.count,
+      pBindings: descriptorSet1Bindings.ptr
+    )
+
+  var descriptorSetLayout1: VkDescriptorSetLayout?
+  vkCreateDescriptorSetLayout(
+    device.handle, &descriptorSetLayout1CreateInfo, nil, &descriptorSetLayout1
+  ).unwrap()
+
+  // MARKER: descriptor indexing
+
+  let descriptorSet2Bindings = CArray([
+    //
+    VkDescriptorSetLayoutBinding(
+      binding: 0,
+      descriptorType: VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+      descriptorCount: 1,
+      stageFlags: VK_SHADER_STAGE_FRAGMENT_BIT.u32,
+      pImmutableSamplers: nil
+    )
+  ])
+
+  let bindingFlags = Box(
+    VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT.u32
+      | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT.u32
+      | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT.u32
+      | VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT.u32
+  )
+  let bindingFlagsCi = Box(VkDescriptorSetLayoutBindingFlagsCreateInfo()) {
+    $0.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT
+    $0.bindingCount = 1
+    $0.pBindingFlags = bindingFlags.ptr
+  }
+
+  var descriptorSetLayout2CreateInfo =
+    VkDescriptorSetLayoutCreateInfo(
+      sType: VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+      pNext: bindingFlagsCi.ptr,
+      // so we gonna have 1 big descriptor containing every rasterization root
+      flags: VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT.u32,
+      bindingCount: descriptorSet2Bindings.count,
+      pBindings: descriptorSet2Bindings.ptr
+    )
+
+  var descriptorSetLayout2: VkDescriptorSetLayout?
+  vkCreateDescriptorSetLayout(
+    device.handle, &descriptorSetLayout2CreateInfo, nil, &descriptorSetLayout2
+  ).unwrap()
+
+  let descriptorSetLayouts: CArray<_> = [descriptorSetLayout1, descriptorSetLayout2]
+
+  let pushConstantRange = Box(
+    VkPushConstantRange(
+      stageFlags: VK_SHADER_STAGE_VERTEX_BIT.u32 | VK_SHADER_STAGE_FRAGMENT_BIT.u32,
+      offset: 0,
+      // just screen size
+      size: 2 * UInt32(MemoryLayout<Float>.size)
+    )
+  )
+
   var pipelineLayoutInfo = VkPipelineLayoutCreateInfo(
     sType: VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
     pNext: nil,
     flags: 0,
-    setLayoutCount: 0,
-    pSetLayouts: nil,
-    pushConstantRangeCount: 0,
-    pPushConstantRanges: nil
+    setLayoutCount: descriptorSetLayouts.count,
+    pSetLayouts: descriptorSetLayouts.ptr,
+    pushConstantRangeCount: 1,
+    pPushConstantRanges: pushConstantRange.ptr
   )
 
   var pipelineLayout: VkPipelineLayout?

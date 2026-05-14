@@ -11,3 +11,10 @@ extension SIMD2 where Scalar: BinaryInteger {
     VkExtent2D(width: UInt32(x), height: UInt32(y))
   }
 }
+
+struct AffineMatrix {
+  var c1: SIMD4<Float>
+  var c2: SIMD4<Float>
+  var c3: SIMD4<Float>
+  var c4: SIMD4<Float>
+}

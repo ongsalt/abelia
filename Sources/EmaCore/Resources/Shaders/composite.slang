@@ -1,3 +1,12 @@
+[[vk::push_constant]]
+ConstantBuffer<float2> viewportSize;
+
+[[vk::binding(0, 0)]]
+Sampler2D sampler;
+
+[[vk::binding(0, 1)]]
+Texture2DArray textures;
+
 struct VertexInput {
   uint32_t layoutNodeIndex;
   float2 position;

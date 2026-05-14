@@ -11,9 +11,9 @@ when a layer is dirty, it tell the compositor `.markDirty(node: self)` the compo
 The presence of an `animationFrameCallback` will force the compositor to actively acquire a frame.
 
 ## TODO
-- setup layer storage
+- setup descriptor bindings
 - setup texture transfering
-- vertex buffer
+- write the actual shader
 
 - optimized computed dirty masking
 - new property wrapper: behave like signal but allow linking

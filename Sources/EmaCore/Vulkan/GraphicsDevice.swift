@@ -111,6 +111,8 @@ private let deviceExtensions = CStringArray {
     "VK_KHR_external_memory"
     "VK_KHR_external_memory_win32"
   #endif
+
+  "VK_EXT_descriptor_indexing" 
 }
 
 private func createDevice(physicalDevice: VkPhysicalDevice, queues: SelectedQueues) -> VkDevice {
@@ -143,10 +145,13 @@ private func createDevice(physicalDevice: VkPhysicalDevice, queues: SelectedQueu
   let enabledVk12Features = Box(VkPhysicalDeviceVulkan12Features()) {
     $0.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES
     $0.pNext = enabledVk11Features.rawMut
+    
     $0.descriptorIndexing = true
     $0.descriptorBindingVariableDescriptorCount = true
     $0.descriptorBindingSampledImageUpdateAfterBind = true
-    // $0.descriptorBindingPartiallyBound = true
+    $0.descriptorBindingPartiallyBound = true
+    $0.descriptorBindingUpdateUnusedWhilePending = true
+
     $0.runtimeDescriptorArray = true
     $0.bufferDeviceAddress = true
 
