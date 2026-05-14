@@ -8,7 +8,7 @@ struct BufferUsages: OptionSet {
   static let storage = BufferUsages(rawValue: 1 << 0)
   static let vertex = BufferUsages(rawValue: 2 << 0)
   // static let index = BufferUsages(rawValue: 3 << 0)
-  // static let transferSource = BufferUsages(rawValue: 4 << 0)
+  static let staging = BufferUsages(rawValue: 4 << 0)
   static let uniform = BufferUsages(rawValue: 5 << 0)
 }
 
@@ -55,9 +55,10 @@ func createBuffer(device: GraphicsDevice, size: UInt64, usages: BufferUsages)
       $0.usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT.u32
     }
 
-    // if usages.contains(.transferSource) {
-    //   $0.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT.u32
-    // }
+    if usages.contains(.staging) {
+      $0.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT.u32
+    }
+
     if usages.contains(.storage) {
       $0.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT.u32
     }

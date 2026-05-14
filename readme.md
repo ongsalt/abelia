@@ -12,10 +12,10 @@ The presence of an `animationFrameCallback` will force the compositor to activel
 
 ## TODO
 - setup descriptor bindings
-- setup texture transfering
 - write the actual shader
+- nuke async code
 
-- optimized computed dirty masking
+- optimize computed dirty flagging
 - new property wrapper: behave like signal but allow linking
 - clip
 - think about pixel perfect stuff

@@ -1,11 +1,11 @@
 [[vk::push_constant]]
-ConstantBuffer<float2> viewportSize;
+uniform ConstantBuffer<float2> viewportSize;
 
 [[vk::binding(0, 0)]]
-Sampler2D sampler;
+uniform Sampler2D sampler;
 
 [[vk::binding(0, 1)]]
-Texture2DArray textures;
+uniform Texture2DArray textures;
 
 struct VertexInput {
   uint32_t layoutNodeIndex;
@@ -20,7 +20,7 @@ struct VertexOutput {
 [shader("vertex")]
 VertexOutput vertMain(VertexInput input) {
   VertexOutput output;
-  output.sv_position = float4(input.position, 0.0, 1.0);
+  output.sv_position = float4((input.position / (viewportSize / 2)) - 1, 0.0, 1.0);
   output.color = float3(1.0, 1.0, 0.5);
   return output;
 }

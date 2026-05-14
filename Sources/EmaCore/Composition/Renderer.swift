@@ -31,26 +31,35 @@ actor Renderer {
       size: UInt64(MemoryLayout<LayerStorageNode>.size) * 100000, usages: .storage)
     self.layerStorage = LayerStorage(layerStorageBuffer)
 
+    var node = LayerStorageNode()
+    node.shapeKind = .roundRect
+    node.shape.roundedRect = .init(halfWidth: 30, halfHeight: 30, cornerRadius: 5, cornerDegree: 4)
+    layerStorage.set(node, at: 0)
+
     self.vertexBuffer = device.createBuffer(
       size: UInt64(MemoryLayout<VertexData>.size) * 100000, usages: .vertex)
 
-    let vertices: [VertexData] = [
-      .init(layoutNodeIndex: 238773, position: (0.0, 0.5)),
-      .init(layoutNodeIndex: 20_837_873, position: (0.5, -0.5)),
-      .init(layoutNodeIndex: 94_898_945, position: (-0.5, -0.5)),
+    self.baseVertices = [
+      .init(layoutNodeIndex: 0, position: (0.0, 10.0)),
+      .init(layoutNodeIndex: 0, position: (10.0, 10.0)),
+      .init(layoutNodeIndex: 0, position: (10.0, 0.0)),
     ]
-    self.baseVertices = vertices
+    let v = self.vertexBuffer.buffer.assumingMemoryBound(to: VertexData.self)
+    _ = v.initialize(from: self.baseVertices)
 
     self.defaultSampler = createSamplers(device: device)
-
-    let v = self.vertexBuffer.buffer.assumingMemoryBound(to: VertexData.self)
-    _ = v.initialize(from: vertices)
-
-    let tex = device.createTexture(size: SIMD2(100, 100), usages: .layer)
+    let registry = TextureRegistry(
+      on: device, globalDescriptorSetLayout: compositionPipeline.descriptorSetLayouts[0],
+      imagesDescriptorSetLayout: compositionPipeline.descriptorSetLayouts[1])
 
     Task { [self] in
+      let image = try! sample6(width: 500, height: 500)
+      // let tex = await Texture(
+      //   from: image, device: self.device, size: SIMD2(500, 500), usages: .static,
+      //   queueIndex: UInt32(device.selectedQueueIndexes.graphics))
+
       while !Task.isCancelled {
-        await self.updateAnimatedVertices()
+        // await self.updateAnimatedVertices()
         await self.render()
       }
     }
@@ -99,7 +108,10 @@ actor Renderer {
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, compositionPipeline.handle)
 
     var viewportSize = SIMD2<Float>(swapchain.imageSize)
-    vkCmdPushConstants(commandBuffer, compositionPipeline.layout, VK_SHADER_STAGE_VERTEX_BIT.u32 | VK_SHADER_STAGE_FRAGMENT_BIT.u32, 0, 2 * UInt32(MemoryLayout<Float>.size), &viewportSize)
+    vkCmdPushConstants(
+      commandBuffer, compositionPipeline.layout,
+      VK_SHADER_STAGE_VERTEX_BIT.u32 | VK_SHADER_STAGE_FRAGMENT_BIT.u32, 0,
+      2 * UInt32(MemoryLayout<Float>.size), &viewportSize)
 
     var viewport = VkViewport(
       x: 0,
@@ -167,9 +179,15 @@ actor Renderer {
     frameIndex &+= 1
 
     var animatedVertices = baseVertices
-    animatedVertices[0].position = (baseVertices[0].position.0 + offsetX, baseVertices[0].position.1)
-    animatedVertices[1].position = (baseVertices[1].position.0 + offsetX, baseVertices[1].position.1)
-    animatedVertices[2].position = (baseVertices[2].position.0 + offsetX, baseVertices[2].position.1)
+    animatedVertices[0].position = (
+      baseVertices[0].position.0 + offsetX, baseVertices[0].position.1
+    )
+    animatedVertices[1].position = (
+      baseVertices[1].position.0 + offsetX, baseVertices[1].position.1
+    )
+    animatedVertices[2].position = (
+      baseVertices[2].position.0 + offsetX, baseVertices[2].position.1
+    )
 
     let vertexPtr = vertexBuffer.buffer.assumingMemoryBound(to: VertexData.self)
     _ = vertexPtr.update(from: animatedVertices)

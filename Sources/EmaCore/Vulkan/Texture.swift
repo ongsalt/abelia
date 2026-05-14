@@ -4,7 +4,7 @@ import Pointer
 class Texture {
   let device: GraphicsDevice
   let handle: VkImage
-  var size: Size<UInt32> = .zero
+  var size: Size<UInt32>
   let usages: TextureUsages
 
   let allocation: VmaAllocation
@@ -27,16 +27,22 @@ class Texture {
       $0.format = VK_FORMAT_R8G8B8A8_UNORM
       $0.mipLevels = 1
       $0.arrayLayers = 1
+      // $0.tiling =
 
       $0.usage = VK_IMAGE_USAGE_SAMPLED_BIT.u32
-      if usages.contains(.canvas) {
-        $0.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT.u32
+      if usages.contains(.canvas) || usages.contains(.static) {
+        $0.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT.u32
       }
+      
       if usages.contains(.layer) {
         $0.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT.u32
       }
 
-      $0.samples = VK_SAMPLE_COUNT_4_BIT
+      if usages.contains(.layer) {
+        $0.samples = VK_SAMPLE_COUNT_4_BIT
+      } else {
+        $0.samples = VK_SAMPLE_COUNT_1_BIT
+      }
     }
     var vmaCi = VmaAllocationCreateInfo(
       flags: 0,
@@ -55,6 +61,30 @@ class Texture {
 
     self.allocation = allocation!
     self.handle = image!
+  }
+
+  convenience init(
+    fromCpuBuffer buffer: UnsafeRawBufferPointer, size: Size<UInt32>, device: GraphicsDevice,
+    usages: TextureUsages, queueIndex: UInt32
+  ) async {
+    let stagingBuffer = GPUBuffer(device: device, size: UInt64(buffer.count), usages: .staging)
+    stagingBuffer.buffer.copyBytes(from: buffer)
+
+    self.init(device: device, size: size, usages: usages, queueIndex: queueIndex)
+
+    await device.command { commandBuffer in
+      self.transition(to: .copyTarget, on: commandBuffer)
+
+      var region = VkBufferImageCopy()
+      region.imageExtent = .init(width: size.x, height: size.y, depth: 1)
+      region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT.u32
+      region.imageSubresource.layerCount = 1
+      vkCmdCopyBufferToImage(
+        commandBuffer, stagingBuffer.handle, self.handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
+        &region)
+
+      self.transition(to: .sampling, on: commandBuffer)
+    }
   }
 
   func transition(
@@ -132,8 +162,11 @@ enum TextureLayout {
       VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT
     case .renderAttachment:
       VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT
-    case .undefined, .copyTarget:
-      VK_PIPELINE_STAGE_2_NONE
+    case .copyTarget:
+      VK_PIPELINE_STAGE_2_TRANSFER_BIT
+    case .undefined:
+      // VK_PIPELINE_STAGE_2_NONE
+      VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT
     }
   }
 
@@ -149,5 +182,4 @@ enum TextureLayout {
       VK_IMAGE_LAYOUT_UNDEFINED
     }
   }
-
 }

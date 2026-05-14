@@ -17,9 +17,11 @@ if let vulkanSDK = ProcessInfo.processInfo.environment["VULKAN_SDK"] {
 let package = Package(
     name: "graphics-101",
     dependencies: [
-        .package(url: "https://github.com/apple/swift-numerics", from: "1.0.0"),
+        // .package(url: "https://github.com/apple/swift-numerics", from: "1.0.0"),
         .package(url: "https://github.com/swiftlang/swift-syntax", from: "602.0.0"),
         .package(url: "https://github.com/ongsalt/swinit", branch: "main"),
+        .package(url: "https://github.com/LuizZak/swift-blend2d", branch: "master")
+
     ],
     targets: [
         // bruh, how do i do this on windows
@@ -39,6 +41,8 @@ let package = Package(
                 "Pointer",
                 "DSLMacro",
                 "CVulkan",
+                // might move to `Ema` laters
+                .product(name: "SwiftBlend2D", package: "swift-blend2d")
             ],
             resources: [
                 .copy("Generated/Resources")
@@ -108,5 +112,6 @@ let package = Package(
             ],
         ),
     ],
-    cLanguageStandard: .c2x
+    swiftLanguageModes: [.v6],
+    cLanguageStandard: .c2x,
 )

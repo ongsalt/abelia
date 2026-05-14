@@ -37,7 +37,8 @@ public class GraphicsDevice: @unchecked Sendable {
     vkGetDeviceQueue(self.handle, UInt32(selectedQueueIndexes.transfer), 0, &transferQueue)
     self.transferQueue = transferQueue!
 
-    self.vma = createVMA(instance: context.instance, physicalDevice: physicalDevice, logicalDevice: handle)
+    self.vma = createVMA(
+      instance: context.instance, physicalDevice: physicalDevice, logicalDevice: handle)
 
     var commandPool: VkCommandPool?
     var commandPoolCi = VkCommandPoolCreateInfo(
@@ -99,6 +100,52 @@ public class GraphicsDevice: @unchecked Sendable {
       }
     }
   }
+
+  func waitIdle(queue: VkQueue) async {
+    nonisolated(unsafe) let handle = queue
+    await withUnsafeContinuation { continuation in
+      DispatchQueue.global(qos: .background).async {
+        vkQueueWaitIdle(handle).unwrap()
+        continuation.resume()
+      }
+    }
+  }
+
+  func command(_ block: (VkCommandBuffer) async -> Void) async {
+    // single use shi
+    let queue = self.graphicsQueue
+    var commandBuffer: VkCommandBuffer?
+    var commandBufferCi = VkCommandBufferAllocateInfo(
+      sType: VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+      pNext: nil,
+      commandPool: self.commandPool,
+      level: VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+      commandBufferCount: 1
+    )
+    vkAllocateCommandBuffers(self.handle, &commandBufferCi, &commandBuffer).unwrap()
+
+    var commandBufferBeginInfo = VkCommandBufferBeginInfo()
+    commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO
+    vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo).unwrap()
+
+    await block(commandBuffer!)
+
+    vkEndCommandBuffer(commandBuffer).unwrap()
+
+    let commandBufferInfo = Box(VkCommandBufferSubmitInfo()) {
+      $0.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO
+      $0.commandBuffer = commandBuffer
+    }
+    var submitInfo = with(VkSubmitInfo2()) {
+      $0.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2
+      $0.commandBufferInfoCount = 1
+      $0.pCommandBufferInfos = commandBufferInfo.ptr
+    }
+    vkQueueSubmit2(queue, 1, &submitInfo, nil).unwrap()
+
+    // await queue.waitIdle()
+    await waitIdle(queue: queue)
+  }
 }
 
 private let deviceExtensions = CStringArray {
@@ -112,7 +159,7 @@ private let deviceExtensions = CStringArray {
     "VK_KHR_external_memory_win32"
   #endif
 
-  "VK_EXT_descriptor_indexing" 
+  "VK_EXT_descriptor_indexing"
 }
 
 private func createDevice(physicalDevice: VkPhysicalDevice, queues: SelectedQueues) -> VkDevice {
@@ -145,7 +192,7 @@ private func createDevice(physicalDevice: VkPhysicalDevice, queues: SelectedQueu
   let enabledVk12Features = Box(VkPhysicalDeviceVulkan12Features()) {
     $0.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES
     $0.pNext = enabledVk11Features.rawMut
-    
+
     $0.descriptorIndexing = true
     $0.descriptorBindingVariableDescriptorCount = true
     $0.descriptorBindingSampledImageUpdateAfterBind = true

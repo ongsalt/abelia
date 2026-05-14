@@ -5,64 +5,62 @@ public class CompositionPipeline {
   let handle: VkPipeline
   let layout: VkPipelineLayout
   let device: GraphicsDevice
+  let descriptorSetLayouts:  [2 of VkDescriptorSetLayout]
 
   init(device: GraphicsDevice, swapchain: borrowing Swapchain) {
     self.device = device
-    (self.handle, self.layout) = createCompositionPipeline(
-      device: device, format: swapchain.imageFormat)
+
+    let format = swapchain.imageFormat
+    let shaderModule = ShaderModule(device: device, filename: "composite")!
+
+    let shaderStages = createShaderStateCi([
+      (shaderModule, "vertMain", VK_SHADER_STAGE_VERTEX_BIT),
+      (shaderModule, "fragMain", VK_SHADER_STAGE_FRAGMENT_BIT),
+    ])
+
+    let dynamicStateCi = createDynamicStateCi()
+    let vertexInputStateCi = createVertexInputStateCi(
+      bindings: [VertexData.bindingDescription],
+      attributes: VertexData.attributeDescriptions
+    )
+    let inputAssemblyStateCi = createInputAssemblyStateCi()
+    let viewportStateCi = createViewportStateCi()
+    let rasterizationStateCi = createRasterizationStateCi()
+    let multisampleStateCi = createMultisampleStateCi()
+    let colorBlendStateCi = createColorBlendStateCi()
+    let (pipelineLayout, descriptorSetLayouts) = createCompositePipelineLayout(device: device)
+    self.descriptorSetLayouts = descriptorSetLayouts
+    self.layout = pipelineLayout
+    // dynamic rendering
+    let pipelineRenderingCi = createPipelineRenderingCi(format: format)
+
+    var ci = VkGraphicsPipelineCreateInfo(
+      sType: VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+      pNext: pipelineRenderingCi.value.raw,
+      flags: 0,
+      stageCount: UInt32(shaderStages.value.count),
+      pStages: shaderStages.value.ptr,
+      pVertexInputState: vertexInputStateCi.value.ptr,
+      pInputAssemblyState: inputAssemblyStateCi.ptr,
+      pTessellationState: nil,
+      pViewportState: viewportStateCi.value.ptr,
+      pRasterizationState: rasterizationStateCi.value.ptr,
+      pMultisampleState: multisampleStateCi.ptr,
+      pDepthStencilState: nil,
+      pColorBlendState: colorBlendStateCi.value.ptr,
+      pDynamicState: dynamicStateCi.value.ptr,
+      layout: pipelineLayout,
+      renderPass: nil,
+      subpass: 0,
+      basePipelineHandle: nil,
+      basePipelineIndex: 0
+    )
+
+    var pipeline: VkPipeline?
+    vkCreateGraphicsPipelines(device.handle, nil, 1, &ci, nil, &pipeline).unwrap()
+    self.handle = pipeline!
+
   }
-}
-
-private func createCompositionPipeline(
-  device: GraphicsDevice,
-  format: VkFormat
-) -> (VkPipeline, VkPipelineLayout) {
-  let shaderModule = ShaderModule(device: device, filename: "composite")!
-
-  let shaderStages = createShaderStateCi([
-    (shaderModule, "vertMain", VK_SHADER_STAGE_VERTEX_BIT),
-    (shaderModule, "fragMain", VK_SHADER_STAGE_FRAGMENT_BIT),
-  ])
-
-  let dynamicStateCi = createDynamicStateCi()
-  let vertexInputStateCi = createVertexInputStateCi(
-    bindings: [VertexData.bindingDescription],
-    attributes: VertexData.attributeDescriptions
-  )
-  let inputAssemblyStateCi = createInputAssemblyStateCi()
-  let viewportStateCi = createViewportStateCi()
-  let rasterizationStateCi = createRasterizationStateCi()
-  let multisampleStateCi = createMultisampleStateCi()
-  let colorBlendStateCi = createColorBlendStateCi()
-  let pipelineLayout = createCompositePipelineLayout(device: device)
-  // dynamic rendering
-  let pipelineRenderingCi = createPipelineRenderingCi(format: format)
-
-  var ci = VkGraphicsPipelineCreateInfo(
-    sType: VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-    pNext: pipelineRenderingCi.value.raw,
-    flags: 0,
-    stageCount: UInt32(shaderStages.value.count),
-    pStages: shaderStages.value.ptr,
-    pVertexInputState: vertexInputStateCi.value.ptr,
-    pInputAssemblyState: inputAssemblyStateCi.ptr,
-    pTessellationState: nil,
-    pViewportState: viewportStateCi.value.ptr,
-    pRasterizationState: rasterizationStateCi.value.ptr,
-    pMultisampleState: multisampleStateCi.ptr,
-    pDepthStencilState: nil,
-    pColorBlendState: colorBlendStateCi.value.ptr,
-    pDynamicState: dynamicStateCi.value.ptr,
-    layout: pipelineLayout,
-    renderPass: nil,
-    subpass: 0,
-    basePipelineHandle: nil,
-    basePipelineIndex: 0
-  )
-
-  var pipeline: VkPipeline?
-  vkCreateGraphicsPipelines(device.handle, nil, 1, &ci, nil, &pipeline).unwrap()
-  return (pipeline!, pipelineLayout)
 }
 
 func createPipelineRenderingCi(format: VkFormat) -> WithDeps<Box<VkPipelineRenderingCreateInfo>> {
@@ -80,7 +78,9 @@ func createPipelineRenderingCi(format: VkFormat) -> WithDeps<Box<VkPipelineRende
   return Box(ci).addDeps(format)
 }
 
-private func createCompositePipelineLayout(device: GraphicsDevice) -> VkPipelineLayout {
+private func createCompositePipelineLayout(device: GraphicsDevice) -> (
+  VkPipelineLayout, [2 of VkDescriptorSetLayout]
+) {
   let descriptorSet1Bindings = CArray([
     // default sampler
     VkDescriptorSetLayoutBinding(
@@ -105,8 +105,7 @@ private func createCompositePipelineLayout(device: GraphicsDevice) -> VkPipeline
     VkDescriptorSetLayoutCreateInfo(
       sType: VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
       pNext: nil,
-      // so we gonna have 1 big descriptor containing every rasterization root
-      flags: VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT.u32,
+      flags: 0,
       bindingCount: descriptorSet1Bindings.count,
       pBindings: descriptorSet1Bindings.ptr
     )
@@ -118,12 +117,13 @@ private func createCompositePipelineLayout(device: GraphicsDevice) -> VkPipeline
 
   // MARKER: descriptor indexing
 
+  // for raster root + other texture
   let descriptorSet2Bindings = CArray([
     //
     VkDescriptorSetLayoutBinding(
       binding: 0,
       descriptorType: VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-      descriptorCount: 1,
+      descriptorCount: 65536,  // the spec state minimum supported is 500k
       stageFlags: VK_SHADER_STAGE_FRAGMENT_BIT.u32,
       pImmutableSamplers: nil
     )
@@ -158,7 +158,7 @@ private func createCompositePipelineLayout(device: GraphicsDevice) -> VkPipeline
 
   let descriptorSetLayouts: CArray<_> = [descriptorSetLayout1, descriptorSetLayout2]
 
-  let pushConstantRange = Box(
+  let pushConstantRange: Box<VkPushConstantRange> = Box(
     VkPushConstantRange(
       stageFlags: VK_SHADER_STAGE_VERTEX_BIT.u32 | VK_SHADER_STAGE_FRAGMENT_BIT.u32,
       offset: 0,
@@ -179,7 +179,7 @@ private func createCompositePipelineLayout(device: GraphicsDevice) -> VkPipeline
 
   var pipelineLayout: VkPipelineLayout?
   vkCreatePipelineLayout(device.handle, &pipelineLayoutInfo, nil, &pipelineLayout).unwrap()
-  return pipelineLayout!
+  return (pipelineLayout!, [descriptorSetLayout1!, descriptorSetLayout2!])
 }
 
 func createRasterizationStateCi() -> WithDeps<Box<VkPipelineRasterizationStateCreateInfo>> {

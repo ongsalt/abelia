@@ -48,7 +48,10 @@ class LayerStorage {
   func update(_ layer: borrowing Layer) {
     let index = index(of: layer)
     buffer[Int(index)] = layer.asStorageNode
+  }
 
+  func set(_ data: LayerStorageNode, at index: Int) {
+    buffer[index] = data
   }
 }
 

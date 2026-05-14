@@ -1,13 +1,13 @@
 {
-  "originHash" : "bb6e2b0c4bc240bcdc0e96f1c6f2913b6f8016c5951d3bebca38c4e613b979ea",
+  "originHash" : "1df5012854439760c00e1fd978fa82e733552fcfddc1bd84b21a058bbc8bdf2b",
   "pins" : [
     {
-      "identity" : "swift-numerics",
+      "identity" : "swift-blend2d",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-numerics",
+      "location" : "https://github.com/LuizZak/swift-blend2d",
       "state" : {
-        "revision" : "0c0290ff6b24942dadb83a929ffaaa1481df04a2",
-        "version" : "1.1.1"
+        "branch" : "master",
+        "revision" : "df2a566c5bbf406f5a28b0fca87b318195fd0d99"
       }
     },
     {

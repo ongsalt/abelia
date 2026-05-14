@@ -85,13 +85,9 @@ public class Swapchain: @unchecked Sendable {
       }
     }
 
-    // if res == VK_SUBOPTIMAL_KHR {
-      // await self.recreate()
-      // return await self.acquireNextImage(force: true)
-    // } else {
+    if res != VK_SUBOPTIMAL_KHR {
       res.unwrap()
-    // }
-
+    }
     self.currentFrameInFlightIndex = (self.currentFrameInFlightIndex + 1) % Self.maxFramesInFlight
 
     return SwapchainImage(
@@ -116,7 +112,8 @@ public class Swapchain: @unchecked Sendable {
     let prev = self.handle
     let prevImageViews = imageViews
 
-    self.handle = createSwapchain(for: surface.handle, on: device, size: size, capabilities: capabilities, previous: prev)
+    self.handle = createSwapchain(
+      for: surface.handle, on: device, size: size, capabilities: capabilities, previous: prev)
     self.imageSize = size
 
     for view in prevImageViews {
