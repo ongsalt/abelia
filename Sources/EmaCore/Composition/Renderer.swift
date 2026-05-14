@@ -7,9 +7,14 @@ actor Renderer {
   private let compositionPipeline: CompositionPipeline
 
   private let vertexBuffer: GPUBuffer
+  private let baseVertices: [VertexData]
 
   private let layerStorageBuffer: GPUBuffer
   private let layerStorage: LayerStorage
+
+  private let defaultSampler: VkSampler
+
+  private var frameIndex: UInt64 = 0
 
   private var swapchain: Swapchain {
     surface.configuredInfo!.swapchain
@@ -31,9 +36,12 @@ actor Renderer {
 
     let vertices: [VertexData] = [
       .init(layoutNodeIndex: 238773, position: (0.0, 0.5)),
-      .init(layoutNodeIndex: 20837873, position: (0.5, -0.5)),
-      .init(layoutNodeIndex: 94898945, position: (-0.5, -0.5)),
+      .init(layoutNodeIndex: 20_837_873, position: (0.5, -0.5)),
+      .init(layoutNodeIndex: 94_898_945, position: (-0.5, -0.5)),
     ]
+    self.baseVertices = vertices
+
+    self.defaultSampler = createSamplers(device: device)
 
     let v = self.vertexBuffer.buffer.assumingMemoryBound(to: VertexData.self)
     _ = v.initialize(from: vertices)
@@ -42,6 +50,7 @@ actor Renderer {
 
     Task { [self] in
       while !Task.isCancelled {
+        await self.updateAnimatedVertices()
         await self.render()
       }
     }
@@ -88,6 +97,9 @@ actor Renderer {
 
     // MARK: actual rendering
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, compositionPipeline.handle)
+
+    var viewportSize = SIMD2<Float>(swapchain.imageSize)
+    vkCmdPushConstants(commandBuffer, compositionPipeline.layout, VK_SHADER_STAGE_VERTEX_BIT.u32 | VK_SHADER_STAGE_FRAGMENT_BIT.u32, 0, 2 * UInt32(MemoryLayout<Float>.size), &viewportSize)
 
     var viewport = VkViewport(
       x: 0,
@@ -144,6 +156,41 @@ actor Renderer {
     }
     vkQueueSubmit2(device.graphicsQueue, 1, &submitInfo, swapchainImage.inFlightFence).unwrap()
 
-    swapchainImage.present()
+    await swapchainImage.present()
   }
+
+  private func updateAnimatedVertices() {
+    // Simple triangle movement: bounce horizontally using a sawtooth wave.
+    let phase = Float(frameIndex % 240)
+    let t = phase < 120 ? phase / 120.0 : (240.0 - phase) / 120.0
+    let offsetX = (t * 2.0 - 1.0) * 0.5
+    frameIndex &+= 1
+
+    var animatedVertices = baseVertices
+    animatedVertices[0].position = (baseVertices[0].position.0 + offsetX, baseVertices[0].position.1)
+    animatedVertices[1].position = (baseVertices[1].position.0 + offsetX, baseVertices[1].position.1)
+    animatedVertices[2].position = (baseVertices[2].position.0 + offsetX, baseVertices[2].position.1)
+
+    let vertexPtr = vertexBuffer.buffer.assumingMemoryBound(to: VertexData.self)
+    _ = vertexPtr.update(from: animatedVertices)
+  }
+}
+
+// TODO: allow mipmap?
+private func createSamplers(device: GraphicsDevice) -> VkSampler {
+  var ci = with(VkSamplerCreateInfo()) {
+    $0.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO
+    $0.magFilter = VK_FILTER_LINEAR
+    $0.minFilter = VK_FILTER_LINEAR
+    $0.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR
+    $0.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT
+    $0.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT
+    $0.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT
+    // $0.anisotropyEnable = VK_TRUE
+  }
+
+  var sampler: VkSampler?
+  vkCreateSampler(device.handle, &ci, nil, &sampler).unwrap()
+
+  return sampler!
 }

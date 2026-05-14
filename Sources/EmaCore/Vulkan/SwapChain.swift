@@ -5,7 +5,7 @@ import Pointer
 public class Swapchain: @unchecked Sendable {
   private let surface: Surface
   private let device: GraphicsDevice
-  private var handle: VkSwapchainKHR
+  var handle: VkSwapchainKHR
 
   // swapchain images
   private var images: [VkImage]
@@ -59,9 +59,11 @@ public class Swapchain: @unchecked Sendable {
   }
 
   // async maybe?
-  public func acquireNextImage() async -> SwapchainImage {
+  public func acquireNextImage(force skipWaiting: Bool = false) async -> SwapchainImage {
     let inFlightFence = self.inFlightFences[currentFrameInFlightIndex]
-    await device.wait(for: inFlightFence)
+    if !skipWaiting {
+      await device.wait(for: inFlightFence)
+    }
 
     nonisolated(unsafe) var swapchainImageIndex: UInt32 = 0
     nonisolated(unsafe) let deviceHandle = device.handle
@@ -83,12 +85,12 @@ public class Swapchain: @unchecked Sendable {
       }
     }
 
-    if res == VK_SUBOPTIMAL_KHR {
-      await self.recreate()
-      return await self.acquireNextImage()
-    } else {
+    // if res == VK_SUBOPTIMAL_KHR {
+      // await self.recreate()
+      // return await self.acquireNextImage(force: true)
+    // } else {
       res.unwrap()
-    }
+    // }
 
     self.currentFrameInFlightIndex = (self.currentFrameInFlightIndex + 1) % Self.maxFramesInFlight
 
@@ -99,8 +101,8 @@ public class Swapchain: @unchecked Sendable {
       renderFinishedSemaphore: self.renderFinishedSemaphores[Int(swapchainImageIndex)],
       presentCompletedSemaphore: presentCompletedSemaphore,
       inFlightFence: inFlightFence,
-      swapChainHandle: self.handle,
-      presentQueue: device.presentQueue
+      presentQueue: device.presentQueue,
+      swapchain: self,
     )
   }
 
@@ -240,15 +242,15 @@ private func createFence(device: VkDevice, signaled: Bool = false) -> VkFence {
   return fence!
 }
 
-public struct SwapchainImage: ~Copyable {
+public struct SwapchainImage: ~Copyable, @unchecked Sendable {
   let image: VkImage
   let imageView: VkImageView
   let imageIndex: UInt32
   let renderFinishedSemaphore: VkSemaphore
   let presentCompletedSemaphore: VkSemaphore
   let inFlightFence: VkFence
-  let swapChainHandle: VkSwapchainKHR
   let presentQueue: VkQueue
+  let swapchain: Swapchain
 
   public func prepareRendering(commandBuffer: VkCommandBuffer) {
     let image = image
@@ -312,9 +314,9 @@ public struct SwapchainImage: ~Copyable {
     vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo)
   }
 
-  public consuming func present() {
+  public consuming func present() async {
     let imageIndex = Box(imageIndex)
-    let handle = Box<VkSwapchainKHR?>(swapChainHandle)
+    let handle = Box<VkSwapchainKHR?>(swapchain.handle)
     let renderFinishedSemaphore = Box<VkSemaphore?>(renderFinishedSemaphore)
 
     var info = VkPresentInfoKHR(
@@ -328,7 +330,12 @@ public struct SwapchainImage: ~Copyable {
       pResults: nil,
     )
 
-    vkQueuePresentKHR(presentQueue, &info).expect("Cannot present image[\(self.imageIndex)]")
+    let res = vkQueuePresentKHR(presentQueue, &info)
+    if res == VK_SUBOPTIMAL_KHR {
+      await swapchain.recreate()
+    } else {
+      res.expect("Cannot present image[\(self.imageIndex)]")
+    }
     // TODO: this notify that swapchain is out of date due to resize or someshi
   }
 }
