@@ -129,7 +129,7 @@ public class Swapchain: @unchecked Sendable {
   }
 }
 
-func createImageView(device: VkDevice, image: VkImage, format: VkFormat) -> VkImageView {
+func createImageView(device: VkDevice, image: VkImage, format: VkFormat, swizzling: Swizzling = .none) -> VkImageView {
   var ci = VkImageViewCreateInfo(
     sType: VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
     pNext: nil,
@@ -137,12 +137,7 @@ func createImageView(device: VkDevice, image: VkImage, format: VkFormat) -> VkIm
     image: image,
     viewType: VK_IMAGE_VIEW_TYPE_2D,
     format: format,
-    components: VkComponentMapping(  // well this can be zeroed out
-      r: VK_COMPONENT_SWIZZLE_IDENTITY,
-      g: VK_COMPONENT_SWIZZLE_IDENTITY,
-      b: VK_COMPONENT_SWIZZLE_IDENTITY,
-      a: VK_COMPONENT_SWIZZLE_IDENTITY
-    ),
+    components: swizzling.componentMapping,
     subresourceRange: .init(
       aspectMask: VK_IMAGE_ASPECT_COLOR_BIT.u32,
       baseMipLevel: 0,

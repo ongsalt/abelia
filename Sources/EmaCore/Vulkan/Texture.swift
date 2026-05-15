@@ -1,6 +1,25 @@
 @preconcurrency import CVulkan
 import Pointer
 
+enum Swizzling {
+  case none
+  case fromBlend2d
+
+  var componentMapping: VkComponentMapping {
+    switch self {
+    case .none:
+      VkComponentMapping()  // identity = 0
+    case .fromBlend2d:
+      VkComponentMapping(
+        r: VK_COMPONENT_SWIZZLE_B,
+        g: VK_COMPONENT_SWIZZLE_IDENTITY,
+        b: VK_COMPONENT_SWIZZLE_R,
+        a: VK_COMPONENT_SWIZZLE_IDENTITY
+      )
+    }
+  }
+}
+
 class Texture: Identifiable {
   let device: GraphicsDevice
   let handle: VkImage
@@ -13,7 +32,10 @@ class Texture: Identifiable {
   private var currentLayout: TextureLayout = .undefined
   private var currentQueueIndex: UInt32 = 0
 
-  init(device: GraphicsDevice, size: Size<UInt32>, usages: TextureUsages, queueIndex: UInt32) {
+  init(
+    device: GraphicsDevice, size: Size<UInt32>, usages: TextureUsages, queueIndex: UInt32,
+    swizzling: Swizzling = .none
+  ) {
     self.device = device
     self.size = size
     self.usages = usages
@@ -25,19 +47,19 @@ class Texture: Identifiable {
       $0.extent.depth = 1
       $0.extent.width = size.x
       $0.extent.height = size.y
-      $0.format = VK_FORMAT_R8G8B8A8_UNORM // TODO: bgr?
+      $0.format = VK_FORMAT_R8G8B8A8_UNORM  // TODO: bgr?
       $0.mipLevels = 1
       $0.arrayLayers = 1
 
       // TODO: query samples support
-      // $0.samples = 
+      // $0.samples =
       // $0.tiling =
 
       $0.usage = VK_IMAGE_USAGE_SAMPLED_BIT.u32
       if usages.contains(.canvas) || usages.contains(.static) {
         $0.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT.u32
       }
-      
+
       if usages.contains(.layer) {
         $0.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT.u32
       }
@@ -67,18 +89,20 @@ class Texture: Identifiable {
     self.handle = image!
 
     // create the view
-    self.imageView = createImageView(device: device.handle, image: image!, format: VK_FORMAT_R8G8B8A8_UNORM)
+    self.imageView = createImageView(
+      device: device.handle, image: image!, format: VK_FORMAT_R8G8B8A8_UNORM, swizzling: swizzling)
   }
 
   convenience init(
     fromCpuBuffer buffer: UnsafeRawBufferPointer, size: Size<UInt32>, device: GraphicsDevice,
-    usages: TextureUsages, queueIndex: UInt32
+    usages: TextureUsages, queueIndex: UInt32, swizzling: Swizzling = .none
   ) async {
     let stagingBuffer = GPUBuffer(device: device, size: UInt64(buffer.count), usages: .staging)
     stagingBuffer.buffer.copyBytes(from: buffer)
 
-    self.init(device: device, size: size, usages: usages, queueIndex: queueIndex)
+    self.init(device: device, size: size, usages: usages, queueIndex: queueIndex, swizzling: swizzling)
 
+    // actually we can just fire and forget
     await device.command { commandBuffer in
       self.transition(to: .copyTarget, on: commandBuffer)
 

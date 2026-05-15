@@ -40,9 +40,9 @@ actor Renderer {
       size: UInt64(MemoryLayout<VertexData>.size) * 100000, usages: .vertex)
 
     self.baseVertices = [
-      .init(layoutNodeIndex: 0, position: (0.0, 200.0)),
-      .init(layoutNodeIndex: 0, position: (200.0, 200.0)),
-      .init(layoutNodeIndex: 0, position: (200.0, 0.0)),
+      .init(layoutNodeIndex: 0, position: (0.0, 0.0)),
+      .init(layoutNodeIndex: 0, position: (0.0, 1000.0)),
+      .init(layoutNodeIndex: 0, position: (1000.0, 0.0)),
     ]
     let v = self.vertexBuffer.buffer.assumingMemoryBound(to: VertexData.self)
     _ = v.initialize(from: self.baseVertices)
@@ -52,9 +52,10 @@ actor Renderer {
       imagesDescriptorSetLayout: compositionPipeline.descriptorSetLayouts[1])
 
     Task { [self] in
+      // TODO: fix color format (BL_FORMAT_PRGB32 -> whatever)
       let image = try! sample6(width: 500, height: 500)
       let tex = await Texture(
-        from: image, device: self.device, size: SIMD2(500, 500), usages: .static,
+        from: image, device: self.device, usages: .static,
         queueIndex: UInt32(device.selectedQueueIndexes.graphics))
 
       self.textureRegistry.register(tex)

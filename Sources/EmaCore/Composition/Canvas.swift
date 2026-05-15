@@ -30,19 +30,19 @@ func sample6(width: Int, height: Int) throws -> BLImage {
 
 extension Texture {
   convenience init(
-    from image: BLImage, device: GraphicsDevice, size: Size<UInt32>, usages: TextureUsages,
+    from image: BLImage, device: GraphicsDevice, usages: TextureUsages,
     queueIndex: UInt32
   ) async {
     // TODO: check is this is freed or not
     let data = image.getImageData()
-    print(data)
     await self.init(
       fromCpuBuffer: UnsafeRawBufferPointer(
         start: data.pixelData, count: data.stride * Int(data.size.h)),
       size: SIMD2(UInt32(data.size.w), UInt32(data.size.h)),
       device: device,
       usages: usages,
-      queueIndex: queueIndex
+      queueIndex: queueIndex,
+      swizzling: .fromBlend2d
     )
   }
 }
