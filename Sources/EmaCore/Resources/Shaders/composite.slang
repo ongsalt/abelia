@@ -23,7 +23,7 @@ VertexOutput vertMain(VertexInput input) {
   VertexOutput output;
   output.layoutNodeIndex = input.layoutNodeIndex;
   output.sv_position = float4((input.position / (viewportSize / 2)) - 1, 0.0, 1.0);
-  output.color = float3(1.0, 1.0, 0.5);
+  output.color = float3(0.1, 0.1, 0.1);
   return output;
 }
 
@@ -33,7 +33,7 @@ float4 fragMain(VertexOutput inVert, float4 position: SV_Position) : SV_Target {
   let texture = textures[inVert.layoutNodeIndex];
 
   let c = texture.Sample(sampler, position.xy / 500);
-
+  
   // this is NOT what layoutNode mean but well
-  return c;
+  return max(float4(color, 1.0), c);
 }

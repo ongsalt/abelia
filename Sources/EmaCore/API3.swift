@@ -12,6 +12,8 @@ extension APIDesign {
         var shouldRasterize: Bool = false
         // we need to calculate Bounding Box + shadow + border and shit
 
+        // advance blend mode: for device with dynamic_rendering_local_read OR blend_operation_advanced???
+
         // var flags: DirtyFlags = .dirty
         // func markDirty() {
         //     // if compositor.localThreadState.isRendering {
@@ -55,28 +57,47 @@ extension APIDesign {
         }
     }
 
-    enum Brush { // 4f, 1f (index), imageIndex:4f:4f, ONEeffect(max=8f):samplerIndex 
-        // so 1f tag + 9f for brush
-        case solid(Color)
-        case gradient(Gradient)  // -> image/gradient1d/vertex interpolation
-        case image(any Surface, ninegrid: SIMD4<Float>, crop: SIMD4<Float>)
-        // well well well, this still require grouping Layer into layer
-        // and this shouldnt sample layer outside its rasterizationRoot anyways
-        // this is the current behavior
-        case effect(ImageFilter)  // -> image
-    }
 
-    // 1d texture lookup for simple case
-    //  might fallback to Vertex Color Interpolation
-    struct Gradient {}
 
-    protocol Surface {}
 
     struct Path {}
 }
 
-enum ImageFilter {
+public enum Brush { // 4f, 1f (index), imageIndex:4f:4f, ONEeffect(max=8f):samplerIndex 
+// so 1f tag + 9f for brush
+case solid(Color)
+// case gradient(Gradient)  // -> image/gradient1d/vertex interpolation 
+case image(any Image, ninegrid: SIMD4<Float>, crop: SIMD4<Float>)
+// well well well, this still require grouping Layer into layer
+// and this shouldnt sample layer outside its rasterizationRoot anyways
+// this is the current behavior
+case effect(ImageFilter)  // -> image
+}
+
+extension Brush {
+    var isEffect: Bool {
+        switch self {
+            case .effect:
+                true
+            default:
+            false
+        }
+    }
+}
+
+    // 1d texture lookup for simple case
+    //  might fallback to Vertex Color Interpolation
+public struct Gradient {}
+public protocol Image {}
+
+
+public enum ImageFilter {
     case blur(radius: Float)
+    case colorMatrix(AffineMatrix)
+}
+
+public enum BlendMode {
+
 }
 
 // this is kinda complex we might need proper render graph now
@@ -97,26 +118,6 @@ enum IntermediateLayer {
         // case gradient1d
         // case custom(Shader)
     }
-
-    enum RenderTask {
-        case shape
-        case shadow
-        // case gradient1d
-        // case gradient2d
-        case effect
-        // case customEffect()
-        case textureLoading
-
-        var pipeline: Pipeline? {
-            switch self {
-            case .shape: .main
-            case .shadow: .main
-            // case .gradient1d: .gradient1d
-            case .effect: .main
-            case .textureLoading: nil
-            }
-        }
-    }
 }
 
 public struct DirtyFlags: OptionSet, Sendable {
@@ -136,10 +137,4 @@ extension DirtyFlags {
     var shouldUpdate: Bool {
         !self.isEmpty
     }
-}
-
-enum DrawCommand {
-    case composite
-    case effect
-    case waitTransfer
 }

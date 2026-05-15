@@ -11,6 +11,7 @@ public class Compositor {
   }
 
   func recomposite() async {
+    
     // await renderer.updateLayers { @MainActor layerStorage in
     //   self.flushAnimations()
     //   for layer in self.dirtyNodes {

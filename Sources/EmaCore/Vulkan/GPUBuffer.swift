@@ -7,7 +7,7 @@ struct BufferUsages: OptionSet {
   // for layer storage
   static let storage = BufferUsages(rawValue: 1 << 0)
   static let vertex = BufferUsages(rawValue: 2 << 0)
-  // static let index = BufferUsages(rawValue: 3 << 0)
+  static let index = BufferUsages(rawValue: 3 << 0)
   static let staging = BufferUsages(rawValue: 4 << 0)
   static let uniform = BufferUsages(rawValue: 5 << 0)
 }
@@ -44,9 +44,9 @@ func createBuffer(device: GraphicsDevice, size: UInt64, usages: BufferUsages)
     $0.sharingMode = VK_SHARING_MODE_EXCLUSIVE
 
     // we dont really need index buffer
-    // if usages.contains(.index) {
-    //   $0.usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT.u32
-    // }
+    if usages.contains(.index) {
+      $0.usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT.u32
+    }
     if usages.contains(.vertex) {
       $0.usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT.u32
     }

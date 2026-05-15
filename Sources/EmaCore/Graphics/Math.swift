@@ -12,7 +12,7 @@ extension SIMD2 where Scalar: BinaryInteger {
   }
 }
 
-struct AffineMatrix {
+public struct AffineMatrix {
   var c1: SIMD4<Float>
   var c2: SIMD4<Float>
   var c3: SIMD4<Float>

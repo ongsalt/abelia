@@ -1,6 +1,6 @@
 import Reactivity
 
-class Layer: Identifiable, @unchecked Sendable { // TODO: make this @MainActor
+public class Layer: Identifiable, @unchecked Sendable { // TODO: make this @MainActor
   var compositor: Compositor
   var label: String? {
     didSet {
@@ -56,6 +56,12 @@ class Layer: Identifiable, @unchecked Sendable { // TODO: make this @MainActor
   public var affine: Float = 1 {
     didSet { dirtyTrackingNode.markDirty() }
   }
+
+  @Signal
+  public var brush: Brush? = nil {
+    didSet { dirtyTrackingNode.markDirty() }
+  }
+
 
   @Signal
   public var shouldRasterize: Bool = false {
