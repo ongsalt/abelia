@@ -5,9 +5,19 @@ public class CompositionPipeline {
   let handle: VkPipeline
   let layout: VkPipelineLayout
   let device: GraphicsDevice
-  let descriptorSetLayouts:  [2 of VkDescriptorSetLayout]
+  let descriptorSetLayouts: [2 of VkDescriptorSetLayout]
 
-  init(device: GraphicsDevice, swapchain: borrowing Swapchain) {
+  let globalDescriptorPool: VkDescriptorPool
+  let globalDescriptorSet: VkDescriptorSet
+
+  private let defaultSampler: VkSampler
+
+  init(
+    device: GraphicsDevice,
+    swapchain: borrowing Swapchain,
+    layerStorage: LayerStorage,
+    layerStorageBuffer: GPUBuffer
+  ) {
     self.device = device
 
     let format = swapchain.imageFormat
@@ -60,6 +70,11 @@ public class CompositionPipeline {
     vkCreateGraphicsPipelines(device.handle, nil, 1, &ci, nil, &pipeline).unwrap()
     self.handle = pipeline!
 
+    self.defaultSampler = createDefaultSampler(device: device)
+
+    (self.globalDescriptorPool, self.globalDescriptorSet) = createAndInitGlobalDescriptorSet(
+      on: device, descriptorSetLayouts[0], defaultSampler: defaultSampler,
+      layerStorageBuffer: layerStorageBuffer.handle)
   }
 }
 
@@ -123,7 +138,7 @@ private func createCompositePipelineLayout(device: GraphicsDevice) -> (
     VkDescriptorSetLayoutBinding(
       binding: 0,
       descriptorType: VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-      descriptorCount: 65536,  // the spec state minimum supported is 500k
+      descriptorCount: TextureRegistry.maxSize,  // the spec state minimum supported is 500k
       stageFlags: VK_SHADER_STAGE_FRAGMENT_BIT.u32,
       pImmutableSamplers: nil
     )
@@ -327,4 +342,103 @@ func createShaderStateCi(_ shaderModules: [(ShaderModule, String, VkShaderStageF
   }
 
   return WithDeps(CArray(cis), deps: deps)
+}
+
+func createAndInitGlobalDescriptorSet(
+  on device: GraphicsDevice,
+  _ globalDescriptorSetLayout: VkDescriptorSetLayout,
+  defaultSampler: VkSampler,
+  layerStorageBuffer: VkBuffer
+) -> (VkDescriptorPool, VkDescriptorSet) {
+  let poolSizes = CArray([
+    VkDescriptorPoolSize(type: VK_DESCRIPTOR_TYPE_SAMPLER, descriptorCount: 1),
+    VkDescriptorPoolSize(type: VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorCount: 1),
+  ])
+
+  var poolCi = VkDescriptorPoolCreateInfo(
+    sType: VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+    pNext: nil,
+    flags: 0,
+    maxSets: 2,
+    poolSizeCount: poolSizes.count,
+    pPoolSizes: poolSizes.ptr
+  )
+
+  var pool: VkDescriptorPool?
+  vkCreateDescriptorPool(device.handle, &poolCi, nil, &pool).unwrap()
+
+  let layout = Box(optional: globalDescriptorSetLayout)
+  var ci = VkDescriptorSetAllocateInfo(
+    sType: VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+    pNext: nil,
+    descriptorPool: pool,
+    descriptorSetCount: 1,
+    pSetLayouts: layout.ptr
+  )
+
+  var descriptotSet: VkDescriptorPool?
+  vkAllocateDescriptorSets(device.handle, &ci, &descriptotSet).unwrap()
+
+  // MARKER: actully init it, cuz it static
+
+  let samplerInfo = Box(VkDescriptorImageInfo()) {
+    $0.sampler = defaultSampler
+  }
+
+  let layerStorageInfo = Box(VkDescriptorBufferInfo()) {
+    $0.buffer = layerStorageBuffer
+    $0.offset = 0
+    $0.range = VK_WHOLE_SIZE
+  }
+
+  var writeSets = [
+    VkWriteDescriptorSet(
+      sType: VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+      pNext: nil,
+      dstSet: descriptotSet,
+      dstBinding: 0,
+      dstArrayElement: 0,
+      descriptorCount: 1,
+      descriptorType: VK_DESCRIPTOR_TYPE_SAMPLER,
+      pImageInfo: samplerInfo.ptr,
+      pBufferInfo: nil,
+      pTexelBufferView: nil
+    ),
+    VkWriteDescriptorSet(
+      sType: VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+      pNext: nil,
+      dstSet: descriptotSet,
+      dstBinding: 1,
+      dstArrayElement: 0,
+      descriptorCount: 1,
+      descriptorType: VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+      pImageInfo: nil,
+      pBufferInfo: layerStorageInfo.ptr,
+      pTexelBufferView: nil
+    ),
+  ]
+  vkUpdateDescriptorSets(device.handle, UInt32(writeSets.count), &writeSets, 0, nil)
+
+  return (pool!, descriptotSet!)
+}
+
+private func createDefaultSampler(device: GraphicsDevice) -> VkSampler {
+  var ci = with(VkSamplerCreateInfo()) {
+    $0.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO
+    $0.magFilter = VK_FILTER_LINEAR
+    $0.minFilter = VK_FILTER_LINEAR
+    $0.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR
+    $0.addressModeU = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT
+    $0.addressModeV = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT
+    $0.addressModeW = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT
+
+    // $0.unnormalizedCoordinates = true
+
+    // $0.anisotropyEnable = VK_TRUE
+  }
+
+  var sampler: VkSampler?
+  vkCreateSampler(device.handle, &ci, nil, &sampler).unwrap()
+
+  return sampler!
 }

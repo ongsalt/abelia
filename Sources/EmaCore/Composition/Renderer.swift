@@ -12,24 +12,24 @@ actor Renderer {
   private let layerStorageBuffer: GPUBuffer
   private let layerStorage: LayerStorage
 
-  private let defaultSampler: VkSampler
+  private nonisolated(unsafe) let textureRegistry: TextureRegistry
 
   private var frameIndex: UInt64 = 0
 
-  private var swapchain: Swapchain {
-    surface.configuredInfo!.swapchain
-  }
+  private var swapchain: Swapchain
 
   init(surface: Surface, device: GraphicsDevice) {
     self.device = device
     self.surface = surface
-    // TODO: swinit: expose window size
-    self.compositionPipeline = device.createCompositionPipeline(
-      compatibleWith: surface.configuredInfo!.swapchain)
+    self.swapchain = surface.configuredInfo!.swapchain
 
     self.layerStorageBuffer = device.createBuffer(
       size: UInt64(MemoryLayout<LayerStorageNode>.size) * 100000, usages: .storage)
     self.layerStorage = LayerStorage(layerStorageBuffer)
+
+    self.compositionPipeline = CompositionPipeline(
+      device: device, swapchain: swapchain, layerStorage: layerStorage,
+      layerStorageBuffer: layerStorageBuffer)
 
     var node = LayerStorageNode()
     node.shapeKind = .roundRect
@@ -40,23 +40,24 @@ actor Renderer {
       size: UInt64(MemoryLayout<VertexData>.size) * 100000, usages: .vertex)
 
     self.baseVertices = [
-      .init(layoutNodeIndex: 0, position: (0.0, 10.0)),
-      .init(layoutNodeIndex: 0, position: (10.0, 10.0)),
-      .init(layoutNodeIndex: 0, position: (10.0, 0.0)),
+      .init(layoutNodeIndex: 0, position: (0.0, 200.0)),
+      .init(layoutNodeIndex: 0, position: (200.0, 200.0)),
+      .init(layoutNodeIndex: 0, position: (200.0, 0.0)),
     ]
     let v = self.vertexBuffer.buffer.assumingMemoryBound(to: VertexData.self)
     _ = v.initialize(from: self.baseVertices)
 
-    self.defaultSampler = createSamplers(device: device)
-    let registry = TextureRegistry(
+    self.textureRegistry = TextureRegistry(
       on: device, globalDescriptorSetLayout: compositionPipeline.descriptorSetLayouts[0],
       imagesDescriptorSetLayout: compositionPipeline.descriptorSetLayouts[1])
 
     Task { [self] in
       let image = try! sample6(width: 500, height: 500)
-      // let tex = await Texture(
-      //   from: image, device: self.device, size: SIMD2(500, 500), usages: .static,
-      //   queueIndex: UInt32(device.selectedQueueIndexes.graphics))
+      let tex = await Texture(
+        from: image, device: self.device, size: SIMD2(500, 500), usages: .static,
+        queueIndex: UInt32(device.selectedQueueIndexes.graphics))
+
+      self.textureRegistry.register(tex)
 
       while !Task.isCancelled {
         // await self.updateAnimatedVertices()
@@ -107,6 +108,17 @@ actor Renderer {
     // MARK: actual rendering
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, compositionPipeline.handle)
 
+    // bind those 2 set
+    var descriptorSets: [VkDescriptorSet?] = [
+      compositionPipeline.globalDescriptorSet,
+      textureRegistry.imagesDescriptorSet,
+    ]
+
+    var tf: UInt32 = 0
+    vkCmdBindDescriptorSets(
+      commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, compositionPipeline.layout, 0,
+      UInt32(descriptorSets.count), &descriptorSets, 0, &tf)
+
     var viewportSize = SIMD2<Float>(swapchain.imageSize)
     vkCmdPushConstants(
       commandBuffer, compositionPipeline.layout,
@@ -135,7 +147,6 @@ actor Renderer {
     vkCmdEndRendering(commandBuffer)
 
     swapchainImage.preparePresent(commandBuffer: commandBuffer)
-
     vkEndCommandBuffer(commandBuffer).unwrap()
 
     // MARK: submit command buffer
@@ -192,23 +203,4 @@ actor Renderer {
     let vertexPtr = vertexBuffer.buffer.assumingMemoryBound(to: VertexData.self)
     _ = vertexPtr.update(from: animatedVertices)
   }
-}
-
-// TODO: allow mipmap?
-private func createSamplers(device: GraphicsDevice) -> VkSampler {
-  var ci = with(VkSamplerCreateInfo()) {
-    $0.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO
-    $0.magFilter = VK_FILTER_LINEAR
-    $0.minFilter = VK_FILTER_LINEAR
-    $0.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR
-    $0.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT
-    $0.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT
-    $0.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT
-    // $0.anisotropyEnable = VK_TRUE
-  }
-
-  var sampler: VkSampler?
-  vkCreateSampler(device.handle, &ci, nil, &sampler).unwrap()
-
-  return sampler!
 }

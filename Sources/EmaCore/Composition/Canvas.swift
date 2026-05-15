@@ -35,6 +35,7 @@ extension Texture {
   ) async {
     // TODO: check is this is freed or not
     let data = image.getImageData()
+    print(data)
     await self.init(
       fromCpuBuffer: UnsafeRawBufferPointer(
         start: data.pixelData, count: data.stride * Int(data.size.h)),

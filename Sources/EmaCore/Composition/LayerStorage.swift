@@ -22,7 +22,7 @@ class LayerStorage {
   func index(of layerId: ObjectIdentifier) -> UInt64 {
     var index = indexMap[layerId]
     if index == nil {
-      if let availableSlot = recycledSlots.first {  // well its random index, but who care
+      if let availableSlot = recycledSlots.popFirst() {  // well its random index, but who care
         index = availableSlot
       } else {
         index = currentIndex

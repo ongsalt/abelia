@@ -1,9 +1,10 @@
 @preconcurrency import CVulkan
 import Pointer
 
-class Texture {
+class Texture: Identifiable {
   let device: GraphicsDevice
   let handle: VkImage
+  let imageView: VkImageView
   var size: Size<UInt32>
   let usages: TextureUsages
 
@@ -24,9 +25,12 @@ class Texture {
       $0.extent.depth = 1
       $0.extent.width = size.x
       $0.extent.height = size.y
-      $0.format = VK_FORMAT_R8G8B8A8_UNORM
+      $0.format = VK_FORMAT_R8G8B8A8_UNORM // TODO: bgr?
       $0.mipLevels = 1
       $0.arrayLayers = 1
+
+      // TODO: query samples support
+      // $0.samples = 
       // $0.tiling =
 
       $0.usage = VK_IMAGE_USAGE_SAMPLED_BIT.u32
@@ -61,6 +65,9 @@ class Texture {
 
     self.allocation = allocation!
     self.handle = image!
+
+    // create the view
+    self.imageView = createImageView(device: device.handle, image: image!, format: VK_FORMAT_R8G8B8A8_UNORM)
   }
 
   convenience init(

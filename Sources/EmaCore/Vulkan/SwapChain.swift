@@ -129,7 +129,7 @@ public class Swapchain: @unchecked Sendable {
   }
 }
 
-private func createImageView(device: VkDevice, image: VkImage, format: VkFormat) -> VkImageView {
+func createImageView(device: VkDevice, image: VkImage, format: VkFormat) -> VkImageView {
   var ci = VkImageViewCreateInfo(
     sType: VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
     pNext: nil,

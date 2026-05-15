@@ -1,6 +1,5 @@
 # Graphics 101
 
-
 ## Dependencies not included
 - vulkan header
 - slangc (only need if shaders were modified)

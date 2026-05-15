@@ -62,12 +62,6 @@ public class GraphicsDevice: @unchecked Sendable {
     self.commandBuffer = commandBuffer!
   }
 
-  public func createCompositionPipeline(compatibleWith swapchain: borrowing Swapchain)
-    -> CompositionPipeline
-  {
-    CompositionPipeline(device: self, swapchain: swapchain)
-  }
-
   func createTexture(size: SIMD2<UInt32>, usages: TextureUsages) -> Texture {
     Texture(
       device: self, size: size, usages: usages,
