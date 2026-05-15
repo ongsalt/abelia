@@ -218,6 +218,10 @@ private func createSwapchain(
     &swapchain
   ).unwrap()
 
+  if let previous {
+    vkDestroySwapchainKHR(device.handle, previous, nil)
+  }
+
   return swapchain!
 }
 

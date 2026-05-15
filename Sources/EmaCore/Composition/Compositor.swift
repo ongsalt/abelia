@@ -66,6 +66,6 @@ public class Compositor {
   }
 }
 
-class RootLayer: Layer {
+class RootLayer: Layer, @unchecked Sendable {
 
 }

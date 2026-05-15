@@ -135,6 +135,7 @@ class Renderer: @unchecked Sendable {
 
   public func forceRenderAfterResize() {
     // TODO: VK_EXT_swapchain_maintenance1 
+    // use directx swapchain?
     self.swapchain.recreate()
     self.render()
   }
@@ -142,15 +143,6 @@ class Renderer: @unchecked Sendable {
   public var isNextImageReady: Bool {
     swapchain.isNextImageReady
   }
-
-  // let isRenderScheduled = false
-  // // let isRenderScheduled = Mutex(false)
-  // public func scheduleRender() {
-  //   if isRenderScheduled {
-  //     return
-  //   }
-
-  // }
 
   private func writeRenderingCommand(
     to commandBuffer: VkCommandBuffer, attachmentView: VkImageView, clear: Bool = true,
