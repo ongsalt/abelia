@@ -32,10 +32,10 @@ extension Texture {
   convenience init(
     from image: BLImage, device: GraphicsDevice, usages: TextureUsages,
     queueIndex: UInt32
-  ) async {
+  ) {
     // TODO: check is this is freed or not
     let data = image.getImageData()
-    await self.init(
+    self.init(
       fromCpuBuffer: UnsafeRawBufferPointer(
         start: data.pixelData, count: data.stride * Int(data.size.h)),
       size: SIMD2(UInt32(data.size.w), UInt32(data.size.h)),

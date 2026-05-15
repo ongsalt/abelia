@@ -36,7 +36,16 @@ class Responder: Swinit.Responder, @unchecked Sendable {
 
         MainActor.assumeIsolated {
             self.compositor = Compositor(surface: surface, device: device)
+            self.compositor!.recomposite()
+
+            Task { @MainActor in
+                while true {
+                    self.compositor?.recomposite()
+                    try await Task.sleep(for: .milliseconds(1))
+                }
+            }
         }
+
     }
 
     func windowEvent(
@@ -50,8 +59,11 @@ class Responder: Swinit.Responder, @unchecked Sendable {
             // print("resized to", size)
             let w = size.width
             let h = size.height
-            MainActor.assumeIsolated {
-                compositor?.resize(to: SIMD2(w, h))
+            // print(size)
+            if w != 0 && h != 0 {
+                MainActor.assumeIsolated {
+                    compositor?.resize(to: SIMD2(w, h))
+                }
             }
         default:
             do {}
@@ -95,14 +107,14 @@ struct Playground {
     static func main() {
         let eventLoop = EventLoop()!
 
-        Task {
-            var i = 0
-            while !Task.isCancelled {
-                i += 1
-                print(i)
-                try await Task.sleep(for: .seconds(1))
-            }
-        }
+        // Task {
+        //     var i = 0
+        //     while !Task.isCancelled {
+        //         i += 1
+        //         print(i)
+        //         try await Task.sleep(for: .seconds(1))
+        //     }
+        // }
 
         eventLoop.run(Responder())
     }

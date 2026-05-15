@@ -58,11 +58,16 @@ public class Swapchain: @unchecked Sendable {
     }
   }
 
+  public var isNextImageReady: Bool {
+    let inFlightFence: VkFence = self.inFlightFences[currentFrameInFlightIndex]
+    return device.isFenceSignaled(inFlightFence)
+  }
+
   // async maybe?
-  public func acquireNextImage(force skipWaiting: Bool = false) async -> SwapchainImage {
+  public func acquireNextImage(force skipWaiting: Bool = false) -> SwapchainImage {
     let inFlightFence = self.inFlightFences[currentFrameInFlightIndex]
     if !skipWaiting {
-      await device.wait(for: inFlightFence)
+      device.wait(for: inFlightFence)
     }
 
     nonisolated(unsafe) var swapchainImageIndex: UInt32 = 0
@@ -71,19 +76,19 @@ public class Swapchain: @unchecked Sendable {
     nonisolated(unsafe) let presentCompletedSemaphore = self.presentCompletedSemaphores[
       currentFrameInFlightIndex]
 
-    let res = await withUnsafeContinuation { continuation in
-      DispatchQueue.global(qos: .background).async {
-        let res = vkAcquireNextImageKHR(
-          deviceHandle,
-          handle,
-          UInt64.max,  // timeout nanosec
-          presentCompletedSemaphore,  // the one to NOTIFY after we are done
-          nil,
-          &swapchainImageIndex
-        )
-        continuation.resume(returning: res)
-      }
-    }
+    // let res = await withUnsafeContinuation { continuation in
+    //   DispatchQueue.global(qos: .background).async {
+    let res = vkAcquireNextImageKHR(
+      deviceHandle,
+      handle,
+      UInt64.max,  // timeout nanosec
+      presentCompletedSemaphore,  // the one to NOTIFY after we are done
+      nil,
+      &swapchainImageIndex
+    )
+    //     continuation.resume(returning: res)
+    //   }
+    // }
 
     if res != VK_SUBOPTIMAL_KHR {
       res.unwrap()
@@ -102,8 +107,8 @@ public class Swapchain: @unchecked Sendable {
     )
   }
 
-  func recreate() async {
-    await device.waitIdle()
+  func recreate() {
+    device.waitIdle()
 
     self.surface.reconfigure()
     let capabilities = surface.configuredInfo!.capabilities
@@ -129,7 +134,9 @@ public class Swapchain: @unchecked Sendable {
   }
 }
 
-func createImageView(device: VkDevice, image: VkImage, format: VkFormat, swizzling: Swizzling = .none) -> VkImageView {
+func createImageView(
+  device: VkDevice, image: VkImage, format: VkFormat, swizzling: Swizzling = .none
+) -> VkImageView {
   var ci = VkImageViewCreateInfo(
     sType: VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
     pNext: nil,
@@ -306,7 +313,7 @@ public struct SwapchainImage: ~Copyable, @unchecked Sendable {
     vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo)
   }
 
-  public consuming func present() async {
+  public consuming func present() {
     let imageIndex = Box(imageIndex)
     let handle = Box<VkSwapchainKHR?>(swapchain.handle)
     let renderFinishedSemaphore = Box<VkSemaphore?>(renderFinishedSemaphore)
@@ -324,7 +331,7 @@ public struct SwapchainImage: ~Copyable, @unchecked Sendable {
 
     let res = vkQueuePresentKHR(presentQueue, &info)
     if res == VK_SUBOPTIMAL_KHR {
-      await swapchain.recreate()
+      swapchain.recreate()
     } else {
       res.expect("Cannot present image[\(self.imageIndex)]")
     }

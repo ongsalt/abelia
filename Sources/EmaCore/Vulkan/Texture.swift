@@ -96,14 +96,14 @@ class Texture: Identifiable {
   convenience init(
     fromCpuBuffer buffer: UnsafeRawBufferPointer, size: Size<UInt32>, device: GraphicsDevice,
     usages: TextureUsages, queueIndex: UInt32, swizzling: Swizzling = .none
-  ) async {
+  ) {
     let stagingBuffer = GPUBuffer(device: device, size: UInt64(buffer.count), usages: .staging)
     stagingBuffer.buffer.copyBytes(from: buffer)
 
     self.init(device: device, size: size, usages: usages, queueIndex: queueIndex, swizzling: swizzling)
 
     // actually we can just fire and forget
-    await device.command { commandBuffer in
+    device.command { commandBuffer in
       self.transition(to: .copyTarget, on: commandBuffer)
 
       var region = VkBufferImageCopy()

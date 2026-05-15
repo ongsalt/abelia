@@ -10,7 +10,6 @@ when a layer is dirty, it tell the compositor `.markDirty(node: self)` the compo
 The presence of an `animationFrameCallback` will force the compositor to actively acquire a frame.
 
 ## TODO
-- nuke async code
 - write the actual shader
 - actually read from layerStorage
 

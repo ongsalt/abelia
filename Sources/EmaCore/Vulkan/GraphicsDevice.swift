@@ -72,30 +72,35 @@ public class GraphicsDevice: @unchecked Sendable {
     GPUBuffer(device: self, size: size, usages: usages)
   }
 
-  func wait(for fence: VkFence) async {
+  func wait(for fence: VkFence) {
     nonisolated(unsafe) let device = self.handle
     nonisolated(unsafe) var fence: VkFence? = fence
-    await withUnsafeContinuation { continuation in
-      DispatchQueue.global(qos: .background).async {
-        vkWaitForFences(device, 1, &fence, true, UInt64.max).unwrap()
-        // how tf is it VK_TIMEOUT
-        continuation.resume()
-      }
-    }
+    // await withUnsafeContinuation { continuation in
+    //   DispatchQueue.global(qos: .background).async {
+    vkWaitForFences(device, 1, &fence, true, UInt64.max).unwrap()
+    // how tf is it VK_TIMEOUT
+    // continuation.resume()
+    //   }
+    // }
     vkResetFences(device, 1, &fence).unwrap()
   }
 
-  func waitIdle() async {
-    nonisolated(unsafe) let handle = handle
-    await withUnsafeContinuation { continuation in
-      DispatchQueue.global(qos: .background).async {
-        vkDeviceWaitIdle(handle).unwrap()
-        continuation.resume()
-      }
-    }
+  func isFenceSignaled(_ fence: VkFence) -> Bool {
+    var fence = Optional(fence)
+    return vkWaitForFences(self.handle, 1, &fence, true, 0) == VK_SUCCESS
   }
 
-  func waitIdle(queue: VkQueue) async {
+  func waitIdle() {
+    nonisolated(unsafe) let handle = handle
+    // await withUnsafeContinuation { continuation in
+    //   DispatchQueue.global(qos: .background).async {
+    vkDeviceWaitIdle(handle).unwrap()
+    //     continuation.resume()
+    //   }
+    // }
+  }
+
+  func waitIdleAsync(queue: VkQueue) async {
     nonisolated(unsafe) let handle = queue
     await withUnsafeContinuation { continuation in
       DispatchQueue.global(qos: .background).async {
@@ -105,7 +110,11 @@ public class GraphicsDevice: @unchecked Sendable {
     }
   }
 
-  func command(_ block: (VkCommandBuffer) async -> Void) async {
+  func waitIdle(queue: VkQueue) {
+    vkQueueWaitIdle(queue).unwrap()
+  }
+
+  func command(_ block: (VkCommandBuffer) -> Void) {
     // single use shi
     let queue = self.graphicsQueue
     var commandBuffer: VkCommandBuffer?
@@ -122,7 +131,7 @@ public class GraphicsDevice: @unchecked Sendable {
     commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO
     vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo).unwrap()
 
-    await block(commandBuffer!)
+    block(commandBuffer!)
 
     vkEndCommandBuffer(commandBuffer).unwrap()
 
@@ -138,7 +147,7 @@ public class GraphicsDevice: @unchecked Sendable {
     vkQueueSubmit2(queue, 1, &submitInfo, nil).unwrap()
 
     // await queue.waitIdle()
-    await waitIdle(queue: queue)
+    waitIdle(queue: queue)
   }
 }
 

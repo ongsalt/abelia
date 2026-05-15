@@ -1,7 +1,8 @@
 @preconcurrency import CVulkan
 import Pointer
+import Synchronization
 
-actor Renderer {
+class Renderer: @unchecked Sendable {
   private let device: GraphicsDevice
   private let surface: Surface
   private let compositionPipeline: CompositionPipeline
@@ -50,38 +51,33 @@ actor Renderer {
       .init(layoutNodeIndex: 0, position: (500.0, 0.0)),
       .init(layoutNodeIndex: 0, position: (500.0, 500.0)),
     ]
-    
+
     let v = self.vertexBuffer.buffer.assumingMemoryBound(to: VertexData.self)
     _ = v.initialize(from: self.baseVertices)
 
-    _ = self.indexBuffer.buffer.assumingMemoryBound(to: UInt32.self).initialize(from: [0, 1, 2, 1, 2, 3])
+    _ = self.indexBuffer.buffer.assumingMemoryBound(to: UInt32.self).initialize(from: [
+      0, 1, 2, 1, 2, 3,
+    ])
 
     self.textureRegistry = TextureRegistry(
       on: device, globalDescriptorSetLayout: compositionPipeline.descriptorSetLayouts[0],
       imagesDescriptorSetLayout: compositionPipeline.descriptorSetLayouts[1])
 
-    Task { [self] in
-      // TODO: fix color format (BL_FORMAT_PRGB32 -> whatever)
-      let image = try! sample6(width: 500, height: 500)
-      let tex = await Texture(
-        from: image, device: self.device, usages: .static,
-        queueIndex: UInt32(device.selectedQueueIndexes.graphics))
+    let image = try! sample6(width: 500, height: 500)
+    let tex = Texture(
+      from: image, device: self.device, usages: .static,
+      queueIndex: UInt32(device.selectedQueueIndexes.graphics))
 
-      self.textureRegistry.register(tex)
-
-      while !Task.isCancelled {
-        // await self.updateAnimatedVertices()
-        await self.render()
-      }
-    }
+    self.textureRegistry.register(tex)
   }
 
   public func update(dirtyRects: [Rect], dirtyLayers: [Layer]) {
 
   }
 
-  private func render() async {
-    let swapchainImage = await swapchain.acquireNextImage()
+  func render() {
+    // TODO: swapchain.oudated
+    let swapchainImage = swapchain.acquireNextImage()
 
     // TODO: reuse this. raii?
     let commandBuffer = device.commandBuffer
@@ -107,13 +103,13 @@ actor Renderer {
     // MARK: submit command buffer
     let presentCompletedSemaphore = swapchainImage.presentCompletedSemaphore
     let renderFinishedSemaphore = swapchainImage.renderFinishedSemaphore
-    nonisolated(unsafe) let waitSemaphoreInfos = Box(VkSemaphoreSubmitInfo()) {
+    let waitSemaphoreInfos = Box(VkSemaphoreSubmitInfo()) {
       $0.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO
       // we wait the same wait the same presentCompleteSemaphore that we notify
       $0.semaphore = presentCompletedSemaphore
       $0.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT
     }
-    nonisolated(unsafe) let signalSemaphoreInfo = Box(VkSemaphoreSubmitInfo()) {
+    let signalSemaphoreInfo = Box(VkSemaphoreSubmitInfo()) {
       $0.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO
       $0.semaphore = renderFinishedSemaphore
     }
@@ -134,8 +130,27 @@ actor Renderer {
     }
     vkQueueSubmit2(device.graphicsQueue, 1, &submitInfo, swapchainImage.inFlightFence).unwrap()
 
-    await swapchainImage.present()
+    swapchainImage.present()
   }
+
+  public func forceRenderAfterResize() {
+    // TODO: VK_EXT_swapchain_maintenance1 
+    self.swapchain.recreate()
+    self.render()
+  }
+
+  public var isNextImageReady: Bool {
+    swapchain.isNextImageReady
+  }
+
+  // let isRenderScheduled = false
+  // // let isRenderScheduled = Mutex(false)
+  // public func scheduleRender() {
+  //   if isRenderScheduled {
+  //     return
+  //   }
+
+  // }
 
   private func writeRenderingCommand(
     to commandBuffer: VkCommandBuffer, attachmentView: VkImageView, clear: Bool = true,
