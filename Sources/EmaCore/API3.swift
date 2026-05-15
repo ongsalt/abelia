@@ -1,5 +1,9 @@
-enum APIDesign {}
+// 1d texture lookup for simple case
+//  might fallback to Vertex Color Interpolation
 
+// this is kinda complex we might need proper render graph now
+
+enum APIDesign {}
 extension APIDesign {
     class Layer {  // basically SpriteVisual -> currently our CompositionLayer
         // transform/offset/opacity
@@ -57,51 +61,39 @@ extension APIDesign {
         }
     }
 
-
-
-
     struct Path {}
 }
-
-public enum Brush { // 4f, 1f (index), imageIndex:4f:4f, ONEeffect(max=8f):samplerIndex 
-// so 1f tag + 9f for brush
-case solid(Color)
-// case gradient(Gradient)  // -> image/gradient1d/vertex interpolation 
-case image(any Image, ninegrid: SIMD4<Float>, crop: SIMD4<Float>)
-// well well well, this still require grouping Layer into layer
-// and this shouldnt sample layer outside its rasterizationRoot anyways
-// this is the current behavior
-case effect(ImageFilter)  // -> image
+public enum Brush {  // 4f, 1f (index), imageIndex:4f:4f, ONEeffect(max=8f):samplerIndex
+    // so 1f tag + 9f for brush
+    case solid(Color)
+    // case gradient(Gradient)  // -> image/gradient1d/vertex interpolation
+    case image(any CompositionTextureProtocol, ninegrid: SIMD4<Float>, crop: SIMD4<Float>)
+    // well well well, this still require grouping Layer into layer
+    // and this shouldnt sample layer outside its rasterizationRoot anyways
+    // this is the current behavior
+    case effect(ImageFilter)  // -> image
 }
-
 extension Brush {
     var isEffect: Bool {
         switch self {
-            case .effect:
-                true
-            default:
+        case .effect:
+            true
+        default:
             false
         }
     }
 }
-
-    // 1d texture lookup for simple case
-    //  might fallback to Vertex Color Interpolation
 public struct Gradient {}
-public protocol Image {}
-
-
+public protocol CompositionTextureProtocol {
+    var textureIndex: UInt32 { get }
+}
 public enum ImageFilter {
     case blur(radius: Float)
     case colorMatrix(AffineMatrix)
 }
-
 public enum BlendMode {
 
 }
-
-// this is kinda complex we might need proper render graph now
-
 enum IntermediateLayer {
     enum Pipeline {
         // uber shader
@@ -119,7 +111,6 @@ enum IntermediateLayer {
         // case custom(Shader)
     }
 }
-
 public struct DirtyFlags: OptionSet, Sendable {
     public let rawValue: Int
     public init(rawValue: Int) {
@@ -132,7 +123,6 @@ public struct DirtyFlags: OptionSet, Sendable {
     /// No need, just for propagation
     public static let parent = DirtyFlags(rawValue: 1 << 1)
 }
-
 extension DirtyFlags {
     var shouldUpdate: Bool {
         !self.isEmpty

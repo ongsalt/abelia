@@ -1,7 +1,7 @@
 import Foundation
 import SwiftBlend2D
 
-func sample6(width: Int, height: Int) throws -> BLImage {
+public func sample6(width: Int, height: Int) throws -> BLImage {
   let img = BLImage(width: width, height: height, format: .prgb32)
   let ctx = BLContext(image: img)!
 
@@ -28,21 +28,13 @@ func sample6(width: Int, height: Int) throws -> BLImage {
   return img
 }
 
-extension Texture {
-  convenience init(
-    from image: BLImage, device: GraphicsDevice, usages: TextureUsages,
-    queueIndex: UInt32
-  ) {
-    // TODO: check is this is freed or not
+extension TextureRegistry {
+  func createTexture(from image: BLImage, usages: TextureUsages) -> Texture {
     let data = image.getImageData()
-    self.init(
+    return createTexture(
       fromCpuBuffer: UnsafeRawBufferPointer(
         start: data.pixelData, count: data.stride * Int(data.size.h)),
       size: SIMD2(UInt32(data.size.w), UInt32(data.size.h)),
-      device: device,
-      usages: usages,
-      queueIndex: queueIndex,
-      swizzling: .fromBlend2d
-    )
+      usages: usages, swizzling: .fromBlend2d)
   }
 }

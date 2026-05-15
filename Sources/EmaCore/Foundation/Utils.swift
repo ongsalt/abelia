@@ -13,3 +13,23 @@ extension Numeric where Self: Comparable {
 func todo<T>(_ message: String = "Todo", file: String = #file, line: Int = #line) -> T {
   fatalError("\(message) at \(file):\(line)")
 }
+
+extension SIMD4 {
+  var asFixedSizeArray: [4 of Scalar] {
+    [w, x, y, z]
+  }
+
+  var asTuple: (Scalar, Scalar, Scalar, Scalar) {
+    (w, x, y, z)
+  }
+}
+
+extension SIMD2 {
+  var asFixedSizeArray: [2 of Scalar] {
+    [x, y]
+  }
+
+  var asTuple: (Scalar, Scalar) {
+    (x, y)
+  }
+}

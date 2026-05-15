@@ -1,74 +1,72 @@
 import Reactivity
 
-public class Layer: Identifiable, @unchecked Sendable { // TODO: make this @MainActor
+@MainActor
+public class Layer: Identifiable {
   var compositor: Compositor
-  var label: String? {
-    didSet {
-      if let label {
-        self.dirtyTrackingNode.label = "Layer\(self.id) - \(label)"
-      } else {
-        self.dirtyTrackingNode.label = "Layer\(self.id)"
-      }
-    }
-  }
+  var label: String?
 
   package init(compositor: Compositor) {
     self.compositor = compositor
-    self.dirtyTrackingNode.label = "Layer\(self.id)"
   }
-
-  /// use when emitting draw command
-  package let dirtyTrackingNode: Reactivity.Node = Node()
 
   @Signal
   public package(set) var parent: Layer?
   public package(set) var children: [Layer] = []  // it shuold be ordered set actually
 
-  func insert(_ layer: Layer, before: Layer? = nil) {
+  public func insert(_ layer: Layer, before: Layer? = nil) {
     children.append(layer)
   }
 
-  func remove(_ layer: Layer) {
+  public func remove(_ layer: Layer) {
     children.removeAll { $0.id == layer.id }
   }
 
   @Signal
   public var opacity: Float = 1 {
-    didSet { dirtyTrackingNode.markDirty() }
+    didSet { compositor.markDirty(self) }
   }
 
   @Signal
   public var position: Position<Float> = .zero {
-    didSet { dirtyTrackingNode.markDirty() }
+    didSet { compositor.markDirty(self) }
   }
 
   @Signal
   public var size: Size<Float> = .zero {
-    didSet { dirtyTrackingNode.markDirty() }
+    didSet { compositor.markDirty(self) }
   }
 
   @Signal
   public var scale: Float = 1 {
-    didSet { dirtyTrackingNode.markDirty() }
+    didSet { compositor.markDirty(self) }
   }
 
   @Signal
   public var affine: Float = 1 {
-    didSet { dirtyTrackingNode.markDirty() }
+    didSet { compositor.markDirty(self) }
   }
 
   @Signal
   public var brush: Brush? = nil {
-    didSet { dirtyTrackingNode.markDirty() }
+    didSet { compositor.markDirty(self) }
   }
 
+  @Signal
+  public var cornerRadius: Float = 0 {
+    didSet { compositor.markDirty(self) }
+  }
+
+  @Signal
+  public var cornerDegree: Float = 4 {
+    didSet { compositor.markDirty(self) }
+  }
 
   @Signal
   public var shouldRasterize: Bool = false {
     didSet {
       // fuckk
       // TODO: when isRasterizationRoot changed
-      dirtyTrackingNode.markDirty()
+      compositor.markDirty(self)
     }
   }
 

@@ -1,5 +1,6 @@
 import CVulkan
 
+@MainActor
 func createBatches(
   dirtyLayers: borrowing [Layer],
   root: Layer
@@ -11,6 +12,7 @@ func createBatches(
   return [Batch(rasterizationRoot: root, subpasses: [Subpass(dependencies: [], inner: .composite(children))])]
 }
 
+@MainActor
 func childrenWithoutRasterizationRootChildren(of layer: Layer) -> (children: [Layer], rasterizationRoots: [Layer]) {
   var children: [Layer] = []
   var roots: [Layer] = []

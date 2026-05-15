@@ -62,12 +62,6 @@ public class GraphicsDevice: @unchecked Sendable {
     self.commandBuffer = commandBuffer!
   }
 
-  func createTexture(size: SIMD2<UInt32>, usages: TextureUsages) -> Texture {
-    Texture(
-      device: self, size: size, usages: usages,
-      queueIndex: UInt32(self.selectedQueueIndexes.graphics))
-  }
-
   func createBuffer(size: UInt64, usages: BufferUsages) -> GPUBuffer {
     GPUBuffer(device: self, size: size, usages: usages)
   }

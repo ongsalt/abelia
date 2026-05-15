@@ -27,6 +27,8 @@ class Texture: Identifiable {
   var size: Size<UInt32>
   let usages: TextureUsages
 
+  let textureIndex: UInt32
+
   let allocation: VmaAllocation
   // var size: Size<UInt32> = .zero
   private var currentLayout: TextureLayout = .undefined
@@ -34,12 +36,13 @@ class Texture: Identifiable {
 
   init(
     device: GraphicsDevice, size: Size<UInt32>, usages: TextureUsages, queueIndex: UInt32,
-    swizzling: Swizzling = .none
+    swizzling: Swizzling = .none, textureIndex: UInt32
   ) {
     self.device = device
     self.size = size
     self.usages = usages
     self.currentQueueIndex = queueIndex
+    self.textureIndex = textureIndex
 
     var ci = with(VkImageCreateInfo()) {
       $0.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO
@@ -91,31 +94,6 @@ class Texture: Identifiable {
     // create the view
     self.imageView = createImageView(
       device: device.handle, image: image!, format: VK_FORMAT_R8G8B8A8_UNORM, swizzling: swizzling)
-  }
-
-  convenience init(
-    fromCpuBuffer buffer: UnsafeRawBufferPointer, size: Size<UInt32>, device: GraphicsDevice,
-    usages: TextureUsages, queueIndex: UInt32, swizzling: Swizzling = .none
-  ) {
-    let stagingBuffer = GPUBuffer(device: device, size: UInt64(buffer.count), usages: .staging)
-    stagingBuffer.buffer.copyBytes(from: buffer)
-
-    self.init(device: device, size: size, usages: usages, queueIndex: queueIndex, swizzling: swizzling)
-
-    // actually we can just fire and forget
-    device.command { commandBuffer in
-      self.transition(to: .copyTarget, on: commandBuffer)
-
-      var region = VkBufferImageCopy()
-      region.imageExtent = .init(width: size.x, height: size.y, depth: 1)
-      region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT.u32
-      region.imageSubresource.layerCount = 1
-      vkCmdCopyBufferToImage(
-        commandBuffer, stagingBuffer.handle, self.handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
-        &region)
-
-      self.transition(to: .sampling, on: commandBuffer)
-    }
   }
 
   func transition(

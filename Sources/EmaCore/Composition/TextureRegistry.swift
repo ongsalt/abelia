@@ -2,7 +2,7 @@
 import Pointer
 
 class TextureRegistry {
-  private let device: GraphicsDevice
+  let device: GraphicsDevice
 
   let imagesDescriptorPool: VkDescriptorPool
   let imagesDescriptorSet: VkDescriptorSet
@@ -31,9 +31,7 @@ class TextureRegistry {
     return currentIndex
   }
 
-  func register(_ texture: Texture) {
-    let index = createIndex()
-    print("index = \(index)")
+  func register(_ texture: Texture, index: UInt32) {
     let imageInfo = Box(VkDescriptorImageInfo()) {
       $0.imageView = texture.imageView
       $0.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
@@ -52,6 +50,49 @@ class TextureRegistry {
       pTexelBufferView: nil
     )
     vkUpdateDescriptorSets(device.handle, 1, &writeSet, 0, nil)
+  }
+
+  func createTexture(size: SIMD2<UInt32>, usages: TextureUsages, swizzling: Swizzling = .none)
+    -> Texture
+  {
+    let texture = Texture(
+      device: device, size: size, usages: usages,
+      queueIndex: UInt32(device.selectedQueueIndexes.graphics),
+      swizzling: swizzling,
+      textureIndex: createIndex()
+    )
+
+    register(texture, index: texture.textureIndex)
+
+    return texture
+  }
+
+  // This is blocking
+  func createTexture(
+    fromCpuBuffer buffer: UnsafeRawBufferPointer, size: Size<UInt32>,
+    usages: TextureUsages, swizzling: Swizzling = .none
+  ) -> Texture {
+    let stagingBuffer = GPUBuffer(device: device, size: UInt64(buffer.count), usages: .staging)
+    stagingBuffer.buffer.copyBytes(from: buffer)
+
+    let texture = createTexture(size: size, usages: usages, swizzling: swizzling)
+
+    // actually we can just fire and forget
+    device.command { commandBuffer in
+      texture.transition(to: .copyTarget, on: commandBuffer)
+
+      var region = VkBufferImageCopy()
+      region.imageExtent = .init(width: size.x, height: size.y, depth: 1)
+      region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT.u32
+      region.imageSubresource.layerCount = 1
+      vkCmdCopyBufferToImage(
+        commandBuffer, stagingBuffer.handle, texture.handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        1,
+        &region)
+
+      texture.transition(to: .sampling, on: commandBuffer)
+    }
+    return texture
   }
 
   // destroy?

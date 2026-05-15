@@ -1,5 +1,6 @@
 public enum Color: Sendable {
   case rgb(_ r: Float, _ g: Float, _ b: Float, _ a: Float)
+  // TODO: oklch
   case oklch(_ l: Float, _ c: Float, _ h: Float, _ a: Float)
 
   public init(rgb: UInt32) {
@@ -7,6 +8,15 @@ public enum Color: Sendable {
     let g = Float((rgb >> 8) & 0xFF) / 255.0
     let b = Float((rgb >> 0) & 0xFF) / 255.0
     self = .rgb(r, g, b, 1.0)
+  }
+
+  var asTuple: (Float, Float, Float, Float) {
+    switch self {
+    case .rgb(let r, let g, let b, let a):
+      (r, g, b, a)
+    case .oklch(let l, let c, let h, let a):
+      (l, c, h, a)
+    }
   }
 }
 

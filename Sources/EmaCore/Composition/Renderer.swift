@@ -15,7 +15,7 @@ class Renderer: @unchecked Sendable {
   private let layerStorageBuffer: GPUBuffer
   private let layerStorage: LayerStorage
 
-  private nonisolated(unsafe) let textureRegistry: TextureRegistry
+  nonisolated(unsafe) let textureRegistry: TextureRegistry
 
   // private var acquiredFrame: SwapchainImage?
 
@@ -52,27 +52,54 @@ class Renderer: @unchecked Sendable {
       .init(layoutNodeIndex: 0, position: (500.0, 500.0)),
     ]
 
-    let v = self.vertexBuffer.buffer.assumingMemoryBound(to: VertexData.self)
-    _ = v.initialize(from: self.baseVertices)
+    // let v = self.vertexBuffer.buffer.assumingMemoryBound(to: VertexData.self)
+    // _ = v.initialize(from: self.baseVertices)
 
-    _ = self.indexBuffer.buffer.assumingMemoryBound(to: UInt32.self).initialize(from: [
-      0, 1, 2, 1, 2, 3,
-    ])
+    // _ = self.indexBuffer.buffer.assumingMemoryBound(to: UInt32.self).initialize(from: [
+    //   0, 1, 2, 1, 2, 3,
+    // ])
 
     self.textureRegistry = TextureRegistry(
       on: device, globalDescriptorSetLayout: compositionPipeline.descriptorSetLayouts[0],
       imagesDescriptorSetLayout: compositionPipeline.descriptorSetLayouts[1])
 
-    let image = try! sample6(width: 500, height: 500)
-    let tex = Texture(
-      from: image, device: self.device, usages: .static,
-      queueIndex: UInt32(device.selectedQueueIndexes.graphics))
-
-    self.textureRegistry.register(tex)
   }
 
-  public func update(dirtyRects: [Rect], dirtyLayers: [Layer]) {
+  // TODO: remove @MainActor after we are writing layerStorageNode in createBatch
+  @MainActor
+  public func update(dirtyRects: [Rect], dirtyLayers: [Layer], batches: [Batch]) {
+    for layer in dirtyLayers {
+      self.layerStorage.update(layer)
+    }
 
+    let indexBuffer = indexBuffer.buffer.assumingMemoryBound(to: UInt32.self)
+    var ii = 0
+    let vertexBuffer = vertexBuffer.buffer.assumingMemoryBound(to: VertexData.self)
+    var iv = 0
+
+    for batch in batches {
+      if case .composite(let layers) = batch.subpasses[0].inner  {
+        for layer in layers {
+          let index = self.layerStorage.index(of: layer)
+          let bound = layer.boundingRect
+          print(layer, bound)
+          vertexBuffer[iv] = VertexData(layoutNodeIndex: UInt32(index), position: bound.topLeft.asTuple)
+          vertexBuffer[iv + 1] = VertexData(layoutNodeIndex: UInt32(index), position: (bound.topLeft + SIMD2(bound.size.x, 0)).asTuple)
+          vertexBuffer[iv + 2] = VertexData(layoutNodeIndex: UInt32(index), position: (bound.topLeft + SIMD2(0, bound.size.y)).asTuple)
+          vertexBuffer[iv + 3] = VertexData(layoutNodeIndex: UInt32(index), position: (bound.topLeft + bound.size).asTuple)
+
+          indexBuffer[ii] = UInt32(iv) 
+          indexBuffer[ii + 1] = UInt32(iv) + 1
+          indexBuffer[ii + 2] = UInt32(iv) + 2
+          indexBuffer[ii + 3] = UInt32(iv) + 1
+          indexBuffer[ii + 4] = UInt32(iv) + 2
+          indexBuffer[ii + 5] = UInt32(iv) + 3
+
+          ii += 6
+          iv += 3
+        }
+      }
+    }
   }
 
   func render() {

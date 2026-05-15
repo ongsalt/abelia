@@ -35,12 +35,18 @@ class Responder: Swinit.Responder, @unchecked Sendable {
         surface.configure(associateWith: device)
 
         MainActor.assumeIsolated {
-            self.compositor = Compositor(surface: surface, device: device)
-            self.compositor!.recomposite()
+            let compositor = Compositor(surface: surface, device: device)
+            self.compositor = compositor
+            let layer = Layer(compositor: compositor)
+            layer.brush = .solid(.red)
+            layer.size = Size(100, 100)
+
+            compositor.root.insert(layer)
+            compositor.recomposite()
 
             Task { @MainActor in
                 while true {
-                    self.compositor?.recomposite()
+                    compositor.recomposite()
                     try await Task.sleep(for: .milliseconds(1))
                 }
             }
