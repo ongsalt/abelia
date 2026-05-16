@@ -2,19 +2,33 @@
 import Foundation
 import Pointer
 
-public protocol SwapchainProtocol {
+protocol SwapchainProtocol {
   associatedtype SwapchainImage: SwapchainImageProtocol
 
-  func waitNextImage()
+  var size: SIMD2<UInt32> { get }
+  var imageFormat: VkFormat { get }
+
+  func recreate()
+  func waitForNextImage()
   func acquireNextImage(commandBuffer: VkCommandBuffer) -> SwapchainImage
 }
 
-public protocol SwapchainImageProtocol {
+protocol SwapchainImageProtocol: ~Copyable {
+  var renderFinishedSemaphore: VkSemaphore { get }
+  var presentCompletedSemaphore: VkSemaphore { get }
+  var inFlightFence: VkFence? { get }
+
+  var timelineValue: UInt64? { get }
+
+  var imageView: VkImageView { get }
+
   func transitionToPresentable()
   func present()
 }
 
-public class Swapchain: @unchecked Sendable {
+public class Swapchain: @unchecked Sendable, SwapchainProtocol {
+  typealias SwapchainImage = VulkanSwapchainImage
+
   private let surface: Surface
   private let device: GraphicsDevice
   var handle: VkSwapchainKHR
@@ -34,7 +48,7 @@ public class Swapchain: @unchecked Sendable {
   static let maxFramesInFlight = 1
 
   private(set) var imageFormat: VkFormat
-  private(set) var imageSize: SIMD2<UInt32>
+  private(set) var size: SIMD2<UInt32>
 
   init(
     for surface: Surface, on device: GraphicsDevice, initialSize size: SIMD2<UInt32>,
@@ -57,7 +71,7 @@ public class Swapchain: @unchecked Sendable {
 
     // TODO: actually selecting format
     self.imageFormat = imageFormat
-    self.imageSize = size
+    self.size = size
 
     self.renderFinishedSemaphores = (0..<images.count).map { _ in
       createSemaphore(device: device.handle)
@@ -75,13 +89,15 @@ public class Swapchain: @unchecked Sendable {
     return device.isFenceSignaled(inFlightFence)
   }
 
-  // async maybe?
-  public func acquireNextImage(force skipWaiting: Bool = false) -> SwapchainImage {
-    let inFlightFence = self.inFlightFences[currentFrameInFlightIndex]
-    if !skipWaiting {
-      device.wait(for: inFlightFence)
-    }
 
+  public func waitForNextImage() {
+    let inFlightFence = self.inFlightFences[currentFrameInFlightIndex]
+    device.wait(for: inFlightFence)
+  }
+
+  public func acquireNextImage(commandBuffer: VkCommandBuffer) -> VulkanSwapchainImage {
+    let inFlightFence = self.inFlightFences[currentFrameInFlightIndex]
+  
     nonisolated(unsafe) var swapchainImageIndex: UInt32 = 0
     nonisolated(unsafe) let deviceHandle = device.handle
     nonisolated(unsafe) let handle = self.handle
@@ -107,7 +123,8 @@ public class Swapchain: @unchecked Sendable {
     }
     self.currentFrameInFlightIndex = (self.currentFrameInFlightIndex + 1) % Self.maxFramesInFlight
 
-    return SwapchainImage(
+    let image = VulkanSwapchainImage(
+      commandBuffer: commandBuffer,
       image: images[Int(swapchainImageIndex)],
       imageView: imageViews[Int(swapchainImageIndex)],
       imageIndex: swapchainImageIndex,
@@ -117,6 +134,9 @@ public class Swapchain: @unchecked Sendable {
       presentQueue: device.presentQueue,
       swapchain: self,
     )
+
+    image.prepareRendering()
+    return image
   }
 
   func recreate() {
@@ -131,7 +151,7 @@ public class Swapchain: @unchecked Sendable {
 
     self.handle = createSwapchain(
       for: surface.handle, on: device, size: size, capabilities: capabilities, previous: prev)
-    self.imageSize = size
+    self.size = size
 
     for view in prevImageViews {
       vkDestroyImageView(device.handle, view, nil)
@@ -257,17 +277,20 @@ private func createFence(device: VkDevice, signaled: Bool = false) -> VkFence {
   return fence!
 }
 
-public struct SwapchainImage: ~Copyable, @unchecked Sendable {
+public struct VulkanSwapchainImage: @unchecked Sendable, SwapchainImageProtocol {
+  let commandBuffer: VkCommandBuffer
   let image: VkImage
   let imageView: VkImageView
   let imageIndex: UInt32
   let renderFinishedSemaphore: VkSemaphore
   let presentCompletedSemaphore: VkSemaphore
-  let inFlightFence: VkFence
+  let inFlightFence: VkFence?
   let presentQueue: VkQueue
   let swapchain: Swapchain
 
-  public func prepareRendering(commandBuffer: VkCommandBuffer) {
+  var timelineValue: UInt64? { nil }
+
+  fileprivate func prepareRendering() {
     let image = image
     let barrier = Box(VkImageMemoryBarrier2()) {
       $0.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2
@@ -298,7 +321,7 @@ public struct SwapchainImage: ~Copyable, @unchecked Sendable {
     vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo)
   }
 
-  public func preparePresent(commandBuffer: VkCommandBuffer) {
+  public func transitionToPresentable() {
     let image = image
     let barrier = Box(VkImageMemoryBarrier2()) {
       $0.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2

@@ -44,14 +44,14 @@ class Responder: Swinit.Responder, @unchecked Sendable {
             compositor.root.insert(layer)
             compositor.recomposite()
 
-            Task { @MainActor in
-                while true {
-                    layer.size.x += 1
-                    layer.size.x += 0.5
-                    compositor.recomposite()
-                    try await Task.sleep(for: .milliseconds(1))
-                }
-            }
+            // Task { @MainActor in
+            //     while true {
+            //         layer.size.x += 1
+            //         layer.size.x += 0.5
+            //         compositor.recomposite()
+            //         try await Task.sleep(for: .milliseconds(1))
+            //     }
+            // }
         }
 
     }

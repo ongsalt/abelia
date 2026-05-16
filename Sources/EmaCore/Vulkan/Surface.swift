@@ -6,7 +6,7 @@
 
 struct ConfiguredSurfaceInfo {
   let device: GraphicsDevice
-  let swapchain: Swapchain
+  let swapchain: any SwapchainProtocol
   var capabilities: VkSurfaceCapabilitiesKHR
 }
 
@@ -18,6 +18,7 @@ public class Surface: @unchecked Sendable {
     // init() {}
   #endif
   #if os(Windows)
+    let hwnd: WinSDK.HWND
     public init(
       _ context: GraphicsContext,
       hinstance: WinSDK.HINSTANCE,
@@ -31,6 +32,7 @@ public class Surface: @unchecked Sendable {
         hwnd: hwnd
       )
 
+      self.hwnd = hwnd
       var surface: VkSurfaceKHR? = nil
 
       vkCreateWin32SurfaceKHR(
@@ -49,11 +51,17 @@ public class Surface: @unchecked Sendable {
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device.physicalDevice, self.handle, &capabilities)
       .unwrap()
 
+    #if os(Windows)
+    let swapchain = DXGISwapchain(
+      hwnd: self.hwnd, on: device, initialSize: capabilities.currentExtent.asSimd)
+    #else
+    let swapchain = Swapchain(
+      for: self, on: device, initialSize: capabilities.currentExtent.asSimd,
+      surfaceCapabilities: capabilities)
+    #endif
     self.configuredInfo = ConfiguredSurfaceInfo(
       device: device,
-      swapchain: Swapchain(
-        for: self, on: device, initialSize: capabilities.currentExtent.asSimd,
-        surfaceCapabilities: capabilities),
+      swapchain: swapchain,
       capabilities: capabilities
     )
   }

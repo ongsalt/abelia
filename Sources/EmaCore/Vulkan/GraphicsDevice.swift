@@ -154,6 +154,8 @@ private let deviceExtensions = CStringArray {
   #if os(Windows)
     "VK_KHR_external_memory"
     "VK_KHR_external_memory_win32"
+    "VK_KHR_external_semaphore"
+    "VK_KHR_external_semaphore_win32"
   #endif
 
   "VK_EXT_descriptor_indexing"
@@ -198,6 +200,8 @@ private func createDevice(physicalDevice: VkPhysicalDevice, queues: SelectedQueu
 
     $0.runtimeDescriptorArray = true
     $0.bufferDeviceAddress = true
+
+    $0.timelineSemaphore = true
 
     $0.shaderSampledImageArrayNonUniformIndexing = true
   }

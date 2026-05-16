@@ -14,13 +14,13 @@ public class CompositionPipeline {
 
   init(
     device: GraphicsDevice,
-    swapchain: borrowing Swapchain,
+    format: VkFormat,
     layerStorage: LayerStorage,
     layerStorageBuffer: GPUBuffer
   ) {
     self.device = device
 
-    let format = swapchain.imageFormat
+    let format = format
     let shaderModule = ShaderModule(device: device, filename: "composite")!
 
     let shaderStages = createShaderStateCi([

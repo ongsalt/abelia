@@ -35,14 +35,6 @@ let package = Package(
         ),
 
         .target(name: "CEmaPlatforms"),
-        .target(
-            name: "EmaPlatforms", 
-            dependencies: [
-                "CEmaPlatforms",
-                "CVulkan"
-            ],
-            cSettings: vulkanIncludePath,
-        ),
 
         .target(
             name: "EmaCore",
@@ -52,7 +44,6 @@ let package = Package(
                 "DSLMacro",
                 "CVulkan",
                 "CEmaPlatforms",
-                // might move to `Ema` laters
                 .product(name: "SwiftBlend2D", package: "swift-blend2d"),
             ],
             resources: [

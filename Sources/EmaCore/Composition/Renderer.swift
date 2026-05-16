@@ -19,7 +19,7 @@ class Renderer: @unchecked Sendable {
 
   // private var acquiredFrame: SwapchainImage?
 
-  private var swapchain: Swapchain
+  private var swapchain: any SwapchainProtocol
 
   init(surface: Surface, device: GraphicsDevice) {
     self.device = device
@@ -31,7 +31,7 @@ class Renderer: @unchecked Sendable {
     self.layerStorage = LayerStorage(layerStorageBuffer)
 
     self.compositionPipeline = CompositionPipeline(
-      device: device, swapchain: swapchain, layerStorage: layerStorage,
+      device: device, format: swapchain.imageFormat, layerStorage: layerStorage,
       layerStorageBuffer: layerStorageBuffer)
 
     var node = LayerStorageNode()
@@ -78,17 +78,23 @@ class Renderer: @unchecked Sendable {
     var iv = 0
 
     for batch in batches {
-      if case .composite(let layers) = batch.subpasses[0].inner  {
+      if case .composite(let layers) = batch.subpasses[0].inner {
         for layer in layers {
           let index = self.layerStorage.index(of: layer)
           let bound = layer.boundingRect
-          print(layer, bound)
-          vertexBuffer[iv] = VertexData(layoutNodeIndex: UInt32(index), position: bound.topLeft.asTuple)
-          vertexBuffer[iv + 1] = VertexData(layoutNodeIndex: UInt32(index), position: (bound.topLeft + SIMD2(bound.size.x, 0)).asTuple)
-          vertexBuffer[iv + 2] = VertexData(layoutNodeIndex: UInt32(index), position: (bound.topLeft + SIMD2(0, bound.size.y)).asTuple)
-          vertexBuffer[iv + 3] = VertexData(layoutNodeIndex: UInt32(index), position: (bound.topLeft + bound.size).asTuple)
+          // print(layer, bound)
+          vertexBuffer[iv] = VertexData(
+            layoutNodeIndex: UInt32(index), position: bound.topLeft.asTuple)
+          vertexBuffer[iv + 1] = VertexData(
+            layoutNodeIndex: UInt32(index),
+            position: (bound.topLeft + SIMD2(bound.size.x, 0)).asTuple)
+          vertexBuffer[iv + 2] = VertexData(
+            layoutNodeIndex: UInt32(index),
+            position: (bound.topLeft + SIMD2(0, bound.size.y)).asTuple)
+          vertexBuffer[iv + 3] = VertexData(
+            layoutNodeIndex: UInt32(index), position: (bound.topLeft + bound.size).asTuple)
 
-          indexBuffer[ii] = UInt32(iv) 
+          indexBuffer[ii] = UInt32(iv)
           indexBuffer[ii + 1] = UInt32(iv) + 1
           indexBuffer[ii + 2] = UInt32(iv) + 2
           indexBuffer[ii + 3] = UInt32(iv) + 1
@@ -104,11 +110,10 @@ class Renderer: @unchecked Sendable {
 
   func render() {
     // TODO: swapchain.oudated
-    // TODO: split this into waitForNextImage + acquireNextImage(commandBuffer:) and remove prepareRendering(commandBuffer:)
-    let swapchainImage = swapchain.acquireNextImage()
 
     // TODO: reuse this. raii?
     let commandBuffer = device.commandBuffer
+    // we shuold reset this once in a while?
     var commandBufferBeginInfo = VkCommandBufferBeginInfo(
       sType: VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
       pNext: nil,
@@ -117,15 +122,16 @@ class Renderer: @unchecked Sendable {
     )
     vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo).unwrap()
 
-    // Transition the swapchain image
-    swapchainImage.prepareRendering(commandBuffer: commandBuffer)
+    swapchain.waitForNextImage()
+    let swapchainImage = swapchain.acquireNextImage(commandBuffer: commandBuffer)
 
     // TODO: update vertex buffer
     writeRenderingCommand(
       to: commandBuffer, attachmentView: swapchainImage.imageView, clear: true, store: true,
       indexCount: 6, firstIndex: 0)
 
-    swapchainImage.preparePresent(commandBuffer: commandBuffer)
+    swapchainImage.transitionToPresentable()
+    
     vkEndCommandBuffer(commandBuffer).unwrap()
 
     // MARK: submit command buffer
@@ -140,6 +146,8 @@ class Renderer: @unchecked Sendable {
     let signalSemaphoreInfo = Box(VkSemaphoreSubmitInfo()) {
       $0.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO
       $0.semaphore = renderFinishedSemaphore
+      print("swapchainImage.timelineValue = \(swapchainImage.timelineValue)")
+      $0.value = swapchainImage.timelineValue ?? 0
     }
     let commandBufferInfo = Box(VkCommandBufferSubmitInfo()) {
       $0.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO
@@ -164,14 +172,10 @@ class Renderer: @unchecked Sendable {
   }
 
   public func forceRenderAfterResize() {
-    // TODO: VK_EXT_swapchain_maintenance1 
+    // TODO: VK_EXT_swapchain_maintenance1
     // use directx swapchain?
     self.swapchain.recreate()
     self.render()
-  }
-
-  public var isNextImageReady: Bool {
-    swapchain.isNextImageReady
   }
 
   private func writeRenderingCommand(
@@ -206,7 +210,7 @@ class Renderer: @unchecked Sendable {
       $0.colorAttachmentCount = 1
       $0.layerCount = 1
       $0.pColorAttachments = renderingAttachmentInfo.ptr
-      $0.renderArea = .init(offset: .init(), extent: swapchain.imageSize.asExtent)
+      $0.renderArea = .init(offset: .init(), extent: swapchain.size.asExtent)
     }
     vkCmdBeginRendering(commandBuffer, &renderingInfo)
 
@@ -224,7 +228,7 @@ class Renderer: @unchecked Sendable {
       commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, compositionPipeline.layout, 0,
       UInt32(descriptorSets.count), &descriptorSets, 0, &tf)
 
-    var viewportSize = SIMD2<Float>(swapchain.imageSize)
+    var viewportSize = SIMD2<Float>(swapchain.size)
     vkCmdPushConstants(
       commandBuffer, compositionPipeline.layout,
       VK_SHADER_STAGE_VERTEX_BIT.u32 | VK_SHADER_STAGE_FRAGMENT_BIT.u32, 0,
@@ -233,14 +237,14 @@ class Renderer: @unchecked Sendable {
     var viewport = VkViewport(
       x: 0,
       y: 0,
-      width: Float(swapchain.imageSize.x),
-      height: Float(swapchain.imageSize.y),
+      width: Float(swapchain.size.x),
+      height: Float(swapchain.size.y),
       minDepth: 0,
       maxDepth: 1
     )
     vkCmdSetViewport(commandBuffer, 0, 1, &viewport)
 
-    var rects = [VkRect2D(offset: .init(), extent: swapchain.imageSize.asExtent)]
+    var rects = [VkRect2D(offset: .init(), extent: swapchain.size.asExtent)]
     vkCmdSetScissor(commandBuffer, 0, 1, &rects)
 
     // same one
