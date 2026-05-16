@@ -2,6 +2,18 @@
 import Foundation
 import Pointer
 
+public protocol SwapchainProtocol {
+  associatedtype SwapchainImage: SwapchainImageProtocol
+
+  func waitNextImage()
+  func acquireNextImage(commandBuffer: VkCommandBuffer) -> SwapchainImage
+}
+
+public protocol SwapchainImageProtocol {
+  func transitionToPresentable()
+  func present()
+}
+
 public class Swapchain: @unchecked Sendable {
   private let surface: Surface
   private let device: GraphicsDevice

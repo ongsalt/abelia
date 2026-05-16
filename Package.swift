@@ -20,7 +20,7 @@ let package = Package(
         // .package(url: "https://github.com/apple/swift-numerics", from: "1.0.0"),
         .package(url: "https://github.com/swiftlang/swift-syntax", from: "602.0.0"),
         .package(url: "https://github.com/ongsalt/swinit", branch: "main"),
-        .package(url: "https://github.com/LuizZak/swift-blend2d", branch: "master")
+        .package(url: "https://github.com/LuizZak/swift-blend2d", branch: "master"),
 
     ],
     targets: [
@@ -34,6 +34,16 @@ let package = Package(
             cSettings: vulkanIncludePath,
         ),
 
+        .target(name: "CEmaPlatforms"),
+        .target(
+            name: "EmaPlatforms", 
+            dependencies: [
+                "CEmaPlatforms",
+                "CVulkan"
+            ],
+            cSettings: vulkanIncludePath,
+        ),
+
         .target(
             name: "EmaCore",
             dependencies: [
@@ -41,8 +51,9 @@ let package = Package(
                 "Pointer",
                 "DSLMacro",
                 "CVulkan",
+                "CEmaPlatforms",
                 // might move to `Ema` laters
-                .product(name: "SwiftBlend2D", package: "swift-blend2d")
+                .product(name: "SwiftBlend2D", package: "swift-blend2d"),
             ],
             resources: [
                 .copy("Generated/Resources")

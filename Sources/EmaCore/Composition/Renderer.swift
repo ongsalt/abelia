@@ -104,6 +104,7 @@ class Renderer: @unchecked Sendable {
 
   func render() {
     // TODO: swapchain.oudated
+    // TODO: split this into waitForNextImage + acquireNextImage(commandBuffer:) and remove prepareRendering(commandBuffer:)
     let swapchainImage = swapchain.acquireNextImage()
 
     // TODO: reuse this. raii?
@@ -155,6 +156,8 @@ class Renderer: @unchecked Sendable {
       $0.signalSemaphoreInfoCount = 1
       $0.pSignalSemaphoreInfos = signalSemaphoreInfo.ptr
     }
+
+    // this one should only be specific to Vulkan implementation
     vkQueueSubmit2(device.graphicsQueue, 1, &submitInfo, swapchainImage.inFlightFence).unwrap()
 
     swapchainImage.present()

@@ -38,7 +38,7 @@ class Responder: Swinit.Responder, @unchecked Sendable {
             let compositor = Compositor(surface: surface, device: device)
             self.compositor = compositor
             let layer = Layer(compositor: compositor)
-            layer.brush = .solid(.red)
+            layer.brush = .solid(.blue)
             layer.size = Size(100, 100)
 
             compositor.root.insert(layer)
@@ -46,6 +46,8 @@ class Responder: Swinit.Responder, @unchecked Sendable {
 
             Task { @MainActor in
                 while true {
+                    layer.size.x += 1
+                    layer.size.x += 0.5
                     compositor.recomposite()
                     try await Task.sleep(for: .milliseconds(1))
                 }
