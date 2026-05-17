@@ -1,18 +1,29 @@
+@MainActor
 public class Effect {
-    let node: Node = Node(label: String(describing: Effect.self))
+    nonisolated(unsafe) let node: Node = Node(label: String(describing: Effect.self))
+    let block: () -> Void
 
-    @discardableResult
+    // @discardableResult
     public init(_ block: @escaping () -> Void) {
-        node.dirtyCallback = { [weak node] in
-            node?.clearDependencies()
-            let deps = TrackingContext.track {
-                block()
+        self.block = block
+        node.dirtyCallback = {
+            // TODO make a nextTick { ... }
+            Task {
+                self.update()
             }
-            node?.addDependency(deps)
-            node?.markClean()
         }
 
-        node.dirtyCallback?()
+        self.update()
+    }
+
+    func update() {
+        node.clearDependencies()
+        let deps = TrackingContext.track {
+            block()
+        }
+        print(deps)
+        node.addDependency(deps)
+        node.markClean()
     }
 
     public func stop() {
