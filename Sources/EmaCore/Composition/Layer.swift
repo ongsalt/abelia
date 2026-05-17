@@ -22,31 +22,32 @@ public class Layer: Identifiable {
   public func remove(_ layer: Layer) {
     layer.parent = nil
     children.removeAll { $0.id == layer.id }
+    compositor.markDirty(self)
   }
 
   @Signal
   public var opacity: Float = 1 {
-    didSet { compositor.markDirty(self) }
+    didSet { compositor.markDirty(self, accumulated: !isRasterizationRoot) }
   }
 
   @Signal
   public var position: Position<Float> = .zero {
-    didSet { compositor.markDirty(self) }
+    didSet { compositor.markDirty(self, accumulated: !isRasterizationRoot) }
   }
 
   @Signal
   public var size: Size<Float> = .zero {
-    didSet { compositor.markDirty(self) }
+    didSet { compositor.markDirty(self, accumulated: !isRasterizationRoot) }
   }
 
   @Signal
   public var scale: Float = 1 {
-    didSet { compositor.markDirty(self) }
+    didSet { compositor.markDirty(self, accumulated: !isRasterizationRoot) }
   }
 
   @Signal
   public var affine: Float = 1 {
-    didSet { compositor.markDirty(self) }
+    didSet { compositor.markDirty(self, accumulated: !isRasterizationRoot) }
   }
 
   @Signal
@@ -56,6 +57,7 @@ public class Layer: Identifiable {
 
   @Signal
   public var cornerRadius: Float = 0 {
+    // only when using clip
     didSet { compositor.markDirty(self) }
   }
 
@@ -109,7 +111,28 @@ public class Layer: Identifiable {
   /// TODO: Rect that contains all children
   public var boundingRect: Rect { _boundingRect.value }
   private lazy var _boundingRect: Computed<Rect> = Computed { [self] in
-    Rect(topLeft: position, size: size)
+    Rect(topLeft: absolutePosition, size: size)
+  }
+
+}
+
+extension Layer {
+  public func dumpTree(indent: Int = 0) -> String {
+    let prefix = String(repeating: "  ", count: indent)
+    var info = "\(type(of: self))"
+    let pos = absolutePosition
+    let size = size
+    let offset = position
+    info += " offset=(\(offset.x), \(offset.y)) absPos=(\(pos.x), \(pos.y)) size=(\(size.x), \(size.y))"
+    var result = "\(prefix)- \(info)\n"
+    for child in children {
+      result += child.dumpTree(indent: indent + 1)
+    }
+    return result
+  }
+
+  public func printTree(indent: Int = 0) {
+    print(dumpTree(indent: indent), terminator: "")
   }
 
 }

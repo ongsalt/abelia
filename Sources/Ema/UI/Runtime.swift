@@ -33,6 +33,9 @@ public class Runtime {
 
     let prev = Runtime.current
     Runtime.current = self
+
+    // window.size is NOT client rect
+    // TODO: fix it
     root.preferedWidth = Float(window.size.x)
     root.preferedHeight = Float(window.size.y)
     root.replaceChildren(self.body)
@@ -68,6 +71,8 @@ public class Runtime {
     for fn in onFrames {
       fn()
     }
+    self.root.printTree()
+    compositor?.root.printTree()
   }
 
   var onDestroyCallbacks: [ObjectIdentifier: [() -> Void]] = [:]

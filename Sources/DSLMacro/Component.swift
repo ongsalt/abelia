@@ -85,14 +85,14 @@ struct AutobindMacro: MemberMacro {
             name: decl.name.text, signature: decl.signature, bindIndices: bindIndices)
 
         // external name must be the same
-        let reservedNames: Set<_> = ["@Component", "@Autobind", "@MainActor"]
+        let reservedNames: Set<_> = ["@Component", "@Autobind"]
         var attributes = decl.attributes.filter {
             // prevent recursive expansion
             !reservedNames.contains($0.trimmedDescription)
         }
         // this wont work
-        let mainActor: AttributeSyntax = "@MainActor"
-        attributes.append(.attribute(mainActor))
+        // let mainActor: AttributeSyntax = "@MainActor"
+        // attributes.append(.attribute(mainActor))
 
         let out = FunctionDeclSyntax(
             attributes: attributes,

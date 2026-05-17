@@ -57,7 +57,7 @@ public class Swapchain: @unchecked Sendable, SwapchainProtocol {
   ) {
     self.surface = surface
     self.device = device
-    let imageFormat = VK_FORMAT_B8G8R8A8_SRGB
+    let imageFormat = VK_FORMAT_B8G8R8A8_UNORM
     self.imageFormat = imageFormat
     
     let swapchain = createSwapchain(

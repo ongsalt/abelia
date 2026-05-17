@@ -27,10 +27,16 @@ public class Compositor {
     self.markDirty(root, shouldRecreateSwapchain: true)
   }
 
-  func markDirty(_ layer: Layer, shouldRecreateSwapchain: Bool = false) {
+  func markDirty(_ layer: Layer, accumulated: Bool = false, shouldRecreateSwapchain: Bool = false) {
     let (inserted, _) = dirtyLayerIds.insert(layer.id)
     if inserted {
       dirtyLayers.append(layer)
+    }
+
+    if accumulated {
+      for c in layer.children {
+        markDirty(c, accumulated: true)
+      }
     }
 
     // tell renderer we need rerender

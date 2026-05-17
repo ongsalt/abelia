@@ -1,3 +1,5 @@
+import EmaCore
+
 @Autobind
 extension View {
   public consuming func width(_ w: Prop<Float?>) -> Self {
@@ -28,6 +30,13 @@ extension View {
   public consuming func fillMaxSize() -> Self {
     layoutNode.preferedWidth = .infinity
     layoutNode.preferedHeight = .infinity
+    return self
+  }
+
+  public consuming func color(_ c: Prop<Color>) -> Self {
+    TemplateEffect {
+      layoutNode.layer?.brush = .solid(c.value)
+    }
     return self
   }
 

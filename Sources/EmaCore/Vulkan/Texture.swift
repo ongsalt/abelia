@@ -44,7 +44,7 @@ class Texture: Identifiable {
     self.currentQueueIndex = queueIndex
     self.textureIndex = textureIndex
 
-    let format = VK_FORMAT_R8G8B8A8_SRGB
+    let format = VK_FORMAT_B8G8R8A8_UNORM
 
     var ci = with(VkImageCreateInfo()) {
       $0.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO

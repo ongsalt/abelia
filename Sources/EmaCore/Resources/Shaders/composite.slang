@@ -36,7 +36,7 @@ float4 fragMain(VertexOutput inVert, float4 position: SV_Position) : SV_Target {
   //   return float4(1, 1, 0, 1);
   // }
 
-  return float4(0.1, 0.1, 0.1, 0.1);
+  // return float4(0.1, 0.1, 0.1, 0.1);
   // return float4(0.1, 0.1, inVert.layoutNodeIndex * 0.1, 0.1);
 
   if (layoutStorageNode.brushKind == BrushKind.Solid) {

@@ -17,13 +17,13 @@ func childrenWithoutRasterizationRootChildren(of layer: Layer) -> (children: [La
   var children: [Layer] = []
   var roots: [Layer] = []
   for c in layer.children {
+    children.append(c)
     if !layer.isRasterizationRoot {
       let (children2, _) = childrenWithoutRasterizationRootChildren(of: c)
       children += children2
     } else {
       roots.append(layer)
     }
-    children.append(c)
   }
 
   return (children, roots)

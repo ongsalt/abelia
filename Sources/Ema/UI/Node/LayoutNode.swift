@@ -165,7 +165,7 @@ public class LayoutNode: NonLayoutNode {
   @Signal
   var layer: Layer?
   func initializeLayer() {
-    print("mounting", self.id)
+    // print("mounting", self.id)
     self.layer = runtime!.compositor!.createLayer()
     self.linkProperties()
 
@@ -178,19 +178,18 @@ public class LayoutNode: NonLayoutNode {
   }
 
   func linkProperties() {
-    layer?.brush = .solid(.blue.with(alpha: 0.1))
     // need to bound with LayoutNode lifetime
     TemplateEffect { [weak self] in
       if let self {
         layer?.position = absolutePosition
-        print("absolutePosition = \(absolutePosition) [\(id)]")
+        // print("absolutePosition = \(absolutePosition) [\(id)]")
       }
     }
 
     TemplateEffect { [weak self] in
       if let self {
         layer?.size = size
-        print("size = \(size) [\(id)]")
+        // print("size = \(size) [\(id)]")
       }
     }
   }
