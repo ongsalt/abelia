@@ -9,6 +9,7 @@ public struct Signal<T> {
         }
         _modify {
             yield &self._value
+            // print("children of \(node.label)(\(self._value)) is \(node.dependants)")
             node.markChildrenDirty()
         }
     }

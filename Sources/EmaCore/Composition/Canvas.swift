@@ -35,7 +35,7 @@ extension TextureRegistry {
       fromCpuBuffer: UnsafeRawBufferPointer(
         start: data.pixelData, count: data.stride * Int(data.size.h)),
       size: SIMD2(UInt32(data.size.w), UInt32(data.size.h)),
-      usages: usages, swizzling: .fromBlend2d)
+      usages: usages)
   }
 }
 

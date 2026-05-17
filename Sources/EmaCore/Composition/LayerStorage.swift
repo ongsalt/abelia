@@ -85,7 +85,8 @@ extension Layer {
       switch brush {
       case .solid(let color):
         $0.brushKind = .solid
-        $0.brush.solid.color = color.asPremultipliedTuple
+        // $0.brush.solid.color = color.asPremultipliedTuple
+        $0.brush.solid.color = color.asTuple
       case .image(let image, let ninegrid, let crop):
         $0.brushKind = .texture
         $0.brush.texture.textureIndex = image.textureIndex

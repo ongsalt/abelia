@@ -21,7 +21,6 @@ public class Effect {
         let deps = TrackingContext.track {
             block()
         }
-        print(deps)
         node.addDependency(deps)
         node.markClean()
     }

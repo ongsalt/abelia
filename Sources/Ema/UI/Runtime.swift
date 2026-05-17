@@ -71,8 +71,8 @@ public class Runtime {
     for fn in onFrames {
       fn()
     }
-    self.root.printTree()
-    compositor?.root.printTree()
+    // self.root.printTree()
+    // compositor?.root.printTree()
   }
 
   var onDestroyCallbacks: [ObjectIdentifier: [() -> Void]] = [:]

@@ -2,7 +2,7 @@ import Reactivity
 
 @MainActor
 public class Layer: Identifiable {
-  var compositor: Compositor
+  private(set) public var compositor: Compositor
   var label: String?
 
   package init(compositor: Compositor) {

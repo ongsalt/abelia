@@ -69,7 +69,7 @@ public enum Brush {  // 4f, 1f (index), imageIndex:4f:4f, ONEeffect(max=8f):samp
     // case gradient(Gradient)  // -> image/gradient1d/vertex interpolation
     
     // this should be auto register
-    case image(any CompositionTextureProtocol, ninegrid: SIMD4<Float>, crop: SIMD4<Float>)
+    case image(any CompositionTextureProtocol, ninegrid: SIMD4<Float> = .zero, crop: SIMD4<Float> = .zero)
     // well well well, this still require grouping Layer into layer
     // and this shouldnt sample layer outside its rasterizationRoot anyways
     // this is the current behavior

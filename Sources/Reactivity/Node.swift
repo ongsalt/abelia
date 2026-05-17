@@ -17,6 +17,7 @@ public struct DirtyFlags: Sendable {
 }
 
 public class Node {
+    // TODO: think about dedup and Eager node
     public var label: String?
     private(set) var dirty: DirtyFlags = []  // we need to do `maybeDirty`
     var dirtyCallback: (() -> Void)?
@@ -30,16 +31,16 @@ public class Node {
     }
 
     public func markDirty(flag: DirtyFlags = .dirty) {
+        if let dirtyCallback {
+            dirtyCallback()
+        }
+
         if self.dirty == flag {
             return
         }
 
         self.dirty = flag
         // idk which should run first
-        if let dirtyCallback {
-            // call some shi???
-            dirtyCallback()
-        }
         self.markChildrenDirty(flag: flag)
     }
 
