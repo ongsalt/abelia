@@ -3,14 +3,22 @@ import SwiftBlend2D
 
 @Component
 @MainActor
-public func Canvas(size: SIMD2<Float>, draw: @escaping (borrowing BLContext) -> Void) -> View {
+public func Canvas(size: Prop<SIMD2<Int>>, draw: @escaping (borrowing BLContext) -> Void) -> View {
   let box = Box()
 
+  // TODO: clamp size
+  @Computed
+  var clamped = size.value.clamped(lowerBound: .one, upperBound: .init(.max, .max))
+
   let img = Computed {
-    let img = BLImage(width: Int(size.x), height: Int(size.y), format: .prgb32)
+    let img = BLImage(width: clamped.x, height: clamped.y, format: .prgb32)
     let ctx = BLContext(image: img)!
+    ctx.compOp = .srcCopy
+    ctx.setFillStyle(BLRgba32.transparentWhite)
+    ctx.fillAll()
+
+    ctx.compOp = .srcOver
     // implicitly track anything read in this?
-    // ctx.fillAll()
     draw(ctx)
     ctx.end()
     return img
@@ -25,6 +33,6 @@ public func Canvas(size: SIMD2<Float>, draw: @escaping (borrowing BLContext) -> 
   }
 
   return box
-    .width(size.x)
-    .height(size.y)
+    .width(Float(clamped.x))
+    .height(Float(clamped.y))
 }

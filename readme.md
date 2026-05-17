@@ -13,8 +13,8 @@ The presence of an `animationFrameCallback` will force the compositor to activel
 - write the actual shader
 - actually read from layerStorage
   - make layer storage node per subpass instead
-- sort draw command
 - pause rendering if hidden or windows size = 0
+- transform DSL: .default
 
 - optimize computed dirty flagging
 - new property wrapper: behave like signal but allow linking
