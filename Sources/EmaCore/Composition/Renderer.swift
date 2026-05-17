@@ -146,7 +146,6 @@ class Renderer: @unchecked Sendable {
     let signalSemaphoreInfo = Box(VkSemaphoreSubmitInfo()) {
       $0.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO
       $0.semaphore = renderFinishedSemaphore
-      print("swapchainImage.timelineValue = \(swapchainImage.timelineValue)")
       $0.value = swapchainImage.timelineValue ?? 0
     }
     let commandBufferInfo = Box(VkCommandBufferSubmitInfo()) {

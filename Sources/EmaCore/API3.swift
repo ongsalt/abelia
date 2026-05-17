@@ -67,6 +67,8 @@ public enum Brush {  // 4f, 1f (index), imageIndex:4f:4f, ONEeffect(max=8f):samp
     // so 1f tag + 9f for brush
     case solid(Color)
     // case gradient(Gradient)  // -> image/gradient1d/vertex interpolation
+    
+    // this should be auto register
     case image(any CompositionTextureProtocol, ninegrid: SIMD4<Float>, crop: SIMD4<Float>)
     // well well well, this still require grouping Layer into layer
     // and this shouldnt sample layer outside its rasterizationRoot anyways

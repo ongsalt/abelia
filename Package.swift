@@ -46,6 +46,9 @@ let package = Package(
                 "CEmaPlatforms",
                 .product(name: "SwiftBlend2D", package: "swift-blend2d"),
             ],
+            exclude: [
+                "Resources/Shaders/"
+            ],
             resources: [
                 .copy("Generated/Resources")
                 // .ignore("Resources/Shaders"),

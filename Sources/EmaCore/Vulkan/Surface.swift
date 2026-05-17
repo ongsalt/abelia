@@ -51,14 +51,14 @@ public class Surface: @unchecked Sendable {
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device.physicalDevice, self.handle, &capabilities)
       .unwrap()
 
-    #if os(Windows)
-    let swapchain = DXGISwapchain(
-      hwnd: self.hwnd, on: device, initialSize: capabilities.currentExtent.asSimd)
-    #else
+    // #if os(Windows)
+    // let swapchain = DXGISwapchain(
+    //   hwnd: self.hwnd, on: device, initialSize: capabilities.currentExtent.asSimd)
+    // #else
     let swapchain = Swapchain(
       for: self, on: device, initialSize: capabilities.currentExtent.asSimd,
       surfaceCapabilities: capabilities)
-    #endif
+    // #endif
     self.configuredInfo = ConfiguredSurfaceInfo(
       device: device,
       swapchain: swapchain,
