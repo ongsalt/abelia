@@ -50,7 +50,7 @@ float4 fragMain(VertexOutput inVert, float4 position: SV_Position) : SV_Target {
 
     let origin = layoutStorageNode.center - float2(rect.halfWidth, rect.halfHeight);
     let relativePosition = (position.xy - origin) / (2 * float2(rect.halfWidth, rect.halfHeight));
-    return texture.Sample(sampler, relativePosition);
+    return texture.Sample(sampler, 1 - relativePosition);
   }
 
   // let texture = layoutStorageNode;
