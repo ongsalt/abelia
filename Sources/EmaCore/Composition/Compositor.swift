@@ -1,26 +1,33 @@
 import Dispatch
+import SwiftBlend2D
 import Synchronization
 
 // public api @MainActor???
 @MainActor
 public class Compositor {
-  private(set) public lazy var root: RootLayer = RootLayer(compositor: self)
+  private(set) public var root: RootLayer!
   private let renderer: Renderer
   private let rendererDispatchQueue: DispatchQueue = DispatchQueue(
     label: "lt.ongsa.Ema.EmaCore.rendererDispatchQueue")
-  // private var layerStorage: GPULayerStorage
+
+  var dirtyLayers: [Layer] = []
+  var dirtyLayerIds: Set<ObjectIdentifier> = []
 
   public init(surface: Surface, device: GraphicsDevice) {
     self.renderer = Renderer(surface: surface, device: device)
-    _ = self.root
+
+    self.root = RootLayer(compositor: self)
   }
 
-  public func recomposite() {
+  public func commit(recreateSwapchain: Bool = false) {
+    self.markDirty(root)
+
     let dirtyLayers = dirtyLayers
     self.dirtyLayers = []
     dirtyLayerIds = []
-    let batches = createBatches(dirtyLayers: [self.root], root: self.root)
-    // fuckk
+    let batches = createBatches(dirtyLayers: dirtyLayers, root: self.root)
+
+    print(batches[0].subpasses)
 
     // for batch in batches {
     //   let layers = batch.subpasses.flatMap {
@@ -33,23 +40,19 @@ public class Compositor {
     //   }
     // }
 
-    self.renderer.update(dirtyRects: [], dirtyLayers: dirtyLayers, batches: batches)
     // write index buffer, write vertex buffer
+    let (vertex, index) = self.renderer.update(dirtyRects: [], dirtyLayers: dirtyLayers, batches: batches)
     withRenderingFn {
-      self.renderer.render()
+      // print("indexCount = \(index), vertexCount = \(vertex)")
+      self.renderer.render(indexCount: UInt32(index), recreateSwapchain: recreateSwapchain)
     }
   }
 
-  // TODO: smooth resize
   public func resize(to size: Size<UInt32>) {
-    withRenderingFn {
-      // just mark root node as dirty
-      self.renderer.forceRenderAfterResize()
-    }
+    self.markDirty(root)
+    self.commit(recreateSwapchain: true)
   }
 
-  var dirtyLayers: [Layer] = []
-  var dirtyLayerIds: Set<ObjectIdentifier> = []
   func markDirty(_ layer: Layer) {
     let (inserted, _) = dirtyLayerIds.insert(layer.id)
     if inserted {
@@ -57,6 +60,7 @@ public class Compositor {
     }
   }
 
+  // TODO: atomicInt
   let rendering = Mutex(0)
   private func withRenderingFn(_ block: @Sendable @escaping () -> Void) {
     let willContinue = rendering.withLock { rendering in
@@ -88,6 +92,12 @@ public class Compositor {
     // }
     // tell the renderer which layer propery changed (update LayerStorage)
     // and what need to be rerender
+  }
+
+  public func createImage(from blImage: BLImage) -> Image {
+    let texture = renderer.textureRegistry.createTexture(from: blImage, usages: .static)
+
+    return Image(texture: texture)
   }
 }
 

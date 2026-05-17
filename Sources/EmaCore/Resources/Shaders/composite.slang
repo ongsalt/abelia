@@ -16,7 +16,7 @@ struct VertexInput {
 };
 
 struct VertexOutput {
-  uint32_t layoutNodeIndex;
+  nointerpolation uint32_t layoutNodeIndex;
   float4 sv_position : SV_Position;
 };
 
@@ -32,9 +32,24 @@ VertexOutput vertMain(VertexInput input) {
 float4 fragMain(VertexOutput inVert, float4 position: SV_Position) : SV_Target {
   let layoutStorageNode = layoutStorageNodes[inVert.layoutNodeIndex];
 
+  // if (inVert.layoutNodeIndex == 0) {
+  //   return float4(1, 1, 0, 1);
+  // }
+
+  // return float4(0, 0, inVert.layoutNodeIndex * 0.1, 1);
+
   if (layoutStorageNode.brushKind == BrushKind.Solid) {
     let solidColorBrush = unpackSolidColorBrush(layoutStorageNode.brush);
     return solidColorBrush.color;
+  } else if (layoutStorageNode.brushKind == BrushKind.Texture) {
+    let textureBrush = unpackTextureBrush(layoutStorageNode.brush);
+    let texture = textures[textureBrush.textureIndex];
+
+    let rect = unpackRoundedRect(layoutStorageNode.shape);
+
+    let origin = layoutStorageNode.center - float2(rect.halfWidth, rect.halfHeight);
+    let relativePosition = (position.xy - origin) / (2 * float2(rect.halfWidth, rect.halfHeight));
+    return texture.Sample(sampler, relativePosition);
   }
 
   // let texture = layoutStorageNode;
@@ -101,20 +116,24 @@ struct BrushUnion {
 // ==========================================
 
 struct LayerStorageNode {
-  float2 center;
-  float opacity;
-
-  ShapeKind shapeKind;
+  // 16-byte aligned types
+  float4x4 affine;
+  float4 shadowColor;
   ShapeUnion shape;
 
-  BrushKind brushKind;
-  BrushUnion brush;
-
-  float4 shadowColor;
-  float shadowBlur;
+  // 8-byte aligned types
+  float2 center;
   float2 shadowOffset;
 
-  float4x4 affine;
+  // 4-byte aligned types
+  BrushUnion brush;
+  float opacity;
+  float shadowBlur;
+  ShapeKind shapeKind;
+  BrushKind brushKind;
+
+  // Slang will invisibly add 12 bytes of padding right here
+  // to bring the final struct size to 176 bytes.
 };
 
 // ==========================================

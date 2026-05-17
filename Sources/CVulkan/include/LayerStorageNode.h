@@ -37,22 +37,32 @@ union Brush {
   struct TextureBrush texture;
 };
 
-// TODO: fixed size struct
+
 struct LayerStorageNode {
-  float centerX;
-  float centerY;
-  float opacity;
+// --- 16-byte aligned boundary ---
+  float affine[16];        // Offset: 0   (Size: 64)
+  float shadowColor[4];    // Offset: 64  (Size: 16)
+  union Shape shape;       // Offset: 80  (Size: 16)
 
-  enum ShapeKind shapeKind;
-  union Shape shape;
+  // --- 8-byte aligned boundary ---
+  float centerX;           // Offset: 96  (Size: 4)
+  float centerY;           // Offset: 100 (Size: 4)
+  float shadowOffsetX;     // Offset: 104 (Size: 4)
+  float shadowOffsetY;     // Offset: 108 (Size: 4)
 
-  enum BrushKind brushKind;
-  union Brush brush;
+  // --- 4-byte aligned boundary ---
+  union Brush brush;       // Offset: 112 (Size: 36)
+  float opacity;           // Offset: 148 (Size: 4)
+  float shadowBlur;        // Offset: 152 (Size: 4)
+  enum ShapeKind shapeKind;// Offset: 156 (Size: 4)
+  enum BrushKind brushKind;// Offset: 160 (Size: 4)
 
-  float shadowColor[4];
-  float shadowBlur;
-  float shadowOffsetX;
-  float shadowOffsetY;
+  // TOTAL ACTIVE SIZE: 164 bytes
 
-  float affine[16];
+  // --- Critical Detail: Tail Padding ---
+  // Slang requires the total struct size to be a multiple of its 
+  // largest alignment (16 bytes). 164 rounds up to 176.
+  // If sending an ARRAY of these to the GPU, you MUST add 12 bytes 
+  // of tail padding in C so the array strides match.
+  uint32_t _pad[3];
 };

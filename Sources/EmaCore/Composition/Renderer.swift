@@ -9,7 +9,6 @@ class Renderer: @unchecked Sendable {
 
   private let vertexBuffer: GPUBuffer
   private let indexBuffer: GPUBuffer
-  private let baseVertices: [VertexData]
 
   // TODO: rename this to renderNodeStorage or shi
   private let layerStorageBuffer: GPUBuffer
@@ -45,20 +44,6 @@ class Renderer: @unchecked Sendable {
     self.indexBuffer = device.createBuffer(
       size: UInt64(MemoryLayout<UInt32>.size) * 6 * 100000, usages: .index)
 
-    self.baseVertices = [
-      .init(layoutNodeIndex: 0, position: (0.0, 0.0)),
-      .init(layoutNodeIndex: 0, position: (0.0, 500.0)),
-      .init(layoutNodeIndex: 0, position: (500.0, 0.0)),
-      .init(layoutNodeIndex: 0, position: (500.0, 500.0)),
-    ]
-
-    // let v = self.vertexBuffer.buffer.assumingMemoryBound(to: VertexData.self)
-    // _ = v.initialize(from: self.baseVertices)
-
-    // _ = self.indexBuffer.buffer.assumingMemoryBound(to: UInt32.self).initialize(from: [
-    //   0, 1, 2, 1, 2, 3,
-    // ])
-
     self.textureRegistry = TextureRegistry(
       on: device, globalDescriptorSetLayout: compositionPipeline.descriptorSetLayouts[0],
       imagesDescriptorSetLayout: compositionPipeline.descriptorSetLayouts[1])
@@ -67,9 +52,11 @@ class Renderer: @unchecked Sendable {
 
   // TODO: remove @MainActor after we are writing layerStorageNode in createBatch
   @MainActor
-  public func update(dirtyRects: [Rect], dirtyLayers: [Layer], batches: [Batch]) {
+  public func update(dirtyRects: [Rect], dirtyLayers: [Layer], batches: [Batch]) -> (vertex: Int, index: Int) {
     for layer in dirtyLayers {
+      let index = self.layerStorage.index(of: layer)
       self.layerStorage.update(layer)
+      print("update", index, layer.brush)
     }
 
     let indexBuffer = indexBuffer.buffer.assumingMemoryBound(to: UInt32.self)
@@ -82,6 +69,7 @@ class Renderer: @unchecked Sendable {
         for layer in layers {
           let index = self.layerStorage.index(of: layer)
           let bound = layer.boundingRect
+          print(index, layer.brush, bound)
           // print(layer, bound)
           vertexBuffer[iv] = VertexData(
             layoutNodeIndex: UInt32(index), position: bound.topLeft.asTuple)
@@ -101,14 +89,19 @@ class Renderer: @unchecked Sendable {
           indexBuffer[ii + 4] = UInt32(iv) + 2
           indexBuffer[ii + 5] = UInt32(iv) + 3
 
+          iv += 4
           ii += 6
-          iv += 3
         }
       }
     }
+
+    return (iv, ii)
   }
 
-  func render() {
+  func render(indexCount: UInt32, recreateSwapchain: Bool = false) {
+    if recreateSwapchain {
+        self.swapchain.recreate()
+    }
     // TODO: swapchain.oudated
 
     // TODO: reuse this. raii?
@@ -128,10 +121,9 @@ class Renderer: @unchecked Sendable {
     // TODO: update vertex buffer
     writeRenderingCommand(
       to: commandBuffer, attachmentView: swapchainImage.imageView, clear: true, store: true,
-      indexCount: 6, firstIndex: 0)
+      indexCount: indexCount, firstIndex: 0)
 
     swapchainImage.transitionToPresentable()
-    
     vkEndCommandBuffer(commandBuffer).unwrap()
 
     // MARK: submit command buffer
@@ -170,20 +162,12 @@ class Renderer: @unchecked Sendable {
     swapchainImage.present()
   }
 
-  public func forceRenderAfterResize() {
-    // TODO: VK_EXT_swapchain_maintenance1
-    // use directx swapchain?
-    self.swapchain.recreate()
-    self.render()
-  }
-
   private func writeRenderingCommand(
     to commandBuffer: VkCommandBuffer, attachmentView: VkImageView, clear: Bool = true,
     store: Bool = true,
     indexCount: UInt32,
     firstIndex: UInt32,
     // resolveTo resolveTarget:,
-
   ) {
     nonisolated(unsafe) let renderingAttachmentInfo = Box(VkRenderingAttachmentInfo()) {
       $0.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO

@@ -38,3 +38,15 @@ extension TextureRegistry {
       usages: usages, swizzling: .fromBlend2d)
   }
 }
+
+public class Image {
+  let texture: Texture
+
+  init(texture: Texture) {
+    self.texture = texture
+  }
+}
+
+extension Image: CompositionTextureProtocol {
+    public var textureIndex: UInt32 { texture.textureIndex }
+}
