@@ -11,18 +11,23 @@ The presence of an `animationFrameCallback` will force the compositor to activel
 
 ## TODO
 - write the actual shader
-- actually read from layerStorage
+  - sdf
+  - transformation
+- calculate batching
   - make layer storage node per subpass instead
+- anti aliasing
 - pause rendering if hidden or windows size = 0
 - transform DSL: .default
+- fix render loop again. also do proper frame in flight
+```
+vkQueueSubmit2(): THREADING ERROR : object of type VkQueue is simultaneously used in current thread X and thread Y
+```
 
 - optimize computed dirty flagging
 - new property wrapper: behave like signal but allow linking
 - clip
 - think about pixel perfect stuff
 - `libharfbuzz-gpu`
-- `blend2d` for canvas api
-  - and font rendering (for now)
-- windows resize (wayland)
+- a window on wayland
 - transparency on windows: DirectComposition swapchain
 - multi windows support

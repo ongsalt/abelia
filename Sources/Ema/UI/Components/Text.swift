@@ -16,7 +16,7 @@ public func Text(_ text: Prop<some StringProtocol>, size: Prop<Float> = .default
   var matrics = font.getTextMetrics(text.value)
 
   // wtf, is there no bound check or what
-  let safeArea  = 0
+  let safeArea = 0
 
   @Computed
   var w = Int(matrics.advance.x) + safeArea
@@ -25,11 +25,13 @@ public func Text(_ text: Prop<some StringProtocol>, size: Prop<Float> = .default
   @Computed
   var h = Int(font.metrics.yMax - font.metrics.yMin) + safeArea
 
-  // print("w,h = \(w) \(h)")
+  // Effect {
+  //   print("w,h = \(w) \(h)")
+  // }
 
   return Canvas(size: SIMD2(w, h)) { ctx in
     ctx.compOp = .srcCopy
-  
+
     ctx.setFillStyleRgba32(0xFFFF_FFFF)
     ctx.fillText(text.value, at: BLPoint(x: 0, y: Double(font.metrics.ascent)), font: font)
   }
