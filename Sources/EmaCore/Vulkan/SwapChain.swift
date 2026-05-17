@@ -45,6 +45,7 @@ public class Swapchain: @unchecked Sendable, SwapchainProtocol {
   private var inFlightFences: [VkFence]
   private var currentFrameInFlightIndex: Int = 0
 
+  // TODO: properlyu do fif
   static let maxFramesInFlight = 1
 
   private(set) var imageFormat: VkFormat
@@ -56,11 +57,13 @@ public class Swapchain: @unchecked Sendable, SwapchainProtocol {
   ) {
     self.surface = surface
     self.device = device
+    let imageFormat = VK_FORMAT_B8G8R8A8_SRGB
+    self.imageFormat = imageFormat
+    
     let swapchain = createSwapchain(
-      for: surface.handle, on: device, size: size, capabilities: surfaceCapabilities)
+      for: surface.handle, on: device, size: size, capabilities: surfaceCapabilities, imageFormat: self.imageFormat)
     self.handle = swapchain
 
-    let imageFormat = VK_FORMAT_B8G8R8A8_UNORM
 
     self.images = Vulkan.enumerate { count, arr in
       vkGetSwapchainImagesKHR(device.handle, swapchain, count, arr)
@@ -70,7 +73,6 @@ public class Swapchain: @unchecked Sendable, SwapchainProtocol {
     }
 
     // TODO: actually selecting format
-    self.imageFormat = imageFormat
     self.size = size
 
     self.renderFinishedSemaphores = (0..<images.count).map { _ in
@@ -140,17 +142,20 @@ public class Swapchain: @unchecked Sendable, SwapchainProtocol {
   }
 
   func recreate() {
-    device.waitIdle()
-
     self.surface.reconfigure()
     let capabilities = surface.configuredInfo!.capabilities
     let size = capabilities.currentExtent.asSimd
+    if size.x == 0 || size.y == 0 {
+      return
+    }
+
+    device.waitIdle()
 
     let prev = self.handle
     let prevImageViews = imageViews
 
     self.handle = createSwapchain(
-      for: surface.handle, on: device, size: size, capabilities: capabilities, previous: prev)
+      for: surface.handle, on: device, size: size, capabilities: capabilities,imageFormat: self.imageFormat, previous: prev)
     self.size = size
 
     for view in prevImageViews {
@@ -197,7 +202,8 @@ private func createSwapchain(
   on device: GraphicsDevice,
   size: SIMD2<UInt32>,
   capabilities: VkSurfaceCapabilitiesKHR,
-  previous: VkSwapchainKHR? = nil
+  imageFormat: VkFormat,
+  previous: VkSwapchainKHR? = nil,
 ) -> VkSwapchainKHR {
 
   let pQueueFamilyIndices = CArray([
@@ -213,7 +219,7 @@ private func createSwapchain(
 
     $0.imageExtent = size.asExtent
     // TODO: check support
-    $0.imageFormat = VK_FORMAT_B8G8R8A8_UNORM
+    $0.imageFormat = imageFormat
     $0.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR
     $0.imageArrayLayers = 1  // ???wtf
     $0.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT.u32

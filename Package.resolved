@@ -1,5 +1,5 @@
 {
-  "originHash" : "1df5012854439760c00e1fd978fa82e733552fcfddc1bd84b21a058bbc8bdf2b",
+  "originHash" : "5ba401722569a3e22211b88fbda7650103da251d97657dd5bad1f6f6befcbf39",
   "pins" : [
     {
       "identity" : "swift-blend2d",
@@ -25,7 +25,7 @@
       "location" : "https://github.com/ongsalt/swinit",
       "state" : {
         "branch" : "main",
-        "revision" : "e863bc46b5f5d3eacb93401acae69b148673d2e9"
+        "revision" : "f60d94a62eca07c929cf8d20a764bd2418be7459"
       }
     }
   ],

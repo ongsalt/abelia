@@ -1,4 +1,5 @@
 @Component
+@MainActor
 public func Box(
   alignment: Prop<BoxAlignment> = .default(.center), 
   @ViewBuilder body: () -> Body = { .empty }
@@ -13,6 +14,7 @@ public func Box(
 }
 
 @Component
+@MainActor
 public func Row(
   horizontalArrangement: Prop<MainAxisAlignment> = .default(.start),
   verticalAlignment: Prop<CrossAxisAlignment> = .default(.start),
@@ -29,6 +31,7 @@ public func Row(
 }
 
 @Component
+@MainActor
 public func Column(
   verticalArrangement: Prop<MainAxisAlignment> = .default(.start),
   horizontalAlignment: Prop<CrossAxisAlignment> = .default(.start),

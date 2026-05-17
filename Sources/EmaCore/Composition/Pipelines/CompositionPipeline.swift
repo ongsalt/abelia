@@ -297,12 +297,12 @@ func createColorBlendStateCi() -> WithDeps<Box<VkPipelineColorBlendStateCreateIn
     VK_COLOR_COMPONENT_R_BIT.rawValue | VK_COLOR_COMPONENT_G_BIT.rawValue
     | VK_COLOR_COMPONENT_B_BIT.rawValue | VK_COLOR_COMPONENT_A_BIT.rawValue
   let attachment = VkPipelineColorBlendAttachmentState(
-    blendEnable: false,
-    srcColorBlendFactor: VK_BLEND_FACTOR_ZERO,
-    dstColorBlendFactor: VK_BLEND_FACTOR_ZERO,
+    blendEnable: true,
+    srcColorBlendFactor: VK_BLEND_FACTOR_SRC_ALPHA,
+    dstColorBlendFactor: VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
     colorBlendOp: VK_BLEND_OP_ADD,
-    srcAlphaBlendFactor: VK_BLEND_FACTOR_ZERO,
-    dstAlphaBlendFactor: VK_BLEND_FACTOR_ZERO,
+    srcAlphaBlendFactor: VK_BLEND_FACTOR_ONE,
+    dstAlphaBlendFactor: VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
     alphaBlendOp: VK_BLEND_OP_ADD,
     colorWriteMask: VkColorComponentFlags(colorWriteMask)
   )

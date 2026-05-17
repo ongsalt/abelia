@@ -1,23 +1,70 @@
+import EmaCore
 import Reactivity
+import Swinit
 
 // handle compositor/window
-public class Runtime: @unchecked Sendable {
-  @TaskLocal
+@MainActor
+public class Runtime {
+  @MainActor
   static var current: Runtime?
+
   public let root: RootNode
   var onFrames: [() -> Void] = []
 
-  // NonLayoutNode id
+  // let eventLoop: EventLoop
 
-  init(size: SIMD2<Float>) {
-    root = RootNode(size: size)
+  // NonLayoutNode id
+  var compositor: Compositor?
+  var window: Window?
+  var eventLoop: EventLoop!
+  var body: () -> Body
+
+  init(contents: @escaping () -> Body) {
+    // self.compositor = compositor
+    // self.eventLoop = eventLoop
+    self.body = contents
+    root = RootNode(size: .zero)
+    root.runtime = self
+  }
+
+  func initializeRendering(_ compositor: Compositor, _ window: Window) {
+    self.compositor = compositor
+    self.window = window
+
+    let prev = Runtime.current
+    Runtime.current = self
+    root.preferedWidth = Float(window.size.x)
+    root.preferedHeight = Float(window.size.y)
+    root.replaceChildren(self.body)
+    root.initializeLayer()
+    Runtime.current = prev
+    self.flushOnFrame()
+  }
+
+  func resize(to size: SIMD2<Float>) {
+    root.preferedWidth = size.x
+    root.preferedHeight = size.y
+    compositor?.resize(to: SIMD2(size))
+  }
+
+  func sendWindowEvent(_ event: WindowEvent) {
+    switch event {
+    case .resized(let size, let isFinal):
+      self.resize(to: SIMD2(Float(size.width), Float(size.height)))
+    case .closeRequested:
+      // see if there is any closeRequest handler
+      // for now...
+      eventLoop.stop()
+    default:
+      do {}
+    }
   }
 
   func runOnFrame(_ block: @escaping () -> Void) {
     onFrames.append(block)
   }
 
-  public func flushOnFrame() {
+  func flushOnFrame() {
     for fn in onFrames {
       fn()
     }
@@ -38,6 +85,7 @@ public class Runtime: @unchecked Sendable {
   }
 }
 
+@MainActor
 public func onDestroy(_ block: @escaping () -> Void) {
   guard let runtime = Runtime.current,
     let node = NonLayoutNode.current

@@ -1,8 +1,13 @@
 @preconcurrency import CVulkan
+
+import Dispatch
+
 import Pointer
+
 import Synchronization
 
 class Renderer: @unchecked Sendable {
+  unowned var compositor: Compositor?
   private let device: GraphicsDevice
   private let surface: Surface
   private let compositionPipeline: CompositionPipeline
@@ -52,11 +57,12 @@ class Renderer: @unchecked Sendable {
 
   // TODO: remove @MainActor after we are writing layerStorageNode in createBatch
   @MainActor
-  public func update(dirtyRects: [Rect], dirtyLayers: [Layer], batches: [Batch]) -> (vertex: Int, index: Int) {
-    for layer in dirtyLayers {
-      let index = self.layerStorage.index(of: layer)
-      self.layerStorage.update(layer)
-      print("update", index, layer.brush)
+  public func update(
+    dirtyRects: [Rect], dirtyLayerStorageNodes: [ObjectIdentifier: [LayerStorageNode]],
+    batches: [Batch]
+  ) -> (vertex: Int, index: Int) {
+    for (id, nodes) in dirtyLayerStorageNodes {
+      self.layerStorage.update(id: id, nodes: nodes)
     }
 
     let indexBuffer = indexBuffer.buffer.assumingMemoryBound(to: UInt32.self)
@@ -69,7 +75,6 @@ class Renderer: @unchecked Sendable {
         for layer in layers {
           let index = self.layerStorage.index(of: layer)
           let bound = layer.boundingRect
-          print(index, layer.brush, bound)
           // print(layer, bound)
           vertexBuffer[iv] = VertexData(
             layoutNodeIndex: UInt32(index), position: bound.topLeft.asTuple)
@@ -98,11 +103,59 @@ class Renderer: @unchecked Sendable {
     return (iv, ii)
   }
 
+  var hasPendingRerender: Bool = false
+  var shouldRecreateSwapchain: Bool = false
+  func markRerenderNeeded(shouldRecreateSwapchain: Bool = false) {
+    if shouldRecreateSwapchain {
+      self.shouldRecreateSwapchain = true
+    }
+    if hasPendingRerender { return }
+    hasPendingRerender = true
+    // will flip back once we wrote render command
+
+    Task {
+      let time = await ContinuousClock().measure {
+        await self.waitForNextImage()
+      }
+      // print("rendering took \(time / .milliseconds(1))ms")
+    }
+  }
+
+  private func waitForNextImage() async {
+    // wait on other thread
+    nonisolated(unsafe) let swapchain = swapchain
+    await withUnsafeContinuation { continuation in
+      DispatchQueue.global(qos: .userInteractive).async {
+        swapchain.waitForNextImage()
+        continuation.resume()
+      }
+    }
+
+    let indexCount = await MainActor.run {
+      let info = compositor!.onRendererFrame()
+      let (_, indexCount) = self.update(
+        dirtyRects: info.dirtyRects, dirtyLayerStorageNodes: info.dirtyLayerStorageNodes,
+        batches: info.batches)
+      // update and schedule rendering
+      return indexCount
+    }
+
+    let s = shouldRecreateSwapchain
+    await withUnsafeContinuation { continuation in
+      DispatchQueue.global(qos: .userInteractive).async {
+        self.render(indexCount: UInt32(indexCount), recreateSwapchain: s)
+        continuation.resume()
+      }
+    }
+
+    hasPendingRerender = false
+  }
+
   func render(indexCount: UInt32, recreateSwapchain: Bool = false) {
     if recreateSwapchain {
-        self.swapchain.recreate()
+      self.swapchain.recreate()
+      self.shouldRecreateSwapchain = false
     }
-    // TODO: swapchain.oudated
 
     // TODO: reuse this. raii?
     let commandBuffer = device.commandBuffer
@@ -115,7 +168,7 @@ class Renderer: @unchecked Sendable {
     )
     vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo).unwrap()
 
-    swapchain.waitForNextImage()
+    // then run onAnimationFrame -> get diff -> self.update() -> the rest
     let swapchainImage = swapchain.acquireNextImage(commandBuffer: commandBuffer)
 
     // TODO: update vertex buffer

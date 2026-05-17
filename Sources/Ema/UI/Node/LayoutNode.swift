@@ -16,6 +16,7 @@ import EmaCore
 
 import Reactivity
 
+@MainActor
 public class NonLayoutNode: Identifiable {
   // i really need to make this @MainActor
   nonisolated(unsafe) static var current: NonLayoutNode?
@@ -124,7 +125,9 @@ public class LayoutNode: NonLayoutNode {
   }
 
   // depends on children size
-  var childrenConstraintsMap: [ObjectIdentifier: Computed<Constraints>] { _childrenConstraintsMap.value }
+  var childrenConstraintsMap: [ObjectIdentifier: Computed<Constraints>] {
+    _childrenConstraintsMap.value
+  }
   lazy var _childrenConstraintsMap: Computed<[ObjectIdentifier: Computed<Constraints>]> = Computed {
     [unowned self] in
     calculateChildrenConstraintsMap()
@@ -152,13 +155,56 @@ public class LayoutNode: NonLayoutNode {
     var map: [ObjectIdentifier: Computed<Position<Float>>] = [:]
 
     for c in layoutChildren {
+      // lifetime tracking is hell
       map[c.id] = Computed { .zero }
     }
 
     return map
   }
-}
 
+  @Signal
+  var layer: Layer?
+  func initializeLayer() {
+    print("mounting", self.id)
+    self.layer = runtime!.compositor!.createLayer()
+    self.linkProperties()
+
+    for c in layoutChildren {
+      c.initializeLayer()
+    }
+
+    // this is bad
+    self.layoutParent?.layer?.insert(layer!)
+  }
+
+  func linkProperties() {
+    layer?.brush = .solid(.blue.with(alpha: 0.1))
+    // need to bound with LayoutNode lifetime
+    TemplateEffect { [weak self] in
+      if let self {
+        layer?.position = absolutePosition
+        print("absolutePosition = \(absolutePosition) [\(id)]")
+      }
+    }
+
+    TemplateEffect { [weak self] in
+      if let self {
+        layer?.size = size
+        print("size = \(size) [\(id)]")
+      }
+    }
+  }
+
+  func detachLayer() {
+    self.layer = nil
+
+    for c in children {
+      if let layoutNode = c as? LayoutNode {
+        layoutNode.detachLayer()
+      }
+    }
+  }
+}
 public class BoxNode: LayoutNode {
   @Signal
   /// Main axis
@@ -202,6 +248,17 @@ public class RootNode: BoxNode {
     // must not be null
     self.preferedWidth = size.x
     self.preferedHeight = size.y
+  }
+
+  override func initializeLayer() {
+    // TODO: rethink synchronization + animation frame api
+    self.layer = runtime!.compositor!.createLayer()
+    self.linkProperties()
+    for c in layoutChildren {
+      c.initializeLayer()
+    }
+    
+    runtime!.compositor!.root.insert(layer!)
   }
 }
 public enum BoxAlignment {

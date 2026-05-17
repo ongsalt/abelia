@@ -14,10 +14,13 @@ public class Layer: Identifiable {
   public package(set) var children: [Layer] = []  // it shuold be ordered set actually
 
   public func insert(_ layer: Layer, before: Layer? = nil) {
+    compositor.markDirty(layer)
     children.append(layer)
+    layer.parent = self
   }
 
   public func remove(_ layer: Layer) {
+    layer.parent = nil
     children.removeAll { $0.id == layer.id }
   }
 

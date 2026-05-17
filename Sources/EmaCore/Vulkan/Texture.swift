@@ -44,13 +44,15 @@ class Texture: Identifiable {
     self.currentQueueIndex = queueIndex
     self.textureIndex = textureIndex
 
+    let format = VK_FORMAT_R8G8B8A8_SRGB
+
     var ci = with(VkImageCreateInfo()) {
       $0.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO
       $0.imageType = VK_IMAGE_TYPE_2D
       $0.extent.depth = 1
       $0.extent.width = size.x
       $0.extent.height = size.y
-      $0.format = VK_FORMAT_R8G8B8A8_UNORM  // TODO: bgr?
+      $0.format = format  // TODO: bgr?
       $0.mipLevels = 1
       $0.arrayLayers = 1
 
@@ -93,7 +95,7 @@ class Texture: Identifiable {
 
     // create the view
     self.imageView = createImageView(
-      device: device.handle, image: image!, format: VK_FORMAT_R8G8B8A8_UNORM, swizzling: swizzling)
+      device: device.handle, image: image!, format: format, swizzling: swizzling)
   }
 
   func transition(

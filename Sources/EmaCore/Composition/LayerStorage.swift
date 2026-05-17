@@ -57,7 +57,13 @@ class LayerStorage {
   func update(_ layer: borrowing Layer) {
     let index = index(of: layer)
     buffer[Int(index)] = layer.asStorageNode
-    print(buffer[Int(index)])
+  }
+
+  func update(id: ObjectIdentifier, nodes: borrowing [LayerStorageNode]) {
+    for (offset, node) in nodes.enumerated() {
+      let index = index(of: id, passIndex: UInt(offset))
+      buffer[Int(index)] = node
+    }
   }
 
   func set(_ data: LayerStorageNode, at index: Int) {
@@ -69,8 +75,8 @@ extension Layer {
   // backdrop effect make 1 layer corresponds to more than 1 Node
   var asStorageNode: LayerStorageNode {
     with(LayerStorageNode()) {
-      $0.centerX = self.position.x - size.x / 2
-      $0.centerY = self.position.y - size.y / 2
+      $0.centerX = self.absolutePosition.x - size.x / 2
+      $0.centerY = self.absolutePosition.y - size.y / 2
       $0.shapeKind = .roundRect
       $0.shape.roundedRect = .init(
         halfWidth: size.x / 2, halfHeight: size.y / 2, cornerRadius: self.cornerRadius,
@@ -79,7 +85,7 @@ extension Layer {
       switch brush {
       case .solid(let color):
         $0.brushKind = .solid
-        $0.brush.solid.color = color.asTuple
+        $0.brush.solid.color = color.asPremultipliedTuple
       case .image(let image, let ninegrid, let crop):
         $0.brushKind = .texture
         $0.brush.texture.textureIndex = image.textureIndex
@@ -95,4 +101,4 @@ extension Layer {
   }
 }
 
-// do i need to define this in c???
+extension LayerStorageNode: @unchecked Sendable {}

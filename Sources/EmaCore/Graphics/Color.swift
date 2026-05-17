@@ -18,6 +18,27 @@ public enum Color: Sendable {
       (l, c, h, a)
     }
   }
+
+  var asPremultipliedTuple: (Float, Float, Float, Float) {
+    switch self {
+    case .rgb(let r, let g, let b, let a):
+      (r * a, g * a, b * a, a)
+    case .oklch(let l, let c, let h, let a):
+      (l, c, h, a)
+    }
+  }
+
+}
+
+extension Color {
+  public func with(alpha: Float) -> Color {
+    return switch self {
+    case .rgb(let r, let g, let b, _):
+      .rgb(r, g, b, alpha)
+    case .oklch(let l, let c, let h, _):
+      .oklch(l, c, h, alpha)
+    }
+  }
 }
 
 extension Color {

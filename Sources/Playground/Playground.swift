@@ -43,28 +43,23 @@ class Responder: Swinit.Responder, @unchecked Sendable {
             let layer = Layer(compositor: compositor)
             layer.size = Size(500, 500)
             layer.position = .init(200, 0)
-            // layer.brush = .image(image, ninegrid: .zero, crop: .zero)
-            layer.brush = .solid(.blue)
+            layer.brush = .image(image, ninegrid: .zero, crop: .zero)
             compositor.root.insert(layer)
 
             for (i, color) in [Color.red, .yellow, .green, .blue].enumerated() {
                 let layer = Layer(compositor: compositor)
-                // layer.brush = .solid(.blue)
-                layer.size = Size(100, 100)
-                layer.position.x = Float(i * 2)
-                layer.position.y = Float(i * 2)
                 layer.brush = .solid(color)
+                layer.size = Size(100, 100)
+                layer.position.x = Float(i * 10)
+                layer.position.y = Float(i * 10)
                 compositor.root.insert(layer)
             }
 
-            compositor.commit()
-
             Task { @MainActor in
                 while true {
-                    // layer.size.x += 1
-                    // layer.size.x += 0.5
-                    // compositor.commit()
-                    try await Task.sleep(for: .milliseconds(1))
+                    layer.position.x += 1
+                    layer.size.x += 0.5
+                    await Task.yield()
                 }
             }
         }
@@ -78,7 +73,7 @@ class Responder: Swinit.Responder, @unchecked Sendable {
         case .closeRequested:
             self.window = nil
             eventLoop.stop()
-        case .resized(let size):
+        case .resized(let size, _):
             // print("resized to", size)
             let w = size.width
             let h = size.height
@@ -94,7 +89,7 @@ class Responder: Swinit.Responder, @unchecked Sendable {
         }
     }
 }
-@main
+// @main
 struct Playground {
     // static func main() {
     //     @Signal
