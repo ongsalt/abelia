@@ -113,7 +113,10 @@ public class LayoutNode: NonLayoutNode {
   }
 
   func calculateSize() -> Size<Float> {
-    return SIMD2(preferedWidth ?? 0, preferedHeight ?? 0)
+    let width = preferedWidth ?? (layoutChildren.reduce(0) { max($0, $1.size.x) })
+    let height = preferedHeight ?? (layoutChildren.reduce(0) { max($0, $1.size.y) })
+
+    return SIMD2(width, height)
   }
 
   // depends on parent decision
@@ -256,7 +259,7 @@ public class RootNode: BoxNode {
     for c in layoutChildren {
       c.initializeLayer()
     }
-    
+
     runtime!.compositor!.root.insert(layer!)
   }
 }

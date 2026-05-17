@@ -10,6 +10,7 @@ public func Canvas(size: SIMD2<Float>, draw: @escaping (borrowing BLContext) -> 
     let img = BLImage(width: Int(size.x), height: Int(size.y), format: .prgb32)
     let ctx = BLContext(image: img)!
     // implicitly track anything read in this?
+    // ctx.fillAll()
     draw(ctx)
     ctx.end()
     return img
