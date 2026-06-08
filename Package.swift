@@ -2,24 +2,26 @@
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import CompilerPluginSupport
-
 import Foundation
-
 import PackageDescription
 
 var vulkanIncludePath: [CSetting] = [
     .define("VK_USE_PLATFORM_WAYLAND_KHR", .when(platforms: [.linux])),
     .define("VK_USE_PLATFORM_WIN32_KHR", .when(platforms: [.windows])),
 ]
+
 if let vulkanSDK = ProcessInfo.processInfo.environment["VULKAN_SDK"] {
     vulkanIncludePath.append(.unsafeFlags(["-I\(vulkanSDK)/Include"]))
 }
+
 let package = Package(
     name: "graphics-101",
     dependencies: [
-        // .package(url: "https://github.com/apple/swift-numerics", from: "1.0.0"),
         .package(url: "https://github.com/swiftlang/swift-syntax", from: "602.0.0"),
         .package(url: "https://github.com/ongsalt/swinit", branch: "main"),
+        .package(
+            url: "https://github.com/ongsalt/swift-vulkan",
+            revision: "bc9439693d36bd15d57dd0241a9cb0c61d03f022"),
         .package(url: "https://github.com/LuizZak/swift-blend2d", branch: "master"),
 
     ],
@@ -30,8 +32,16 @@ let package = Package(
         .target(name: "Pointer"),
 
         .target(
-            name: "CVulkan",
+            name: "CShim",
             cSettings: vulkanIncludePath,
+        ),
+
+        .executableTarget(
+            name: "TestTarget",
+            dependencies: [
+                "CShim",
+                .product(name: "Vulkan", package: "swift-vulkan")
+            ]
         ),
 
         .target(name: "CEmaPlatforms"),
@@ -42,7 +52,7 @@ let package = Package(
                 "Reactivity",
                 "Pointer",
                 "DSLMacro",
-                "CVulkan",
+                "CShim",
                 "CEmaPlatforms",
                 .product(name: "SwiftBlend2D", package: "swift-blend2d"),
             ],

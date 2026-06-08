@@ -1,6 +1,15 @@
 {
-  "originHash" : "5ba401722569a3e22211b88fbda7650103da251d97657dd5bad1f6f6befcbf39",
+  "originHash" : "a5b3755dae3b8c44178789f61b49dd44cdcbaf0213f313b076f7a42cdaf0a97b",
   "pins" : [
+    {
+      "identity" : "swift-argument-parser",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-argument-parser",
+      "state" : {
+        "revision" : "6a52f3251125d74daf04fcbd5e6f08a75d074382",
+        "version" : "1.8.2"
+      }
+    },
     {
       "identity" : "swift-blend2d",
       "kind" : "remoteSourceControl",
@@ -20,12 +29,38 @@
       }
     },
     {
+      "identity" : "swift-vulkan",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/ongsalt/swift-vulkan",
+      "state" : {
+        "revision" : "bc9439693d36bd15d57dd0241a9cb0c61d03f022"
+      }
+    },
+    {
+      "identity" : "swiftwayland",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/ongsalt/SwiftWayland",
+      "state" : {
+        "branch" : "master",
+        "revision" : "c43d1af75059b26330686a73f5cc542dc46b9659"
+      }
+    },
+    {
       "identity" : "swinit",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/ongsalt/swinit",
       "state" : {
         "branch" : "main",
-        "revision" : "f60d94a62eca07c929cf8d20a764bd2418be7459"
+        "revision" : "8452d5b7eb6be377f35055e15103ab64b81f3de8"
+      }
+    },
+    {
+      "identity" : "xmlcoder",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/CoreOffice/XMLCoder.git",
+      "state" : {
+        "revision" : "42f62383dbcd074440cb1f6a750b9c02df9e7325",
+        "version" : "0.18.2"
       }
     }
   ],

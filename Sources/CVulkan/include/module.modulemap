@@ -1,3 +1,0 @@
-module CVulkan {
-    header "CVulkan.h"
-}

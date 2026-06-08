@@ -28,6 +28,26 @@
             "target": "Playground",
             "configuration": "release",
             "preLaunchTask": "swift: Build Release Playground"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:graphics-101}",
+            "name": "Debug TestTarget",
+            "target": "TestTarget",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug TestTarget"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:graphics-101}",
+            "name": "Release TestTarget",
+            "target": "TestTarget",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release TestTarget"
         }
     ]
 }
