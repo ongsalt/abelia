@@ -21,7 +21,7 @@ let package = Package(
         .package(url: "https://github.com/ongsalt/swinit", branch: "main"),
         .package(
             url: "https://github.com/ongsalt/swift-vulkan",
-            revision: "bc9439693d36bd15d57dd0241a9cb0c61d03f022"),
+            revision: "11d2c5e746de93bb89a10f41ded34520c0805ac1"),
         .package(url: "https://github.com/LuizZak/swift-blend2d", branch: "master"),
 
     ],
@@ -34,14 +34,6 @@ let package = Package(
         .target(
             name: "CShim",
             cSettings: vulkanIncludePath,
-        ),
-
-        .executableTarget(
-            name: "TestTarget",
-            dependencies: [
-                "CShim",
-                .product(name: "Vulkan", package: "swift-vulkan")
-            ]
         ),
 
         .target(name: "CEmaPlatforms"),
@@ -98,25 +90,28 @@ let package = Package(
                 "EmaCore",
             ]
         ),
-        // .plugin(
-        //     name: "ShaderCompilation",
-        //     capability: .buildTool(),
-        // ),
 
-        // .target(
-        //     name: "Composition",
-        //     dependencies: [
-        //         .product(name: "Numerics", package: "swift-numerics"),
-        //         "CVulkan",
-        //         // "FreeType",
-        //         .target(name: "CPango", condition: .when(platforms: [.linux])),
-        //         "Pointer",
-        //     ],
-        //     resources: [
-        //         .copy("Resources/Compiled")
-        //     ],
-        //     cSettings: vulkanIncludePath,
-        // ),
+        .target(
+            name: "Abelia",
+            dependencies: [
+                "CShim",
+                .product(name: "Vulkan", package: "swift-vulkan"),
+            ],
+            exclude: [
+                "Resources/Shaders/"
+            ],
+            resources: [
+                .copy("Generated/Resources")
+            ],
+        ),
+
+        .executableTarget(
+            name: "TestTarget",
+            dependencies: [
+                "Abelia",
+                .product(name: "Swinit", package: "swinit"),
+            ]
+        ),
 
         .executableTarget(
             name: "Playground",
