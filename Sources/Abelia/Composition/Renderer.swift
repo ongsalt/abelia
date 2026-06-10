@@ -91,17 +91,36 @@ public final class Renderer {
         let cmd = res.commandBuffer
 
         print(self.width, self.height)
+        let imageAcquiredSemaphore = try device.createSemaphore()
 
         let imageIndex = Int(
             try device.acquireNextImage2KHR(
                 .init(
                     swapchain: swapchain, timeout: UInt64.max,
-                    semaphore: res.renderCompletedSemaphore, deviceMask: 1)))
+                    semaphore: imageAcquiredSemaphore, deviceMask: 1)))
 
         let image = swapchainImages[imageIndex]
         let imageView = swapchainImageViews[imageIndex]
 
         try cmd.begin()
+
+        cmd.pipelineBarrier2(
+            .init(imageMemoryBarriers: [
+                .init(
+                    srcStageMask: .topOfPipe,
+                    srcAccessMask: .none,
+                    dstStageMask: .colorAttachmentOutput,
+                    dstAccessMask: [.colorAttachmentWrite, .colorAttachmentRead],
+                    oldLayout: .undefined,
+                    newLayout: .colorAttachmentOptimal,
+                    srcQueueFamilyIndex: 0,
+                    dstQueueFamilyIndex: 0,
+                    image: image,
+                    subresourceRange: .init(
+                        aspectMask: .color, baseMipLevel: 0, levelCount: 1, baseArrayLayer: 0,
+                        layerCount: 1),
+                )
+            ]))
 
         cmd.beginRendering(
             .init(
@@ -112,7 +131,7 @@ public final class Renderer {
                     .init(
                         imageView: imageView, imageLayout: .colorAttachmentOptimal,
                         resolveMode: .none, resolveImageView: nil,
-                        resolveImageLayout: .colorAttachmentOptimal, loadOp: .clear,
+                        resolveImageLayout: .undefined, loadOp: .clear,
                         storeOp: .store,
                         clearValue: .init(color: .init(float32: (0.0, 0.0, 0.0, 0.1))))
                 ]))
@@ -134,18 +153,37 @@ public final class Renderer {
         cmd.draw(vertexCount: 3, instanceCount: 1, firstVertex: 0, firstInstance: 0)
         cmd.endRendering()
 
+        cmd.pipelineBarrier2(
+            .init(imageMemoryBarriers: [
+                .init(
+                    srcStageMask: .colorAttachmentOutput,
+                    srcAccessMask: [.colorAttachmentWrite, .colorAttachmentRead],
+                    dstStageMask: .bottomOfPipe,
+                    dstAccessMask: .none,
+                    oldLayout: .colorAttachmentOptimal,
+                    newLayout: .presentSrcKHR,
+                    srcQueueFamilyIndex: 0,
+                    dstQueueFamilyIndex: 0,
+                    image: image,
+                    subresourceRange: .init(
+                        aspectMask: .color, baseMipLevel: 0, levelCount: 1, baseArrayLayer: 0,
+                        layerCount: 1),
+                )
+            ]))
+
         try cmd.end()
 
         try context.graphicsQueue.submit2(submits: [
             .init(
                 waitSemaphoreInfos: [
-                    // should wait for imageAvailable
-                    // .init(
-                    //     semaphore: res.renderCompletedSemaphore, value: 0,
-                    //     stageMask: .colorAttachmentOutput, deviceIndex: 0)
+                    .init(
+                        semaphore: imageAcquiredSemaphore, value: 0,
+                        stageMask: .colorAttachmentOutput, deviceIndex: 0)
                 ],
                 commandBufferInfos: [.init(commandBuffer: cmd, deviceMask: 0)],
-                signalSemaphoreInfos: []
+                signalSemaphoreInfos: [
+                    .init(semaphore: res.renderCompletedSemaphore, value: 0, stageMask: .colorAttachmentOutput, deviceIndex: 0)
+                ]
             )
         ])
 
@@ -157,7 +195,6 @@ public final class Renderer {
 
     }
 }
-
 final class Pipelines {
     let compositionPipeline: Pipeline
 
@@ -246,7 +283,6 @@ final class Pipelines {
         self.compositionPipeline = pipelines[0]
     }
 }
-
 struct FrameResource {
     let index: Int
     let commandPool: CommandPool
@@ -254,7 +290,6 @@ struct FrameResource {
     let renderCompletedSemaphore: Semaphore
     let everythingCompletedFence: Fence
 }
-
 extension FrameResource {
     init(index: Int, context: borrowing SurfaceContext) throws(Vulkan.Result) {
         let pool = try context.device.createCommandPool(
