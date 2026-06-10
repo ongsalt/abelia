@@ -1,4 +1,5 @@
 import Foundation
+
 import Vulkan
 
 extension Optional {
@@ -9,7 +10,6 @@ extension Optional {
         throw error()
     }
 }
-
 extension Swift.Result {
     func mapFailure<E>(_ map: (Failure) -> E) -> Swift.Result<Success, E> {
         switch self {
@@ -26,7 +26,6 @@ extension Swift.Result {
         }
     }
 }
-
 extension Vulkan.Extent2D: @unchecked @retroactive Sendable {}
 extension Vulkan.Extent2D {
     static let zero = Self(width: 0, height: 0)
@@ -38,18 +37,15 @@ extension Vulkan.Extent2D {
         )
     }
 }
-
 extension Vulkan.Offset2D: @unchecked @retroactive Sendable {}
 extension Vulkan.Offset2D {
     static let zero = Self(x: 0, y: 0)
 }
-
 extension Comparable {
     func clamped(from lowerBound: Self, to upperBound: Self) -> Self {
         max(min(upperBound, self), lowerBound)
     }
 }
-
 extension Vulkan.Device {
     func createShaderModule(filename: String) -> ShaderModule? {
         let url = Bundle.module.url(
@@ -69,8 +65,35 @@ extension Vulkan.Device {
         }
     }
 }
-
 extension Vulkan.Rect2D: @unchecked @retroactive Sendable {}
 extension Vulkan.Rect2D {
     static let zero = Rect2D(offset: .zero, extent: .zero)
+}
+struct SequenceChain<First: Sequence, Second: Sequence>: Sequence
+where First.Element == Second.Element {
+    @usableFromInline let first: First
+    @usableFromInline let second: Second
+
+    @inlinable init(_ first: First, _ second: Second) {
+        self.first = first
+        self.second = second
+    }
+
+    public struct Iterator: IteratorProtocol {
+        @usableFromInline var first: First.Iterator
+        @usableFromInline var second: Second.Iterator
+
+        @usableFromInline init(_ first: First.Iterator, _ second: Second.Iterator) {
+            self.first = first
+            self.second = second
+        }
+
+        @inlinable public mutating func next() -> First.Element? {
+            first.next() ?? second.next()
+        }
+    }
+
+    @inlinable public func makeIterator() -> Iterator {
+        Iterator(first.makeIterator(), second.makeIterator())
+    }
 }

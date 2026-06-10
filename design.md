@@ -1,52 +1,56 @@
-## Z index
-- bigger children index = higher z index
+# Graphics Layer
+
+## `Primitive`
+map one to one so shader input. (conceptually, actually it gonna be in storage buffer). It contains
+- transformation matrix
+- shape `Shape` (sdf based): only rounded rect for now 
+- brush: solid, 1dgradient, texture, backdrop (do not exist at shader level)
+- border: brush, style?, width
+- shadow? (gonna produce another quad?)
+- merge params: smoothFactor, [lenght at head, combinationMode elsewhere]
+
+## ShapeProtocol
+is a `Shape` OR a merged `Shape` 
 
 
-## backing store
-- normal layer wont have backing store
-- composite layer have backing store(s)
-    - 1 normally
-    - 2 if it contains an effect layer even if we need to do 100 pass, we can just keep reusing these 2 textures alternately
-- sizing? 
+## `Layer` 
+control composition + render ordering, merging multiple layer into 1 draw call. each layer contains 1 backing `Primitive`. This `Primitive` wont be rasterized in its own layer when `shouldRasterize` is true 
 
+Clipping is at `Layer` level. allowing
+- sdf shape clip
+- 
 
-# TODO
-- BRUSH
-- effect shader
-- fix affine position calculation
-- sampling rasterizationRoot
-- pixel snapping
+# UI Layer
+basically solidjs with macro generaing an overload to allow reactive binding
 
+```swift
+@Component
+func Text(_ text: Prop<some StringProtocol>) -> View {
+    Effect {
+        print(text.value)
+    }
+}
+```
 
-## Optimization 
-- put some vertex data into uniform buffer
-    - cuz its tree, compose say we can do gap buffer
-    - compositorPrivate: skipping fields where `value == .identity`
-    - 
-- scrollNode
-- build damage rect
-- schedule phase 0 node simulteneously
-<!-- - optmize root grouping -->
+will generate
 
+```swift
+func Text(_ text: @autoclosure @escaping () -> some StringProtocol) -> View {
+    Text(Prop(getter: text))
+}
+```
 
-# Render loop
-double buffering and vsync is enough
+- TODO: detect `Module::Prop` and `Module.Prop`
 
-`DirtyFlags: dirty, mutated while rendering`
+component boundary do not exist as we cant really transform function content. So every lifecycle stuff need to be tied to parent element scope.
 
-- EVERYTHING IS ON MAIN THREAD (except blocking method)
-- mark dirty
-- there must only be one instance of this
-- while dirty || hasAnimationFrame 
-    - (await) acquire frame
-    - animation frame callback (this might mutate the tree but its fine)
-    - if dirty (after updated)
-        - flush tree state -> record render command
-- back to idle
+# Planning
+- basic compositing + effect layer scheduling
+- 9 grid
+- clip
+    - simple rect
+    - sdf shape
+    - CALayer-like mask
 
-# Styling
-- modifier (like compose)
-- builder method
-    - `&mut self` -> quite awkward
-    - wrap but with `func Self.margin() -> Margin<Self>`
-- wrap it like flutter
+- remove blend2d
+- use `libharfbuzz-gpu`
