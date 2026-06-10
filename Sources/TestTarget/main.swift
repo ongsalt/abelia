@@ -1,30 +1,41 @@
 import Abelia
-import SwiftWayland
 
 runEventLoop { eventLoop in
     let context = try! GraphicsContext(applicationName: "yomum", version: 12)
-    let window = eventLoop.createWindow(attributes: .init(title: "hihi", size: [600, 600]))
-    eventLoop.connection.roundtrip()
+    var window: _? = eventLoop.createWindow(attributes: .init(title: "hihi", size: [600, 600]))
 
-    window
-
-    let surface = try! context.createWaylandSurface(display: window.display.raw, surface: window.surface.raw)
+    #if os(Linux)
+        let surface = try! context.createWaylandSurface(
+            display: window!.display.raw, surface: window!.surface.raw)
+    #elseif os(Windows)
+        let surface = try! context.createWin32Surface(
+            hinstance: window!.hInstance, hwnd: window!.handle)
+    #endif
     try! context.initDevice(compatibleWith: surface)
 
-    let renderer = try! Renderer(context: context.surfaceContexts[0])
-
-    let root = Layer(offset: [0, 0], size: [800, 600]) {
-        Layer(offset: [10, 10], size: [100, 50])
-        Layer(offset: [20, 20], size: [200, 100]) {
-            Layer(size: [50, 50])
-        }
+    do {
+        let renderer = try Renderer(context: context.surfaceContexts[0])
+        try renderer.render()
+    } catch {
+        print(error)
     }
 
-    // print(sortLayer(root))
-
-    try! renderer.render()
-
     return { id, event in
-        print(event)
+        if case .closeRequested = event {
+            window = nil
+            eventLoop.stop()
+        }
+    }
+}
+
+class Leak<T> {
+    let value: T
+    init(_ value: T) {
+        self.value = value
+        Unmanaged.passRetained(self)
+    }    
+
+    deinit {
+        print("wtf \(value)")
     }
 }

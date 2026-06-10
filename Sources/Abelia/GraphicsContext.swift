@@ -1,5 +1,10 @@
 import CShim
+
 import Vulkan
+
+#if os(Windows)
+    import WinSDK
+#endif
 
 public class GraphicsContext: @unchecked Sendable {
     let vulkanEntry: Entry
@@ -29,7 +34,9 @@ public class GraphicsContext: @unchecked Sendable {
                         // "VK_KHR_external_fence_capabilities",
                     ]
                     #if os(Windows)
-                        extensions.append("VK_KHR_win32_surface")
+                        extensions += [
+                            "VK_KHR_win32_surface"
+                        ]
                     #endif
                     #if os(Linux)
                         extensions.append("VK_KHR_wayland_surface")
@@ -41,18 +48,21 @@ public class GraphicsContext: @unchecked Sendable {
         )
     }
 
-    public func createWaylandSurface(display: OpaquePointer, surface: OpaquePointer) throws(Vulkan
-        .Result)
-        -> SurfaceKHR
-    {
-        try vulkanInstance.createWaylandSurfaceKHR(.init(display: display, surface: surface))
-    }
+    #if os(Linux)
+        public func createWaylandSurface(display: OpaquePointer, surface: OpaquePointer)
+            throws(Vulkan.Result) -> SurfaceKHR
+        {
+            try vulkanInstance.createWaylandSurfaceKHR(.init(display: display, surface: surface))
+        }
+    #endif
 
-    // func createWin32Surface(display: OpaquePointer, surface: OpaquePointer) throws(Vulkan.Result)
-    //     -> SurfaceKHR
-    // {
-    //     try vulkanInstance.createWin32Surface(.init(display: display, surface: surface))
-    // }
+    #if os(Windows)
+        public func createWin32Surface(hinstance: HINSTANCE, hwnd: HWND)
+            throws(Vulkan.Result) -> SurfaceKHR
+        {
+            try vulkanInstance.createWin32SurfaceKHR(.init(hinstance: hinstance, hwnd: hwnd))
+        }
+    #endif
 
     public func initDevice(compatibleWith surface: SurfaceKHR)
         throws(DeviceInitializationError)
@@ -61,11 +71,9 @@ public class GraphicsContext: @unchecked Sendable {
     }
 
 }
-
 public enum DeviceInitializationError: Error {
     case noUsableDevice
 }
-
 public class SurfaceContext: @unchecked Sendable {
     let surface: SurfaceKHR
     let physicalDevice: PhysicalDevice
@@ -86,9 +94,20 @@ public class SurfaceContext: @unchecked Sendable {
                 DeviceCreateInfo(
                     queueCreateInfos: Set([graphicsFamilyIndex, presentationFamilyIndex])
                         .map { .init(queueFamilyIndex: $0, queuePriorities: [1.0]) },
-                    enabledExtensionNames: [
-                        "VK_KHR_swapchain"
-                    ],
+                    enabledExtensionNames: {
+                        var names = [
+                            "VK_KHR_swapchain"
+                        ]
+
+                        #if os(Windows)
+                            names += [
+                                "VK_KHR_external_memory",
+                                "VK_KHR_external_memory_win32",
+                            ]
+                        #endif
+
+                        return names
+                    }(),
                 )
                 .push(PhysicalDeviceBufferDeviceAddressFeatures(bufferDeviceAddress: true))
                 .push(
@@ -109,9 +128,9 @@ public class SurfaceContext: @unchecked Sendable {
         vkFunctions.vkGetInstanceProcAddr = context.vulkanEntry.loader.vkGetInstanceProcAddr
         withUnsafePointer(to: vkFunctions) { vkFunctions in
             var vmaCi = VmaAllocatorCreateInfo(
-                flags: VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT.rawValue
-                    | VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT.rawValue
-                    | VMA_ALLOCATOR_CREATE_EXT_MEMORY_PRIORITY_BIT.rawValue,
+                flags: UInt32(VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT.rawValue)
+                    | UInt32(VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT.rawValue)
+                    | UInt32(VMA_ALLOCATOR_CREATE_EXT_MEMORY_PRIORITY_BIT.rawValue),
                 physicalDevice: physicalDevice.handle!,
                 device: device.handle!,
                 preferredLargeHeapBlockSize: 0,
@@ -124,7 +143,7 @@ public class SurfaceContext: @unchecked Sendable {
                 pTypeExternalMemoryHandleTypes: nil
             )
             #if os(Windows)
-                vmaCi.flags |= VMA_ALLOCATOR_CREATE_KHR_EXTERNAL_MEMORY_WIN32_BIT.u32
+                vmaCi.flags |= UInt32(VMA_ALLOCATOR_CREATE_KHR_EXTERNAL_MEMORY_WIN32_BIT.rawValue)
             #endif
             vmaCreateAllocator(&vmaCi, &allocator)
         }
