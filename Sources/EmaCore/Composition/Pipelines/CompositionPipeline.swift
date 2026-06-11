@@ -253,7 +253,7 @@ func createInputAssemblyStateCi() -> Box<VkPipelineInputAssemblyStateCreateInfo>
     pNext: nil,
     flags: 0,
     topology: VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-    primitiveRestartEnable: false
+    renderNodeRestartEnable: false
   )
 
   return Box(ci)

@@ -1,5 +1,5 @@
 {
-  "originHash" : "3f6f1b96490badfcd8d3cbc4a034c360a569617ebd06112daf13146e53307693",
+  "originHash" : "0fd1f8b6aff42ee9c3e31eee1a2f14bb5e258ab809f6bb99d3c07f67aaca8d61",
   "pins" : [
     {
       "identity" : "swift-argument-parser",
@@ -33,7 +33,7 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/ongsalt/swift-vulkan",
       "state" : {
-        "revision" : "11d2c5e746de93bb89a10f41ded34520c0805ac1"
+        "revision" : "03b43f505c73e3e710e567e27f38b6f2540ad90c"
       }
     },
     {
@@ -51,7 +51,7 @@
       "location" : "https://github.com/ongsalt/swinit",
       "state" : {
         "branch" : "main",
-        "revision" : "8452d5b7eb6be377f35055e15103ab64b81f3de8"
+        "revision" : "0441800ad52d963b9958e5336636e914cd2547ba"
       }
     },
     {

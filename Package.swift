@@ -21,7 +21,7 @@ let package = Package(
         .package(url: "https://github.com/ongsalt/swinit", branch: "main"),
         .package(
             url: "https://github.com/ongsalt/swift-vulkan",
-            revision: "11d2c5e746de93bb89a10f41ded34520c0805ac1"),
+            revision: "03b43f505c73e3e710e567e27f38b6f2540ad90c"),
         .package(url: "https://github.com/LuizZak/swift-blend2d", branch: "master"),
 
     ],
@@ -33,7 +33,10 @@ let package = Package(
 
         .target(
             name: "CShim",
-            cSettings: vulkanIncludePath,
+            // dependencies: [
+            //     .product(name: "Vulkan", package: "swift-vulkan"),
+            // ]
+            cSettings: vulkanIncludePath
         ),
 
         .target(name: "CEmaPlatforms"),
@@ -55,7 +58,6 @@ let package = Package(
                 .copy("Generated/Resources")
                 // .ignore("Resources/Shaders"),
             ],
-            cSettings: vulkanIncludePath,
         ),
 
         .target(
@@ -98,7 +100,7 @@ let package = Package(
                 .product(name: "Vulkan", package: "swift-vulkan"),
             ],
             exclude: [
-                "Resources/Shaders/"
+                "Resources/"
             ],
             resources: [
                 .copy("Generated/Resources")

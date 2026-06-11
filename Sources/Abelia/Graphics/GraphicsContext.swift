@@ -11,8 +11,29 @@ public class GraphicsContext: @unchecked Sendable {
     public let vulkanInstance: Instance
     public private(set) var surfaceContexts: [SurfaceContext] = []
 
+    #if DEBUG
+        var debugMessenger: DebugUtilsMessengerEXT
+    #endif  // DEBUG
+
     public init(applicationName: String? = nil, version: UInt32 = 1) throws {
         self.vulkanEntry = try Entry()
+
+        var layers: [String] = []
+        var extensions: [String] = [
+            "VK_KHR_surface"
+        ]
+
+        #if DEBUG
+            layers.append("VK_LAYER_KHRONOS_validation")
+            extensions.append("VK_EXT_debug_utils")
+        #endif
+
+        #if os(Windows)
+            extensions.append("VK_KHR_win32_surface")
+        #elseif os(Linux)
+            extensions.append("VK_KHR_wayland_surface")
+        #endif
+
         self.vulkanInstance = try self.vulkanEntry.createInstance(
             .init(
                 applicationInfo: .init(
@@ -21,31 +42,27 @@ public class GraphicsContext: @unchecked Sendable {
                     engineVersion: 1,
                     apiVersion: .init(major: 1, minor: 3, patch: 0)
                 ),
-                enabledLayerNames: {
-                    var layers: [String] = []
-                    #if DEBUG
-                        layers.append("VK_LAYER_KHRONOS_validation")
-                    #endif
-                    return layers
-                }(),
-                enabledExtensionNames: {
-                    var extensions = [
-                        "VK_KHR_surface"
-                        // "VK_KHR_external_fence_capabilities",
-                    ]
-                    #if os(Windows)
-                        extensions += [
-                            "VK_KHR_win32_surface"
-                        ]
-                    #endif
-                    #if os(Linux)
-                        extensions.append("VK_KHR_wayland_surface")
-                    #endif  // os(Linux)
-
-                    return extensions
-                }()
+                enabledLayerNames: layers,
+                enabledExtensionNames: extensions
             )
         )
+
+        #if DEBUG
+            debugMessenger = try vulkanInstance.createDebugUtilsMessengerEXT(
+                .init(
+                    flags: [],
+                    messageSeverity: [.warning, .error],
+                    messageType: [.general, .performance, .validation],
+                    pfnUserCallback: { severity, type, callbackData, userData in
+                        print("[vulkan] \(String(cString: callbackData!.pointee.pMessage))")
+                        print()
+                        return 0
+                    },
+                    userData: nil
+                )
+            )
+        #endif
+
     }
 
     #if os(Linux)
