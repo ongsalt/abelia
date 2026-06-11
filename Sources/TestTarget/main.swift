@@ -1,30 +1,27 @@
 import Abelia
 
 runEventLoop { eventLoop in
-    let context = try! GraphicsContext(applicationName: "yomum", version: 12)
+    let context = try GraphicsContext(applicationName: "yomum", version: 12)
     var window: _? = eventLoop.createWindow(attributes: .init(title: "hihi", size: [600, 600]))
 
     #if os(Linux)
-        let surface = try! context.createWaylandSurface(
+        let surface = try context.createWaylandSurface(
             display: window!.display.raw, surface: window!.surface.raw)
     #elseif os(Windows)
-        let surface = try! context.createWin32Surface(
+        let surface = try context.createWin32Surface(
             hinstance: window!.hInstance, hwnd: window!.handle)
     #endif
-    try! context.initDevice(compatibleWith: surface)
+    try context.initDevice(compatibleWith: surface)
 
     let node = RenderNode()
-    node.offset = [20, 20]
+    node.offset = [200, 20]
     node.brush = .solid(.red)
     node.shape = Shape.rect(width: 40, height: 40, cornerRadius: 12)
+    let nodes = [node]
 
-    do {
-        let renderer = try Renderer(context: context.surfaceContexts[0])
-        renderer.updateNodes([node])
-        try renderer.render()
-    } catch {
-        print(error)
-    }
+    let renderer = try Renderer(context: context.surfaceContexts[0])
+    renderer.updateNodes(nodes)
+    try renderer.render(nodeCount: UInt32(nodes.count))
 
     // // confirm generic specialization
     // let merged = Shape.rect(width: 100, height: 100)
@@ -43,22 +40,20 @@ runEventLoop { eventLoop in
     // }
 
     return { id, event in
-        if case .closeRequested = event {
+        switch event {
+        case .resized(let size, let isFinal):
+            // if isFinal {
+                try renderer.resize(w: size.width, h: size.height)
+                renderer.updateNodes(nodes)
+                try renderer.render(nodeCount: UInt32(nodes.count))
+            // }
+
+        case .closeRequested:
             window = nil
             eventLoop.stop()
-        } else {
-            // print(event)
+        default:
+            do {}
+        // print(event)
         }
-    }
-}
-class Leak<T> {
-    let value: T
-    init(_ value: T) {
-        self.value = value
-        Unmanaged.passRetained(self)
-    }
-
-    deinit {
-        print("wtf \(value)")
     }
 }

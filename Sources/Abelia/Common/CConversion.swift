@@ -5,7 +5,7 @@ extension RenderNode {
     // zero it
     data = CShim.RenderNode()
 
-    data.affine = affine.c
+    data.affine = self.nodeTotalAffine.c
     let instructions = Array(shape.drawInstructions)
     if instructions.count <= 1 {
       guard case .push(let metadata) = instructions[0] else {

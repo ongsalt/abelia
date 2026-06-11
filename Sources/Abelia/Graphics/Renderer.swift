@@ -7,12 +7,21 @@ public final class Renderer {
     let imageFormat: Format
     let imageColorSpace: ColorSpaceKHR
     let pipelines: Pipelines
-    let swapchain: SwapchainKHR
+    var swapchain: SwapchainKHR
 
     var swapchainImages: [Image]
     var swapchainImageViews: [ImageView]
 
     var frameResources: [FrameResource] = []
+    var currentFrameResource: FrameResource {
+        frameResources[currentFrameInFlightIndex]
+    }
+    var lastFrameResource: FrameResource {
+        frameResources[(currentFrameInFlightIndex + Self.maxFrameInFlightCount - 1) % Self.maxFrameInFlightCount]
+    }
+
+    let releaseQueue: ReleaseQueue = ReleaseQueue()
+
     static let maxFrameInFlightCount = 2
     private var currentFrameInFlightIndex: Int = 0
 
@@ -30,7 +39,7 @@ public final class Renderer {
         let caps = try physicalDevice.getSurfaceCapabilitiesKHR(surface: surface)
         let formats = try physicalDevice.getSurfaceFormatsKHR(surface: surface)
 
-        let imageFormat: Format = .b8g8r8a8Srgb
+        let imageFormat: Format = .b8g8r8a8Unorm
         self.imageFormat = imageFormat
         self.imageColorSpace = .srgbNonlinear
 
@@ -38,43 +47,15 @@ public final class Renderer {
             if caps.currentExtent.width == UInt32.max {
                 Extent2D(width: initialSize.x, height: initialSize.y)
             } else {
-                caps.currentExtent.clamped(from: caps.minImageExtent, to: caps.maxImageExtent)
+                caps.currentExtent
             }
 
-        self.swapchain = try device.createSwapchainKHR(
-            .init(
-                surface: surface, minImageCount: caps.minImageCount, imageFormat: imageFormat,
-                imageColorSpace: imageColorSpace,
-                imageExtent: extent,
-                imageArrayLayers: 1,
-                imageUsage: .colorAttachment, imageSharingMode: .exclusive,
-                preTransform: caps.currentTransform,
-                compositeAlpha: {
-                    #if os(Linux)  // wayland
-                        .preMultiplied
-                    #else
-                        .opaque
-                    #endif
-                }(),
-                presentMode: .fifo, clipped: true
-            )
-        )
-
-        self.swapchainImages = try swapchain.getImagesKHR()
-        do {
-            self.swapchainImageViews = try self.swapchainImages.map { image in
-                try device.createImageView(
-                    .init(
-                        image: image, viewType: .type2d, format: imageFormat,
-                        components: .init(r: .r, g: .g, b: .b, a: .a),
-                        subresourceRange: .init(
-                            aspectMask: .color, baseMipLevel: 0, levelCount: 1,
-                            baseArrayLayer: 0, layerCount: 1
-                        )))
-            }
-        } catch {
-            throw error as! Vulkan.Result
-        }
+        let (swapchain, images, views) = try Self.recreateSwapchain(
+            device: device, surface: surface, caps: caps, imageFormat: imageFormat,
+            colorspace: imageColorSpace, extent: extent)
+        self.swapchain = swapchain
+        self.swapchainImages = images
+        self.swapchainImageViews = views
 
         self.width = extent.width
         self.height = extent.height
@@ -89,21 +70,51 @@ public final class Renderer {
 
     // temporary api
     public func updateNodes(_ nodes: [RenderNode]) {
-        let res = frameResources[currentFrameInFlightIndex]
         for node in nodes {
-            res.renderNodeStorage.update(
-                node: node, shapeGroupStorage: res.shapeGroupStorage)
+            currentFrameResource.renderNodeStorage.update(
+                node: node, shapeGroupStorage: currentFrameResource.shapeGroupStorage)
         }
-        res.drawListStorage.write(nodes.map(\.id), renderNodeStorage: res.renderNodeStorage)
+        currentFrameResource.drawListStorage.write(
+            nodes.map(\.id), renderNodeStorage: currentFrameResource.renderNodeStorage)
     }
 
-    // public func updateFrameData(updator: (RenderNodeStorage) -> Void) {
-    //     let frameData = frameResources[currentFrameInFlightIndex]
-    //     updator(frameData.renderNodeStorage)
-    // }
+    public func isWaitingForImage() throws -> Bool {
+        do {
+            try context.device.waitForFences(
+                fences: [currentFrameResource.everythingCompletedFence], waitAll: true, timeout: 0)
+            return false
+        } catch {
+            if error == .timeout {
+                return true
+            }
+            throw error
+        }
+    }
 
-    public func render() throws {
-        let res = frameResources[currentFrameInFlightIndex]
+    public func waitForImage(reset: Bool = true) throws {
+        try context.device.waitForFences(
+            fences: [currentFrameResource.everythingCompletedFence], waitAll: true,
+            timeout: UInt64.max)
+        if reset {
+            try context.device.resetFences(fences: [currentFrameResource.everythingCompletedFence])
+        }
+    }
+
+    public func waitLastImage(reset: Bool = true) throws {
+        let res = lastFrameResource
+        try context.device.waitForFences(
+            fences: [res.everythingCompletedFence], waitAll: true, timeout: UInt64.max)
+        if reset {
+            try context.device.resetFences(fences: [res.everythingCompletedFence])
+        }
+    }
+
+    public func render(nodeCount renderNodeCount: UInt32) throws {
+        try self.waitForImage()
+        let res = currentFrameResource
+        res.releaseQueue.flush()
+        self.releaseQueue.flush()
+        currentFrameInFlightIndex = (currentFrameInFlightIndex + 1) % Self.maxFrameInFlightCount
 
         let imageIndex = try context.device.acquireNextImage2KHR(
             .init(
@@ -115,7 +126,9 @@ public final class Renderer {
         try recordCommands(
             into: res.commandBuffer,
             image: swapchainImages[Int(imageIndex)],
-            imageView: swapchainImageViews[Int(imageIndex)]
+            imageView: swapchainImageViews[Int(imageIndex)],
+            renderNodeCount: renderNodeCount,
+            frameResource: res
         )
 
         let graphicsSubmit = SubmitInfo2(
@@ -134,7 +147,8 @@ public final class Renderer {
             ]
         )
 
-        try context.graphicsQueue.submit2(submits: [graphicsSubmit])
+        try context.graphicsQueue.submit2(
+            submits: [graphicsSubmit], fence: res.everythingCompletedFence)
 
         try context.graphicsQueue.presentKHR(
             .init(
@@ -146,8 +160,13 @@ public final class Renderer {
 
     }
 
-    private func recordCommands(into cmd: CommandBuffer, image: Image, imageView: ImageView) throws
-    {
+    private func recordCommands(
+        into cmd: CommandBuffer,
+        image: Image,
+        imageView: ImageView,
+        renderNodeCount: UInt32,
+        frameResource: FrameResource
+    ) throws {
         try cmd.reset()
         try cmd.begin()
 
@@ -188,8 +207,13 @@ public final class Renderer {
             firstViewport: 0,
             viewports: [
                 .init(
-                    x: 0, y: 0, width: Float(self.width), height: Float(self.height), minDepth: 0,
-                    maxDepth: 1)
+                    x: 0,
+                    y: 0,
+                    width: Float(self.width),
+                    height: Float(self.height),
+                    minDepth: 0,
+                    maxDepth: 1
+                )
             ])
         cmd.setScissor(
             firstScissor: 0,
@@ -198,18 +222,26 @@ public final class Renderer {
             ]
         )
 
-        let viewport = (self.width, self.height)
-        withUnsafeBytes(of: viewport) { viewportBuffer in
+        let viewMatrix = Affine.identity.scaled(x: 1 / Float(self.width), y: 1 / Float(self.height))
+        // let viewport = (self.width, self.height)
+        withUnsafeBytes(of: viewMatrix) { viewportBuffer in
             cmd.pushConstants(
-                layout: pipelines.compositionPipelineLayout, 
-                stageFlags: [.vertex, .fragment], 
-                offset: 0, 
-                size:  UInt32(viewportBuffer.count), 
+                layout: pipelines.compositionPipelineLayout,
+                stageFlags: [.vertex, .fragment],
+                offset: 0,
+                size: UInt32(viewportBuffer.count),
                 values: viewportBuffer.baseAddress!
             )
         }
 
-        cmd.draw(vertexCount: 6, instanceCount: 10, firstVertex: 0, firstInstance: 0)
+        cmd.bindDescriptorSets(
+            pipelineBindPoint: .graphics,
+            layout: pipelines.compositionPipelineLayout,
+            firstSet: 0,
+            descriptorSets: [frameResource.mainDescriptorSet]
+        )
+
+        cmd.draw(vertexCount: 6, instanceCount: renderNodeCount, firstVertex: 0, firstInstance: 0)
         cmd.endRendering()
 
         cmd.pipelineBarrier2(
@@ -225,12 +257,92 @@ public final class Renderer {
                     dstQueueFamilyIndex: 0,
                     image: image,
                     subresourceRange: .init(
-                        aspectMask: .color, baseMipLevel: 0, levelCount: 1, baseArrayLayer: 0,
-                        layerCount: 1),
+                        aspectMask: .color,
+                        baseMipLevel: 0,
+                        levelCount: 1,
+                        baseArrayLayer: 0,
+                        layerCount: 1
+                    ),
                 )
             ]))
 
         try cmd.end()
+    }
+
+    public func resize(w: UInt32, h: UInt32) throws {
+        self.width = w
+        self.height = h
+        try recreateSwapchain(extent: Extent2D(width: w, height: h))
+    }
+
+    func recreateSwapchain(extent: Extent2D) throws(Vulkan.Result) {
+        let caps = try context.physicalDevice.getSurfaceCapabilitiesKHR(surface: context.surface)
+        nonisolated(unsafe) let prev = self.swapchain
+        let previousSwapchainImageViews = self.swapchainImageViews
+        (swapchain, swapchainImages, swapchainImageViews) = try Self.recreateSwapchain(
+            device: context.device,
+            surface: context.surface,
+            caps: caps,
+            imageFormat: imageFormat,
+            colorspace: imageColorSpace,
+            extent: extent.clamped(from: caps.minImageExtent, to: caps.maxImageExtent),
+            previous: prev
+        )
+
+        self.releaseQueue.schedule(in: Self.maxFrameInFlightCount + 1) {
+            for view in previousSwapchainImageViews {
+                view.destroy()
+            }
+            prev.destroyKHR()
+        }
+    }
+
+    private static func recreateSwapchain(
+        device: Device, surface: SurfaceKHR, caps: SurfaceCapabilitiesKHR, imageFormat: Format,
+        colorspace: ColorSpaceKHR, extent: Extent2D, previous: SwapchainKHR? = nil
+    ) throws(Vulkan.Result) -> (SwapchainKHR, [Image], [ImageView]) {
+        let swapchain = try device.createSwapchainKHR(
+            .init(
+                surface: surface,
+                minImageCount: caps.minImageCount,
+                imageFormat: imageFormat,
+                imageColorSpace: colorspace,
+                imageExtent: extent,
+                imageArrayLayers: 1,
+                imageUsage: .colorAttachment,
+                imageSharingMode: .exclusive,
+                preTransform: caps.currentTransform,
+                compositeAlpha: {
+                    #if os(Linux)  // wayland
+                        .preMultiplied
+                    #else
+                        .opaque
+                    #endif
+                }(),
+                presentMode: .fifo,
+                clipped: true,
+                oldSwapchain: previous
+            )
+        )
+        let swapchainImages = try swapchain.getImagesKHR()
+        do {
+            let swapchainImageViews = try swapchainImages.map { image in
+                try device.createImageView(
+                    .init(
+                        image: image, viewType: .type2d, format: imageFormat,
+                        components: .init(r: .r, g: .g, b: .b, a: .a),
+                        subresourceRange: .init(
+                            aspectMask: .color, baseMipLevel: 0, levelCount: 1,
+                            baseArrayLayer: 0, layerCount: 1
+                        )
+                    )
+                )
+            }
+
+            return (swapchain, swapchainImages, swapchainImageViews)
+        } catch {
+            throw error as! Vulkan.Result
+        }
     }
 }
 final class Pipelines {
@@ -284,12 +396,14 @@ final class Pipelines {
                     mainDescriptorSetLayout
                 ],
                 pushConstantRanges: [
-                    // viewport size
+                    // viewport w, h
+                    // .init(
+                    //     stageFlags: [.vertex, .fragment], offset: 0,
+                    //     size: UInt32(MemoryLayout<[2 of UInt32]>.size))
+                    // view matrix?
                     .init(
                         stageFlags: [.vertex, .fragment], offset: 0,
-                        size: UInt32(MemoryLayout<[2 of UInt32]>.size))
-                    // view matrix?
-                    // .init(stageFlags: [.vertex, .fragment], offset: 0, size: UInt32(MemoryLayout<[16 of Float]>.size))
+                        size: UInt32(MemoryLayout<[16 of Float]>.size))
                 ]
             )
         )
@@ -395,6 +509,8 @@ class FrameResource {
     let renderNodeStorage: RenderNodeStorage
     let shapeGroupStorage: ShapeGroupStorage
     let drawListStorage: DrawListStorage
+
+    let releaseQueue: ReleaseQueue = ReleaseQueue()
 
     init(index: Int, context: borrowing SurfaceContext, pipelines: borrowing Pipelines)
         throws(Vulkan.Result)

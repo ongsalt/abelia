@@ -12,6 +12,7 @@ public float sdfSmoothUnion(float d1, float d2, float smoothing) {
   return lerp(d2, d1, h) - smoothing * h * (1.0 - h);
 }
 
+
 // public float sdfSmoothIntersect(float d1, float d2, float smoothing) {
 //   float h = clamp(0.5 + 0.5 * (d2 - d1) / smoothing, 0.0, 1.0);
 //   return lerp(d2, d1, h) - smoothing * h * (1.0 - h);

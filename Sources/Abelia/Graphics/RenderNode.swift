@@ -21,8 +21,19 @@ public class RenderNode: Identifiable {
         didSet { dirty = true }
     }
 
+    public var scale: SIMD2<Float> = .one {
+        didSet { dirty = true }
+    }
+
     private(set) var dirty: Bool = false
-    private(set) var totalAffine: Affine = .identity
+    /// combine with offset and scale
+    var nodeTotalAffine: Affine {
+        Affine
+            .identity
+            .scaled(x: scale.x, y: scale.y)
+            .translated(x: offset.x, y: offset.y)
+            .multiplied(by: affine)
+    }
 
     public init() {
 

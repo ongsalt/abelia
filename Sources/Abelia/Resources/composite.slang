@@ -2,7 +2,7 @@ import types;
 import sdf_shapes;
 
 [[vk::push_constant]]
-uniform ConstantBuffer<float2> viewportSize;
+uniform ConstantBuffer<float4x4> viewMatrix;
 
 [[vk::binding(0, 0)]]
 uniform StructuredBuffer<RenderNode> renderNodeData;
@@ -25,26 +25,28 @@ struct VertexOutput {
 
 static const float2 g_Positions[6] = {
   float2(-1.0, -1.0),
-  float2(-1.0, 1.0),
-  float2(1.0, 1.0),
-  float2(-1.0, -1.0),  
   float2(1.0, -1.0),
   float2(1.0, 1.0),
+  float2(1.0, 1.0),
+  float2(-1.0, 1.0),
+  float2(-1.0, -1.0),
 };
 
 [shader("vertex")]
 VertexOutput vsMain(VertexInput input) {
   VertexOutput output;
   output.renderNodeDataIndex = input.instanceIndex;
-  let pos = g_Positions[input.vertexIndex] / 3.0;
-  output.sv_position = float4(pos + float2(input.instanceIndex / 12.0), 0.0, 1.0);
+
+  let renderNode = renderNodeData[input.instanceIndex];
+  
+  let pos = getShapeBound(input.vertexIndex, renderNode.shapeKind, renderNode.shapeData);
+  output.sv_position = mul(viewMatrix, mul(renderNode.affine, float4(pos, 0.0, 1.0)));
+
   return output;
 }
 
 [[shader("fragment")]]
 float4 fsMain(VertexOutput input) {
-  return float4(0.5, 0.0, float(input.renderNodeDataIndex) / 8.0, 1.0);
-
   let renderNode = renderNodeData[input.renderNodeDataIndex];
   let position = mul(renderNode.affine, input.sv_position).xy;
 
@@ -73,4 +75,26 @@ float sdf(float2 position, ShapeKind kind, uint4 data) {
   }
 
   return 0.0;
+}
+
+// bias is for shadow
+float2 getShapeBound(uint corner, ShapeKind kind, uint4 data, float bias = 0.0) {
+  switch (kind) {
+  case ShapeKind.rect:
+    var rect = bit_cast<Rect>(data);
+    switch (corner) {
+    case 0:
+    case 5:
+      return float2(-rect.width, -rect.height);
+    case 1:
+    return float2(rect.width, -rect.height);
+    case 2:
+    case 3:
+      return float2(rect.width, rect.height);
+    case 4:
+      return float2(-rect.width, rect.height);
+    }
+  }
+
+  return float2(0.0);
 }
