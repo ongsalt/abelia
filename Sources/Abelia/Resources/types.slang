@@ -73,10 +73,20 @@ public enum ShapeMergingInstructionKind : uint {
 // Matches C union ShapeMergingInstruction (28 bytes, size of larger member ShapeMetadata).
 // When kind == merge: mergeMode_or_shapeKind is MergeMode, bit_cast<float>(data.x) is smoothing.
 // When kind == push:  mergeMode_or_shapeKind is ShapeKind, data is shape union raw bits, offset is offset.
+// unused???
 public struct ShapeMergingInstruction {
   public uint mergeMode_or_shapeKind;
   public uint4 data;    // merge: data.x = smoothing bits; push: full shape union (16 bytes)
   public float2 offset; // push only
+};
+
+// Packed kind + data — use this as the StructuredBuffer element type.
+// Layout: kind(4) + data(28) = 32 bytes
+public struct ShapeMergingEntry {
+  public ShapeMergingInstructionKind kind;
+  public uint mergeMode_or_shapeKind;
+  public uint4 data;
+  public float2 offset;
 };
 
 // Matches C struct RenderNode exactly.

@@ -1,7 +1,7 @@
 import CShim
 
 extension RenderNode {
-  func write(to data: inout CShim.RenderNode, identity: UInt, shapeGroupStorage: borrowing ShapeGroupStorage) {
+  func write(to data: inout CShim.RenderNode, identity: ObjectIdentifier, shapeGroupStorage: borrowing ShapeGroupStorage) {
     // zero it
     data = CShim.RenderNode()
 
@@ -17,9 +17,8 @@ extension RenderNode {
       data.shapeKind = kind
       data.shapeData.one = shapeData
     } else {
-      fatalError("unimplemented")
       data.oneOrManyKind = .many_shapes
-      // shapeGroupStorage.update()
+      shapeGroupStorage.update(ownerIdentity: identity, data: instructions)
       data.shapeData.many = CShim.ManyShapeRef(startIndex: 0, count: UInt32(instructions.count))
     }
 
@@ -75,5 +74,28 @@ extension Affine {
       col2.x, col2.y, col2.z, col2.w,
       col3.x, col3.y, col3.z, col3.w
     )
+  }
+}
+
+extension ShapeMergingInstruction {
+  var c: CShim.ShapeMergingEntry {
+    var entry = CShim.ShapeMergingEntry()
+    switch self {
+    case .merge(let mode):
+      entry.kind = .merge
+      entry.data.merge = CShim.MergeNode(
+        mode: CShim.MergeMode(rawValue: mode.rawValue)!,
+        smoothing: 0
+      )
+    case .push(let metadata):
+      let (kind, shapeData) = metadata.shape.c
+      entry.kind = .push
+      entry.data.shape = CShim.ShapeMetadata(
+        shapeKind: kind,
+        shape: shapeData,
+        offset: (metadata.offset.x, metadata.offset.y)
+      )
+    }
+    return entry
   }
 }

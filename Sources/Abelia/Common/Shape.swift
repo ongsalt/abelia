@@ -63,9 +63,12 @@ public struct MergedShape<First: ShapeProtocol, Second: ShapeProtocol>: Sendable
 extension MergedShape: ShapeProtocol {
   @inlinable
   public var drawInstructions: some Sequence<ShapeMergingInstruction> {
-      first.drawInstructions
-        .chain(second.drawInstructions)
-        .chain(CollectionOfOne(.merge(self.mode)))
+    first.drawInstructions
+      .chain(second.drawInstructions.lazy.map { instruction in
+        guard case .push(let meta) = instruction else { return instruction }
+        return .push(ShapeMetadata(meta.shape, meta.offset + secondOffset))
+      })
+      .chain(CollectionOfOne(.merge(self.mode)))
   }
 }
 

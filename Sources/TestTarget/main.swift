@@ -17,36 +17,36 @@ runEventLoop { eventLoop in
     node.offset = [200, 20]
     node.brush = .solid(.red)
     node.shape = Shape.rect(width: 40, height: 40, cornerRadius: 12)
-    let nodes = [node]
+
+    let node2 = RenderNode()
+    node2.shape = Shape.rect(width: 100, height: 50)
+        .intersect(Shape.circle(20), offset: [50, 12])
+    node2.brush = .solid(.blue)
+
+    let nodes = [node, node2]
 
     let renderer = try Renderer(context: context.surfaceContexts[0])
     renderer.updateNodes(nodes)
     try renderer.render(nodeCount: UInt32(nodes.count))
 
-    // // confirm generic specialization
-    // let merged = Shape.rect(width: 100, height: 100)
-    //     .intersect(Shape.circle(23), offset: [0, 25])
-    //     .union(Shape.circle(24), offset: [100, 0])
-    //     .intersect(Shape.arc(radius: 50, angle: Float.pi, thickness: 12), offset: [100, 0])
-    //     .xor(
-    //         Shape.circle(26)
-    //             .union(Shape.rect(width: 50, height: 100, cornerRadius: 12), offset: [100, 0])
-    //             .subtract(Shape.circle(27), offset: [100, 0]),
-    //         offset: [100, 0]
-    //     )
-
-    // for s in merged.drawInstructions {
-    //     print(s)
+    // Task {
+    //     while !Task.isCancelled {
+    //         // this is ass, the render thread should actually poll us
+    //         try await Task.sleep(for: .milliseconds(16))
+    //         nodes[0].offset.x += 2
+    //         renderer.updateNodes(nodes)
+    //         try renderer.render(nodeCount: UInt32(nodes.count))
+    //     }
     // }
 
     return { id, event in
         switch event {
         case .resized(let size, let isFinal):
-            // if isFinal {
+            if isFinal {
                 try renderer.resize(w: size.width, h: size.height)
                 renderer.updateNodes(nodes)
                 try renderer.render(nodeCount: UInt32(nodes.count))
-            // }
+            }
 
         case .closeRequested:
             window = nil

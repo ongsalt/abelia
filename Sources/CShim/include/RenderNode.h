@@ -115,3 +115,10 @@ union ShapeMergingInstruction {
   struct MergeNode merge;
   struct ShapeMetadata shape;
 };
+
+// Packed kind + data for use as a StructuredBuffer element.
+// Layout: kind(4) + data(28) = 32 bytes
+struct ShapeMergingEntry {
+  enum ShapeMergingInstructionKind kind;
+  union ShapeMergingInstruction data;
+};
