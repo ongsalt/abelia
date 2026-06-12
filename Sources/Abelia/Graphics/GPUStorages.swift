@@ -32,6 +32,20 @@ class RenderNodeStorage: GPUStorage<CShim.RenderNode> {
         )
     }
 
+    
+    func print(offset: Int, count: Int) {
+        Swift.print("\(Self.self)")
+        // for i in offset..<offset + count {
+        //     let data = bufferPointer[i]
+        //     if data.kind == .push {
+        //         Swift.print("  [\(i)] shapeKind=\(data.data.shape.shapeKind.rawValue) offset=\(data.data.shape.offset)")
+        //     } else {
+        //         Swift.print("  [\(i)] merge=\(data.data.merge.mode.rawValue) smoothing=\(data.data.merge.smoothing)")
+        //     }
+        // }
+    }
+
+
     func index(of node: borrowing RenderNode) -> Int {
         index(objectId: node.id)
     }
@@ -61,20 +75,23 @@ class ShapeGroupStorage: GPUStorage<CShim.ShapeMergingEntry> {
     // Bump cursor: everything at >= lastPosition is untouched space.
     private var lastPosition: Int = 0
 
-    func update(ownerIdentity: ObjectIdentifier, data: [ShapeMergingInstruction]) {
-        guard !data.isEmpty else { delete(ownerIdentity: ownerIdentity); return }
+    func update(ownerIdentity: ObjectIdentifier, data: [ShapeMergingInstruction]) -> Int? {
+        guard !data.isEmpty else {
+            delete(ownerIdentity: ownerIdentity)
+            return nil
+        }
         let count = data.count
 
         if let region = allocatedRegions[ownerIdentity] {
             if count == region.length {
-                write(data, at: region.offset)          // same size: rewrite in place
-                return
+                write(data, at: region.offset)  // same size: rewrite in place
+                return region.offset
             }
-            if count < region.length {                  // shrink in place, free the tail
+            if count < region.length {  // shrink in place, free the tail
                 write(data, at: region.offset)
                 recycle(offset: region.offset + count, length: region.length - count)
                 allocatedRegions[ownerIdentity] = (region.offset, count)
-                return
+                return region.offset
             }
             // grow: doesn't fit -> free old slot and relocate (offset CHANGES here)
             recycle(offset: region.offset, length: region.length)
@@ -83,6 +100,19 @@ class ShapeGroupStorage: GPUStorage<CShim.ShapeMergingEntry> {
         let offset = allocate(count)
         allocatedRegions[ownerIdentity] = (offset, count)
         write(data, at: offset)
+        return offset
+    }
+
+    func print(offset: Int, count: Int) {
+        Swift.print("\(Self.self)")
+        for i in offset..<offset + count {
+            let data = bufferPointer[i]
+            if data.kind == .push {
+                Swift.print("  [\(i)] shapeKind=\(data.data.shape.shapeKind.rawValue) offset=\(data.data.shape.offset)")
+            } else {
+                Swift.print("  [\(i)] merge=\(data.data.merge.mode.rawValue) smoothing=\(data.data.merge.smoothing)")
+            }
+        }
     }
 
     func delete(ownerIdentity: ObjectIdentifier) {
@@ -92,8 +122,8 @@ class ShapeGroupStorage: GPUStorage<CShim.ShapeMergingEntry> {
 
     // MARK: - internals
 
-    private func write(_ data: [ShapeMergingInstruction], at offset: Int) {
-        let region = bufferPointer.extracting(offset ..< offset + data.count)
+    private func write(_ data: borrowing [ShapeMergingInstruction], at offset: Int) {
+        let region = bufferPointer.extracting(offset..<offset + data.count)
         for (i, instruction) in data.enumerated() {
             region[i] = instruction.c
         }
@@ -126,7 +156,7 @@ class ShapeGroupStorage: GPUStorage<CShim.ShapeMergingEntry> {
         var merged = (offset: offset, length: length)
         var idx = freeList.firstIndex { $0.offset > offset } ?? freeList.count
 
-        if idx > 0 {                                    // merge with previous
+        if idx > 0 {  // merge with previous
             let prev = freeList[idx - 1]
             if prev.offset + prev.length == merged.offset {
                 merged = (prev.offset, prev.length + merged.length)
@@ -134,7 +164,7 @@ class ShapeGroupStorage: GPUStorage<CShim.ShapeMergingEntry> {
                 idx -= 1
             }
         }
-        if idx < freeList.count {                        // merge with next
+        if idx < freeList.count {  // merge with next
             let next = freeList[idx]
             if merged.offset + merged.length == next.offset {
                 merged = (merged.offset, merged.length + next.length)
@@ -143,7 +173,7 @@ class ShapeGroupStorage: GPUStorage<CShim.ShapeMergingEntry> {
         }
 
         if merged.offset + merged.length == lastPosition {
-            lastPosition = merged.offset                 // reclaim tail into the cursor
+            lastPosition = merged.offset  // reclaim tail into the cursor
             while let last = freeList.last, last.offset + last.length == lastPosition {
                 lastPosition = last.offset
                 freeList.removeLast()

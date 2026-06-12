@@ -42,46 +42,49 @@ VertexOutput vsMain(VertexInput input) {
 
   let renderNode = renderNodeData[renderNodeDataIndex];
 
-  switch (renderNode.oneOrManyKind) {
-  case OneOrManyShapeKind.one_shape:
+  if (renderNode.oneOrManyKind == OneOrManyShapeKind.one_shape) {
     let pos = getShapeBound(input.vertexIndex, renderNode.shapeKind, renderNode.shapeData);
     output.sv_position = mul(viewMatrix, mul(renderNode.affine, float4(pos, 0.0, 1.0)));
-    break;
-  case OneOrManyShapeKind.many_shapes:
+  } else {
     let shapeGroup = renderNode.shapeData;
     uint startIndex = shapeGroup.x;
     uint count = shapeGroup.y;
 
     // merge
     ShapeMergingEntry first = shapeGroupData[startIndex];
-    float2 position = getShapeBound(input.vertexIndex, bit_cast<ShapeKind>(first.mergeMode_or_shapeKind), first.data) + first.offset;
-    for (uint i = 1; i < count; i++) {
-      ShapeMergingEntry entry = shapeGroupData[startIndex + i];
-      if (entry.kind == ShapeMergingInstructionKind.push) {
-        let corner = getShapeBound(input.vertexIndex, bit_cast<ShapeKind>(entry.mergeMode_or_shapeKind), entry.data) + entry.offset;
+    var pos = getShapeBound(input.vertexIndex, bit_cast<ShapeKind>(first.mergeMode_or_shapeKind), first.data);
+    output.sv_position = mul(viewMatrix, mul(renderNode.affine, float4(pos, 0.0, 1.0)));
 
-        switch (input.vertexIndex) {
-        case 0:
-        case 5:
-          position = min(position, corner);
-          break;
-        case 1:
-          position.x = max(position.x, corner.x);
-          position.y = min(position.y, corner.y);
-          break;
-        case 2:
-        case 3:
-          position = max(position, corner);
-          break;
-        case 4:
-          position.x = min(position.x, corner.x);
-          position.y = max(position.y, corner.y);
-          break;
-        }
-      }
-    }
+    // if (pos) {
+    //   output.sv_position = float4(g_Positions[input.vertexIndex], 0.0, 1.0);
+    // }
 
-    output.sv_position = mul(viewMatrix, mul(renderNode.affine, float4(position, 0.0, 1.0)));
+    // for (uint i = 1; i < count; i++) {
+    //   ShapeMergingEntry entry = shapeGroupData[startIndex + i];
+    //   if (entry.kind == ShapeMergingInstructionKind.push) {
+    //     let corner = getShapeBound(input.vertexIndex, bit_cast<ShapeKind>(entry.mergeMode_or_shapeKind), entry.data) + entry.offset;
+
+    //     switch (input.vertexIndex) {
+    //     case 0:
+    //     case 5:
+    //       position = min(position, corner);
+    //       break;
+    //     case 1:
+    //       position.x = max(position.x, corner.x);
+    //       position.y = min(position.y, corner.y);
+    //       break;
+    //     case 2:
+    //     case 3:
+    //       position = max(position, corner);
+    //       break;
+    //     case 4:
+    //       position.x = min(position.x, corner.x);
+    //       position.y = max(position.y, corner.y);
+    //       break;
+    //     }
+    //   }
+    // }
+
   }
 
   return output;
@@ -92,7 +95,9 @@ float4 fsMain(VertexOutput input) {
   let renderNode = renderNodeData[input.renderNodeDataIndex];
   let position = input.sv_position.xy - renderNode.affine[3].xy;
 
-  var color = float4(1.0, 0.0, 0.0, 0.2);
+  var color = float4(1.0, 0.0, input.renderNodeDataIndex / 10.0, 0.3);
+  return color;
+
   float coverage = 0.0;
 
   if (renderNode.brushKind == BrushKind.solid) {

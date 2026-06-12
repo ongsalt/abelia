@@ -18,8 +18,10 @@ extension RenderNode {
       data.shapeData.one = shapeData
     } else {
       data.oneOrManyKind = .many_shapes
-      shapeGroupStorage.update(ownerIdentity: identity, data: instructions)
-      data.shapeData.many = CShim.ManyShapeRef(startIndex: 0, count: UInt32(instructions.count))
+      print(instructions)
+      let startIndex = shapeGroupStorage.update(ownerIdentity: identity, data: instructions)
+      data.shapeData.many = CShim.ManyShapeRef(startIndex: UInt32(startIndex!), count: UInt32(instructions.count))
+      shapeGroupStorage.print(offset: startIndex!, count: instructions.count)
     }
 
     switch brush {
@@ -40,6 +42,7 @@ extension Shape {
     switch self {
     case .rect(let width, let height, let cornerRadius, let cornerDegree):
       shapeKind = ShapeKind.rect
+      // shapeKind = 0
       shape.rect = CShim.Rect(
         width: width, height: height, cornerRadius: cornerRadius, cornerDegree: cornerDegree
       )
@@ -81,11 +84,11 @@ extension ShapeMergingInstruction {
   var c: CShim.ShapeMergingEntry {
     var entry = CShim.ShapeMergingEntry()
     switch self {
-    case .merge(let mode):
+    case .merge(let mode, let smoothing):
       entry.kind = .merge
       entry.data.merge = CShim.MergeNode(
         mode: CShim.MergeMode(rawValue: mode.rawValue)!,
-        smoothing: 0
+        smoothing: smoothing
       )
     case .push(let metadata):
       let (kind, shapeData) = metadata.shape.c

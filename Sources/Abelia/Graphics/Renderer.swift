@@ -4,8 +4,8 @@ import Vulkan
 
 public final class Renderer {
     let context: SurfaceContext
-    let imageFormat: Format
-    let imageColorSpace: ColorSpaceKHR
+    let swapchainImageFormat: Format
+    let swapchainImageColorSpace: ColorSpaceKHR
     let pipelines: Pipelines
     var swapchain: SwapchainKHR
 
@@ -39,9 +39,17 @@ public final class Renderer {
         let caps = try physicalDevice.getSurfaceCapabilitiesKHR(surface: surface)
         let formats = try physicalDevice.getSurfaceFormatsKHR(surface: surface)
 
-        let imageFormat: Format = .b8g8r8a8Unorm
-        self.imageFormat = imageFormat
-        self.imageColorSpace = .srgbNonlinear
+        self.swapchainImageFormat = .b8g8r8a8Unorm
+        self.swapchainImageColorSpace = .srgbNonlinear
+
+        // for surfaceFormat in formats {
+            // let properties = physicalDevice.getFormatProperties(format: surfaceFormat.format)
+            // print("\(surfaceFormat.format) in \(surfaceFormat.colorSpace):")
+            // print(" - buffer: \(properties.bufferFeatures)")
+            // print(" - linearTiling: \(properties.linearTilingFeatures)")
+            // print(" - optimalTiling: \(properties.optimalTilingFeatures)")
+            // print()
+        // }
 
         let extent =
             if caps.currentExtent.width == UInt32.max {
@@ -51,8 +59,8 @@ public final class Renderer {
             }
 
         let (swapchain, images, views) = try Self.recreateSwapchain(
-            device: device, surface: surface, caps: caps, imageFormat: imageFormat,
-            colorspace: imageColorSpace, extent: extent)
+            device: device, surface: surface, caps: caps, imageFormat: swapchainImageFormat,
+            colorspace: swapchainImageColorSpace, extent: extent)
         self.swapchain = swapchain
         self.swapchainImages = images
         self.swapchainImageViews = views
@@ -61,7 +69,7 @@ public final class Renderer {
         self.height = extent.height
 
         let pipelines = try Pipelines(
-            compatibleWith: swapchain, format: imageFormat, extent: extent, context: context)
+            compatibleWith: swapchain, format: swapchainImageFormat, extent: extent, context: context)
         self.pipelines = pipelines
         self.frameResources = try (0..<Self.maxFrameInFlightCount).map { i throws(Vulkan.Result) in
             try FrameResource(index: i, context: context, pipelines: pipelines)
@@ -283,8 +291,8 @@ public final class Renderer {
             device: context.device,
             surface: context.surface,
             caps: caps,
-            imageFormat: imageFormat,
-            colorspace: imageColorSpace,
+            imageFormat: swapchainImageFormat,
+            colorspace: swapchainImageColorSpace,
             extent: extent.clamped(from: caps.minImageExtent, to: caps.maxImageExtent),
             previous: prev
         )

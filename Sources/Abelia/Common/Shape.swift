@@ -10,7 +10,7 @@ public struct ShapeMetadata: Sendable {
 
 // postfix notation
 public enum ShapeMergingInstruction {
-  case merge(MergeMode)
+  case merge(MergeMode, smoothing: Float)
   case push(ShapeMetadata)
 }
 
@@ -68,7 +68,7 @@ extension MergedShape: ShapeProtocol {
         guard case .push(let meta) = instruction else { return instruction }
         return .push(ShapeMetadata(meta.shape, meta.offset + secondOffset))
       })
-      .chain(CollectionOfOne(.merge(self.mode)))
+      .chain(CollectionOfOne(.merge(self.mode, smoothing: self.smoothing)))
   }
 }
 

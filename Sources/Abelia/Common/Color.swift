@@ -1,63 +1,66 @@
-public enum Color: Sendable {
-  case rgb(_ r: Float, _ g: Float, _ b: Float, _ a: Float)
-  // TODO: oklch
-  case oklch(_ l: Float, _ c: Float, _ h: Float, _ a: Float)
+public struct Color: Sendable {
+  public var red: Float
+  public var green: Float
+  public var blue: Float
+  public var alpha: Float = 1.0
+  public var colorSpace: ColorSpace = .srgb
 
-  public init(rgb: UInt32) {
-    let r = Float((rgb >> 16) & 0xFF) / 255.0
-    let g = Float((rgb >> 8) & 0xFF) / 255.0
-    let b = Float((rgb >> 0) & 0xFF) / 255.0
-    self = .rgb(r, g, b, 1.0)
+  public init(
+    _ colorSpace: ColorSpace = .srgb, red: Float, green: Float, blue: Float, alpha: Float = 1.0,
+  ) {
+    self.red = red
+    self.green = green
+    self.blue = blue
+    self.alpha = alpha
+    self.colorSpace = colorSpace
   }
 
   var asTuple: (Float, Float, Float, Float) {
-    switch self {
-    case .rgb(let r, let g, let b, let a):
-      (r, g, b, a)
-    case .oklch(let l, let c, let h, let a):
-      (l, c, h, a)
-    }
+    (red, green, blue, alpha)
   }
 
-  var asPremultipliedTuple: (Float, Float, Float, Float) {
-    switch self {
-    case .rgb(let r, let g, let b, let a):
-      (r * a, g * a, b * a, a)
-    case .oklch(let l, let c, let h, let a):
-      (l, c, h, a)
-    }
-  }
-
-}
-
-extension Color {
-  public func with(alpha: Float) -> Color {
-    return switch self {
-    case .rgb(let r, let g, let b, _):
-      .rgb(r, g, b, alpha)
-    case .oklch(let l, let c, let h, _):
-      .oklch(l, c, h, alpha)
-    }
+  var asPremultiplied: Color {
+    Color(
+      colorSpace,
+      red: red * alpha,
+      green: green * alpha,
+      blue: blue * alpha,
+      alpha: alpha,
+    )
   }
 }
 
+public enum ColorSpace: Sendable {
+  case srgb
+  case displayP3
+  // cielab???
+}
+
 extension Color {
-  public static let transparent = Color.rgb(0, 0, 0, 0)
-  public static let black = Color(rgb: 0x000000)
-  public static let white = Color(rgb: 0xFFFFFF)
+  public init(hex rgb: UInt32, alpha: Float = 1.0) {
+    let r = Float((rgb >> 16) & 0xFF) / 255.0
+    let g = Float((rgb >> 8) & 0xFF) / 255.0
+    let b = Float((rgb >> 0) & 0xFF) / 255.0
+    self = Color(red: r, green: g, blue: b, alpha: 1.0)
+  }
+}
+
+extension Color {
+  public static let transparent = Color(hex: 0x000000, alpha: 0.0)
+  public static let black = Color(hex: 0x000000)
+  public static let white = Color(hex: 0xFFFFFF)
 
   // Apple Human Interface Guidelines Colors
-  public static let red = Color(rgb: 0xFF383C)
-  public static let orange = Color(rgb: 0xFF8D28)
-  public static let yellow = Color(rgb: 0xFFCC00)
-  public static let green = Color(rgb: 0x34C759)
-  public static let mint = Color(rgb: 0x00C8B3)
-  public static let teal = Color(rgb: 0x00C3D0)
-  public static let cyan = Color(rgb: 0x00C0E8)
-  public static let blue = Color(rgb: 0x0088FF)
-  public static let indigo = Color(rgb: 0x6155F5)
-  public static let purple = Color(rgb: 0xCB30E0)
-  public static let pink = Color(rgb: 0xFF2D55)
-  public static let brown = Color(rgb: 0xAC7F5E)
-  public static let gray = Color(rgb: 0x8E8E93)
+  public static let red = Color(hex: 0xFF383C)
+  public static let orange = Color(hex: 0xFF8D28)
+  public static let yellow = Color(hex: 0xFFCC00)
+  public static let green = Color(hex: 0x34C759)
+  public static let mint = Color(hex: 0x00C8B3)
+  public static let teal = Color(hex: 0x00C3D0)
+  public static let cyan = Color(hex: 0x00C0E8)
+  public static let blue = Color(hex: 0x0088FF)
+  public static let indigo = Color(hex: 0x6155F5)
+  public static let purple = Color(hex: 0xCB30E0)
+  public static let pink = Color(hex: 0xFF2D55)
+  public static let brown = Color(hex: 0xAC7F5E)
 }

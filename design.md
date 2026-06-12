@@ -30,10 +30,13 @@ Clipping is at `Layer` level. allowing sdf shape clip OR alpha mask form another
     - flush the layer tree
 - we are done with main thread, the renderer thread now doing its thing 
 
-## in detail
-- layer stuff -> (ShapeGroupOwner: if size change, realloc)
-    - produce .set, .delete
-- 
+# Color
+in order to do gradient we must generate an intermediate 1d texture to sample from later on.
+2d (mesh) gradient are done by triangluate 
+
+## TODO
+- fuckkkkkkkkkkkkk
+- use `VK_FORMAT_R32G32B32A32_SFLOAT` color texture
 
 # UI Layer
 basically solidjs with macro generaing an overload to allow reactive binding
@@ -55,7 +58,7 @@ func Text(_ text: @autoclosure @escaping () -> some StringProtocol) -> View {
 }
 ```
 
-- TODO: detect `Module::Prop` and `Module.Prop`
+- TODO: detect `Reactivity::Prop` and `Reactivity.Prop`
 
 component boundary do not exist as we cant really transform function content. So every lifecycle stuff need to be tied to parent element scope.
 
