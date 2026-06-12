@@ -81,12 +81,21 @@ public struct ShapeMergingInstruction {
 };
 
 // Packed kind + data — use this as the StructuredBuffer element type.
-// Layout: kind(4) + data(28) = 32 bytes
+// Layout: kind(4) + mergeMode_or_shapeKind(4) + data(16) + offset(8) = 32 bytes
+// Uses scalar fields only: std430 gives uint4 16-byte alignment which would
+// add 8 bytes of padding after mergeMode_or_shapeKind, mismatching the C layout.
 public struct ShapeMergingEntry {
   public ShapeMergingInstructionKind kind;
   public uint mergeMode_or_shapeKind;
-  public uint4 data;
-  public float2 offset;
+  public uint data0;
+  public uint data1;
+  public uint data2;
+  public uint data3;
+  public float offsetX;
+  public float offsetY;
+
+  public property uint4 data { get { return uint4(data0, data1, data2, data3); } }
+  public property float2 offset { get { return float2(offsetX, offsetY); } }
 };
 
 // Matches C struct RenderNode exactly.
