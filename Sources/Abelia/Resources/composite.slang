@@ -46,6 +46,7 @@ VertexOutput vsMain(VertexInput input) {
   case OneOrManyShapeKind.one_shape:
     let pos = getShapeBound(input.vertexIndex, renderNode.shapeKind, renderNode.shapeData);
     output.sv_position = mul(viewMatrix, mul(renderNode.affine, float4(pos, 0.0, 1.0)));
+    break;
   case OneOrManyShapeKind.many_shapes:
     let shapeGroup = renderNode.shapeData;
     uint startIndex = shapeGroup.x;
@@ -106,6 +107,7 @@ float4 fsMain(VertexOutput input) {
     if (distance < 0) {
       coverage = 1;
     }
+    break;
   case OneOrManyShapeKind.many_shapes:
     let shapeGroup = renderNode.shapeData;
     uint startIndex = shapeGroup.x;
