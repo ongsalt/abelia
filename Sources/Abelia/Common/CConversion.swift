@@ -88,7 +88,7 @@ extension ShapeMergingInstruction {
       entry.kind = .merge
       entry.data.merge = CShim.MergeNode(
         mode: CShim.MergeMode(rawValue: mode.rawValue)!,
-        smoothing: smoothing
+        smoothing: max(smoothing, Float.leastNonzeroMagnitude)
       )
     case .push(let metadata):
       let (kind, shapeData) = metadata.shape.c
