@@ -23,6 +23,7 @@ struct VertexInput {
 struct VertexOutput {
   nointerpolation uint32_t renderNodeDataIndex;
   float4 sv_position : SV_Position;
+  float2 localPosition;
 };
 
 static const float2 g_Positions[6] = {
@@ -44,61 +45,63 @@ VertexOutput vsMain(VertexInput input) {
 
   if (renderNode.oneOrManyKind == OneOrManyShapeKind.one_shape) {
     let pos = getShapeBound(input.vertexIndex, renderNode.shapeKind, renderNode.shapeData);
+    output.localPosition = pos;
     output.sv_position = mul(viewMatrix, mul(renderNode.affine, float4(pos, 0.0, 1.0)));
   } else {
     let shapeGroup = renderNode.shapeData;
     uint startIndex = shapeGroup.x;
     uint count = shapeGroup.y;
 
-    // merge
+    // First entry is always a push — use it to seed the AABB
     ShapeMergingEntry first = shapeGroupData[startIndex];
-    var pos = getShapeBound(input.vertexIndex, bit_cast<ShapeKind>(first.mergeMode_or_shapeKind), first.data);
+    let firstKind = bit_cast<ShapeKind>(first.mergeMode_or_shapeKind);
+    float2 boundsMin = getShapeBound(0, firstKind, first.data) + first.offset;
+    float2 boundsMax = getShapeBound(2, firstKind, first.data) + first.offset;
+
+    // Expand AABB with remaining push entries
+    for (uint i = 1; i < count; i++) {
+      ShapeMergingEntry entry = shapeGroupData[startIndex + i];
+      if (entry.kind == ShapeMergingInstructionKind.push) {
+        let shapeKind = bit_cast<ShapeKind>(entry.mergeMode_or_shapeKind);
+        boundsMin = min(boundsMin, getShapeBound(0, shapeKind, entry.data) + entry.offset);
+        boundsMax = max(boundsMax, getShapeBound(2, shapeKind, entry.data) + entry.offset);
+      }
+    }
+
+    float2 pos;
+    switch (input.vertexIndex) {
+    case 0:
+    case 5:
+      pos = boundsMin;
+      break;
+    case 1:
+      pos = float2(boundsMax.x, boundsMin.y);
+      break;
+    case 2:
+    case 3:
+      pos = boundsMax;
+      break;
+    default: // case 4
+      pos = float2(boundsMin.x, boundsMax.y);
+      break;
+    }
+
+    output.localPosition = pos;
     output.sv_position = mul(viewMatrix, mul(renderNode.affine, float4(pos, 0.0, 1.0)));
-
-    // if (pos) {
-    //   output.sv_position = float4(g_Positions[input.vertexIndex], 0.0, 1.0);
-    // }
-
-    // for (uint i = 1; i < count; i++) {
-    //   ShapeMergingEntry entry = shapeGroupData[startIndex + i];
-    //   if (entry.kind == ShapeMergingInstructionKind.push) {
-    //     let corner = getShapeBound(input.vertexIndex, bit_cast<ShapeKind>(entry.mergeMode_or_shapeKind), entry.data) + entry.offset;
-
-    //     switch (input.vertexIndex) {
-    //     case 0:
-    //     case 5:
-    //       position = min(position, corner);
-    //       break;
-    //     case 1:
-    //       position.x = max(position.x, corner.x);
-    //       position.y = min(position.y, corner.y);
-    //       break;
-    //     case 2:
-    //     case 3:
-    //       position = max(position, corner);
-    //       break;
-    //     case 4:
-    //       position.x = min(position.x, corner.x);
-    //       position.y = max(position.y, corner.y);
-    //       break;
-    //     }
-    //   }
-    // }
-
   }
 
   return output;
 }
 
 [[shader("fragment")]]
-float4 fsMain(VertexOutput input) {
+float4 fsMain(VertexOutput input): SV_Target {
   let renderNode = renderNodeData[input.renderNodeDataIndex];
-  let position = input.sv_position.xy - renderNode.affine[3].xy;
+  let position = input.localPosition;
 
-  var color = float4(1.0, 0.0, input.renderNodeDataIndex / 10.0, 0.3);
-  return color;
-
+  var color = float4(0.0);
   float coverage = 0.0;
+
+  // return float4(input.localPosition, 1.0, 1.0);
 
   if (renderNode.brushKind == BrushKind.solid) {
     var brush = bit_cast<SolidColorBrush>(renderNode.brushData);
@@ -107,11 +110,7 @@ float4 fsMain(VertexOutput input) {
 
   switch (renderNode.oneOrManyKind) {
   case OneOrManyShapeKind.one_shape:
-    var distance = sdf(position, renderNode.shapeKind, renderNode.shapeData);
-
-    if (distance < 0) {
-      coverage = 1;
-    }
+    coverage = coverageFromSdf(position, renderNode.shapeKind, renderNode.shapeData);
     break;
   case OneOrManyShapeKind.many_shapes:
     let shapeGroup = renderNode.shapeData;
@@ -124,57 +123,88 @@ float4 fsMain(VertexOutput input) {
     for (uint i = 0u; i < count; i++) {
       ShapeMergingEntry entry = shapeGroupData[startIndex + i];
       if (entry.kind == ShapeMergingInstructionKind.push) {
-        stack[topIndex] = sdf(position - entry.offset, bit_cast<ShapeKind>(entry.mergeMode_or_shapeKind), entry.data);
+        stack[topIndex] = coverageFromSdf(position - entry.offset, bit_cast<ShapeKind>(entry.mergeMode_or_shapeKind), entry.data);
         topIndex += 1;
       } else {
         // merge
         let mergeMode = bit_cast<MergeMode>(entry.mergeMode_or_shapeKind);
-        switch (mergeMode) { // in this case data.x
+        let k = bit_cast<float>(entry.data0); // smoothing stored as float bits
+        let a = stack[topIndex - 1]; // top = last pushed
+        let b = stack[topIndex - 2]; // second = first pushed
+        float result;
+        switch (mergeMode) {
         case MergeMode.union_:
-          let a = stack[topIndex - 1];
-          let b = stack[topIndex - 2];
-          stack[topIndex - 2] = sdfSmoothUnion(a, b, entry.data.x); // entry.data.x = smoothing
-          topIndex -= 1;
+          result = k <= 0 ? min(a, b) : sdfSmoothUnion(a, b, k);
+          break;
+        case MergeMode.intersect:
+          result = k <= 0 ? max(a, b) : sdfSmoothIntersect(a, b, k);
+          break;
+        case MergeMode.subtract:
+          // b - a: b=first pushed (base), a=top (shape to remove)
+          result = k <= 0 ? max(b, -a) : sdfSmoothSubtract(b, a, k);
+          break;
+        default: // xor_
+          result = max(min(a, b), -max(a, b));
+          break;
         }
+        stack[topIndex - 2] = result;
+        topIndex -= 1;
       }
     }
 
-    if (stack[0] < 0) {
-      coverage = 1;
-    }
+    coverage = stack[0];
   }
 
   return color * coverage;
 }
 
 float sdf(float2 position, ShapeKind kind, uint4 data) {
+  float distance = 0;
   switch (kind) {
   case ShapeKind.rect:
     var rect = bit_cast<Rect>(data);
     return sdfRoundRect(position, float2(rect.width, rect.height), rect.cornerRadius, rect.cornerDegree);
+  case ShapeKind.ellipse:
+    var ellipse = bit_cast<Ellipse>(data.xy);
+    return sdfEllipse(position, float2(ellipse.radiusX, ellipse.radiusY));
   }
 
-  return 0.0;
+  return distance;
+}
+
+float coverageFromSdf(float2 position, ShapeKind kind, uint4 data) {
+  let distance = sdf(position, kind, data);
+  float edgeWidth = fwidth(distance);
+  return smoothstep(edgeWidth, -edgeWidth, distance);
 }
 
 // bias is for shadow
 float2 getShapeBound(uint corner, ShapeKind kind, uint4 data, float bias = 0.0) {
+  float2 half;
   switch (kind) {
   case ShapeKind.rect:
+    // sdfRoundRect divides by 2 internally, so half-extent is width/2, height/2
     var rect = bit_cast<Rect>(data);
-    switch (corner) {
-    case 0:
-    case 5:
-      return float2(-rect.width, -rect.height);
-    case 1:
-      return float2(rect.width, -rect.height);
-    case 2:
-    case 3:
-      return float2(rect.width, rect.height);
-    case 4:
-      return float2(-rect.width, rect.height);
-    }
+    half = float2(rect.width, rect.height) * 0.5 + bias;
+    break;
+  case ShapeKind.ellipse:
+    var ellipse = bit_cast<Ellipse>(data.xy);
+    half = float2(ellipse.radiusX, ellipse.radiusY) + bias;
+    break;
+  default:
+    return float2(0.0);
   }
 
-  return float2(0.0);
+  switch (corner) {
+  case 0:
+  case 5:
+    return -half;
+  case 1:
+    return float2(half.x, -half.y);
+  case 2:
+  case 3:
+    return half;
+  default: // case 4
+    return float2(-half.x, half.y);
+  }
 }

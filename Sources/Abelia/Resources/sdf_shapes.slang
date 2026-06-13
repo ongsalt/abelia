@@ -2,15 +2,16 @@ module sdf_shapes;
 
 public float sdfRoundRect(float2 position, float2 size, float radius, float degree) {
   float2 halfSize = size / 2;
-  float2 v = abs(position) - (halfSize - radius);
-  float2 m = max(v, 0.0);
-  float l = pow(pow(m.x, degree) + pow(m.y, degree), 1 / degree);
+  float2 v = abs(position) - halfSize + radius;
+  let m = max(v, 0);
+  float outer = pow(pow(m.x, degree) + pow(m.y, degree), 1 / degree);
 
-  return min(0, max(v.x, v.y)) + l - radius;
+  // inner + outer - bias (cuz this is rounded)
+  return min(0, max(v.x, v.y)) + outer - radius;
 }
 
 // copied from https://www.shadertoy.com/view/4sS3zz
-float sdfEllipse(float2 position, float2 size) {
+public float sdfEllipse(float2 position, float2 size) {
   position = abs(position);
   if (position.x > position.y) {
     position = position.yx;
@@ -52,12 +53,11 @@ public float sdfSmoothUnion(float d1, float d2, float smoothing) {
   return lerp(d2, d1, h) - smoothing * h * (1.0 - h);
 }
 
-// public float sdfSmoothIntersect(float d1, float d2, float smoothing) {
-//   float h = clamp(0.5 + 0.5 * (d2 - d1) / smoothing, 0.0, 1.0);
-//   return lerp(d2, d1, h) - smoothing * h * (1.0 - h);
-// }
+public float sdfSmoothIntersect(float d1, float d2, float k) {
+  return -sdfSmoothUnion(-d1, -d2, k);
+}
 
-// public float sdfSmoothSubtract(float d1, float d2, float smoothing) {
-//   float h = clamp(0.5 + 0.5 * (d2 - d1) / smoothing, 0.0, 1.0);
-//   return lerp(d2, d1, h) - smoothing * h * (1.0 - h);
-// }
+// removes d2 from d1: smooth max(d1, -d2)
+public float sdfSmoothSubtract(float d1, float d2, float k) {
+  return -sdfSmoothUnion(-d1, d2, k);
+}
