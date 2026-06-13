@@ -16,23 +16,25 @@ runEventLoop { eventLoop in
     let node = RenderNode()
     node.offset = [200, 0]
     node.brush = .solid(.red)
-    node.shape = Shape.rect(width: 100, height: 100, cornerRadius: 36)
+    node.shape = Shape.circle(50)
 
     let node2 = RenderNode()
-    node2.offset = [-100, -100]
+    node2.offset = [-140, -100]
     node2.shape = Shape.rect(width: 300, height: 300, cornerRadius: 100)
-        .union(Shape.circle(100), offset: [125, 80], smoothing: 40)
+        .union(Shape.circle(100), offset: [150, 80], smoothing: 40)
+        .intersect(Shape.circle(200), offset: [100, 100], smoothing: 36)
     node2.brush = .solid(.blue)
 
     let node3 = RenderNode()
-    node3.offset = [200, 120]
+    node3.offset = [200, 150]
     node3.brush = .solid(.green)
     node3.shape = Shape.rect(width: 100, height: 100, cornerRadius: 0)
+    node3.affine = Affine().rotated(.degrees(-50), axis: [0, 1, 0])
 
     let nodes = [node, node2, node3]
 
     let renderer = try Renderer(context: context.surfaceContexts[0])
-    renderer.viewAffine = Affine().rotated(.pi(1.2), axis: [0.5, 1, 0])
+    renderer.viewAffine = Affine().rotated(.degrees(10), axis: [1, 0, 0])
 
     renderer.updateNodes(nodes)
     try renderer.render(nodeCount: UInt32(nodes.count))
