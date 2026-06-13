@@ -118,13 +118,14 @@ public final class Renderer {
         let w = Float(size.x)
         let h = Float(size.y)
         let d: Float = 1000  // perspective depth in pixels; larger = weaker effect
-        let projection = Affine(
-            col0: SIMD4<Float>(2 / w, 0, 0, 0),
-            col1: SIMD4<Float>(0, 2 / h, 0, 0),
-            col2: SIMD4<Float>(0, 0, 0, 1 / d),  // z bleeds into w → perspective divide
-            col3: SIMD4<Float>(0, 0, 0, 1)
-        )
-        let viewMatrix = projection.translated(x: -0.5, y: -0.5).multiplied(by: viewAffine)
+        let projection = Affine().translated(x: -1, y: -1)
+            .multiplied(by: Affine(
+                col0: SIMD4<Float>(2 / w, 0, 0, 0),
+                col1: SIMD4<Float>(0, 2 / h, 0, 0),
+                col2: SIMD4<Float>(0, 0, 0, 1 / d),  // z bleeds into w → perspective divide
+                col3: SIMD4<Float>(0, 0, 0, 1)
+            ))
+        let viewMatrix = projection.multiplied(by: viewAffine)
         // let viewport = (size.x, size.y)
         withUnsafeBytes(of: viewMatrix) { viewportBuffer in
             cmd.pushConstants(
