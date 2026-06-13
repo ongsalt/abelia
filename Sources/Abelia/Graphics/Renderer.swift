@@ -230,7 +230,7 @@ public final class Renderer {
             ]
         )
 
-        let viewMatrix = Affine.identity.scaled(x: 1 / Float(self.width), y: 1 / Float(self.height))
+        let viewMatrix = Affine.identity.scaled(x: 2 / Float(self.width), y: 2 / Float(self.height))
         // let viewport = (self.width, self.height)
         withUnsafeBytes(of: viewMatrix) { viewportBuffer in
             cmd.pushConstants(

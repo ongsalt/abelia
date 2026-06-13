@@ -20,8 +20,8 @@ runEventLoop { eventLoop in
 
     let node2 = RenderNode()
     node2.offset = [-100, -100]
-    node2.shape = Shape.rect(width: 100, height: 100, cornerRadius: 0)
-        .union(Shape.circle(50), offset: [-60, 30], smoothing: 15)
+    node2.shape = Shape.rect(width: 1000, height: 1000, cornerRadius: 0)
+        .union(Shape.circle(50), offset: [-500, 30], smoothing: 15)
     node2.brush = .solid(.blue)
 
     let node3 = RenderNode()

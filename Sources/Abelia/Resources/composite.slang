@@ -155,7 +155,8 @@ float4 fsMain(VertexOutput input): SV_Target {
     coverage = smoothCoverageOf(stack[0]);
   }
 
-  return color * coverage;
+  color.w *= coverage;
+  return color;
 }
 
 float sdf(float2 position, ShapeKind kind, uint4 data) {
