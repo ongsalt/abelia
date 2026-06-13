@@ -94,7 +94,7 @@ let package = Package(
         ),
 
         .target(
-            name: "Abelia",
+            name: "AbeliaGraphics",
             dependencies: [
                 "CShim",
                 .product(name: "Vulkan", package: "swift-vulkan"),
@@ -108,18 +108,9 @@ let package = Package(
         ),
 
         .executableTarget(
-            name: "TestTarget",
-            dependencies: [
-                "Abelia",
-                .product(name: "Swinit", package: "swinit"),
-            ]
-        ),
-
-        .executableTarget(
             name: "Playground",
             dependencies: [
-                "Ema",
-                "EmaCore",
+                "AbeliaGraphics",
                 .product(name: "Swinit", package: "swinit"),
             ],
         ),

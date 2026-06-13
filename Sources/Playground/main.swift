@@ -1,62 +1,67 @@
-import Ema
-import Reactivity
-import SwiftBlend2D
+import AbeliaGraphics
 
-var size = Signal<Float>(20)
+runEventLoop { eventLoop in
+    let context = try GraphicsContext(applicationName: "yomum", version: 12)
+    var window: _? = eventLoop.createWindow(attributes: .init(title: "hihi", size: [600, 600]))
 
-Task {
-  while !Task.isCancelled {
-    try await Task.sleep(for: .milliseconds(50))
-    size.value += 0.1
-  }
-}
+    #if os(Linux)
+        let surface = try context.createWaylandSurface(
+            display: window!.display.raw, surface: window!.surface.raw)
+    #elseif os(Windows)
+        let surface = try context.createWin32Surface(
+            hinstance: window!.hInstance, hwnd: window!.handle)
+    #endif
+    try context.initDevice(compatibleWith: surface)
 
-runApp {
-  Row {
-    Column(verticalArrangement: .center, horizontalAlignment: .center, gap: 0) {
-      Text("Hello world", size: 26)
-      Column {
-        Text("font size: \(size.value)", size: 24)
-        Text("wtf", size: size.value)
-      }
-      .color(.white.with(alpha: 0.1))
-      Box()
-        .width(12)
-        .height(300)
-        .color(.white.with(alpha: 0.2))
+    let node = RenderNode()
+    node.offset = [200, 0, 0]
+    node.brush = .solid(.red)
+    node.shape = Shape.circle(50)
+
+    let node2 = RenderNode()
+    node2.offset = [-140, -100, 0]
+    node2.shape = Shape.rect(width: 300, height: 300, cornerRadius: 100)
+        .union(Shape.circle(100), offset: [150, 80], smoothing: 40)
+        .intersect(Shape.circle(200), offset: [100, 100], smoothing: 36)
+    node2.brush = .solid(.blue)
+
+    let node3 = RenderNode()
+    node3.offset = [200, 150, -100]
+    node3.brush = .solid(.green)
+    node3.shape = Shape.rect(width: 100, height: 100, cornerRadius: 0)
+    node3.affine = Affine().rotated(.degrees(-50), axis: [0, 1, 0])
+
+    let nodes = [node, node2, node3]
+
+    let renderer = try Renderer(context: context.surfaceContexts[0])
+    renderer.viewAffine = Affine().rotated(.degrees(10), axis: [1, 0, 0])
+
+    try renderer.draw(nodes)
+    
+    // Task {
+    //     while !Task.isCancelled {
+    //         // this is ass, the render thread should actually poll us
+    //         try await Task.sleep(for: .milliseconds(16))
+    //         nodes[0].offset.x += 2
+    //         renderer.updateNodes(nodes)
+    //         try renderer.render(nodeCount: UInt32(nodes.count))
+    //     }
+    // }
+
+    return { id, event in
+        switch event {
+        case .resized(let size, let isFinal):
+            if isFinal {
+                try renderer.resize(w: size.width, h: size.height)
+                try renderer.draw(nodes)
+            }
+
+        case .closeRequested:
+            window = nil
+            eventLoop.stop()
+        default:
+            do {}
+        // print(event)
+        }
     }
-    .fillMaxHeight()
-    .width(300)
-    .color(.blue)
-
-    Column {
-      // SampleCanvas()
-    }
-    .fillMaxHeight()
-    .color(.white)
-  }
-  .fillMaxSize()
-}
-
-@MainActor
-@Component
-func SampleCanvas() -> View {
-  // fuck, this is premultiplied image, we need to update the shader somehow
-  Canvas(size: .init(500, 500)) { ctx in
-    var linear = BLGradient(linear: BLLinearGradientValues(x0: 0, y0: 0, x1: 0, y1: 480))
-    linear.addStop(0.0, BLRgba32(argb: 0xFFFF_FFFF))
-    linear.addStop(1.0, BLRgba32(argb: 0xFF1F_7FFF))
-
-    let path = BLPath()
-    path.moveTo(x: 119, y: 49)
-    path.cubicTo(x1: 259, y1: 29, x2: 99, y2: 279, x3: 275, y3: 267)
-    path.cubicTo(x1: 537, y1: 245, x2: 300, y2: -170, x3: 274, y3: 430)
-
-    ctx.compOp = .srcOver
-    ctx.setStrokeStyle(linear)
-    ctx.setStrokeWidth(15)
-    ctx.setStrokeStartCap(.round)
-    ctx.setStrokeEndCap(.butt)
-    ctx.strokePath(path)
-  }
 }

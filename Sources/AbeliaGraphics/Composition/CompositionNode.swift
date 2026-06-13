@@ -19,6 +19,8 @@ public class CompositionNode: Identifiable {
         }
     }
 
+    private(set) var renderNode: RenderNode?
+
     public var label: String?
     /// currently just redraw everything
     var dirtyFlags: LayerDirtyFlags = []

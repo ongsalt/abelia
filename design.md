@@ -64,6 +64,12 @@ component boundary do not exist as we cant really transform function content. So
 
 # Planning
 - copying texture
+- `RenderNodeRenderer` render to an any image
+- `GradientRegistry` may render and return an image with wait commands 
+- `Compositor` schedule multiple `CompositionNode` rendering with `RenderNodeRenderer` 
+- many surface might reuse same device context
+- every render function should produce a waitable object
+- extract FrameScheduler? 
 - gradient
 - basic compositing + effect layer scheduling
 - 9 grid

@@ -79,13 +79,15 @@ public final class Renderer {
     }
 
     // temporary api
-    public func updateNodes(_ nodes: [RenderNode]) {
+    public func draw(_ nodes: [RenderNode]) throws {
         for node in nodes {
             currentFrameResource.renderNodeStorage.update(
                 node: node, shapeGroupStorage: currentFrameResource.shapeGroupStorage)
         }
         currentFrameResource.drawListStorage.write(
             nodes.map(\.id), renderNodeStorage: currentFrameResource.renderNodeStorage)
+
+        try self.render(nodeCount: UInt32(nodes.count))
     }
 
     public func isWaitingForImage() throws -> Bool {
@@ -119,7 +121,7 @@ public final class Renderer {
         }
     }
 
-    public func render(nodeCount renderNodeCount: UInt32) throws {
+    func render(nodeCount renderNodeCount: UInt32) throws {
         try self.waitForImage()
         let res = currentFrameResource
         res.releaseQueue.flush()

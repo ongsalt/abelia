@@ -18,7 +18,6 @@ extension RenderNode {
       data.shapeData.one = shapeData
     } else {
       data.oneOrManyKind = .many_shapes
-      print(instructions)
       let startIndex = shapeGroupStorage.update(ownerIdentity: identity, data: instructions)
       data.shapeData.many = CShim.ManyShapeRef(startIndex: UInt32(startIndex!), count: UInt32(instructions.count))
       // shapeGroupStorage.print(offset: startIndex!, count: instructions.count)
