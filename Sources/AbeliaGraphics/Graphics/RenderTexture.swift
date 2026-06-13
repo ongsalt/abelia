@@ -34,7 +34,6 @@ class RenderTextureRegistry {
 
     }
 
-    // how to do cache
     func getOrCreateRenderTexture(size: SIMD2<UInt32>) -> RenderTexture {
         fatalError("unimplemented")
         // device.createImage(
