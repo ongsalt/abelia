@@ -40,34 +40,35 @@ let package = Package(
         ),
 
         .target(name: "CEmaPlatforms"),
+        .target(name: "CSTBImage"),
 
-        .target(
-            name: "Legacy",
-            dependencies: [
-                "Reactivity",
-                "Pointer",
-                "DSLMacro",
-                "CShim",
-                "CEmaPlatforms",
-                .product(name: "SwiftBlend2D", package: "swift-blend2d"),
-            ],
-            exclude: [
-                "Resources/Shaders/"
-            ],
-            resources: [
-                .copy("Generated/Resources")
-                // .ignore("Resources/Shaders"),
-            ],
-        ),
+        // .target(
+        //     name: "Legacy",
+        //     dependencies: [
+        //         "Reactivity",
+        //         "Pointer",
+        //         "DSLMacro",
+        //         "CShim",
+        //         "CEmaPlatforms",
+        //         .product(name: "SwiftBlend2D", package: "swift-blend2d"),
+        //     ],
+        //     exclude: [
+        //         "Resources/Shaders/"
+        //     ],
+        //     resources: [
+        //         .copy("Generated/Resources")
+        //         // .ignore("Resources/Shaders"),
+        //     ],
+        // ),
 
-        .target(
-            name: "AbeliaUI",
-            dependencies: [
-                "Legacy",
-                "DSLMacro",
-                .product(name: "Swinit", package: "swinit"),
-            ],
-        ),
+        // .target(
+        //     name: "AbeliaUI",
+        //     dependencies: [
+        //         "Legacy",
+        //         "DSLMacro",
+        //         .product(name: "Swinit", package: "swinit"),
+        //     ],
+        // ),
 
         .macro(
             name: "DSLMacro",
@@ -97,6 +98,7 @@ let package = Package(
             name: "AbeliaGraphics",
             dependencies: [
                 "CShim",
+                "CSTBImage",
                 .product(name: "Vulkan", package: "swift-vulkan"),
             ],
             exclude: [

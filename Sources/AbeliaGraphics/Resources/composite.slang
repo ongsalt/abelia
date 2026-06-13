@@ -98,13 +98,14 @@ float4 fsMain(VertexOutput input): SV_Target {
   let renderNode = renderNodeData[input.renderNodeDataIndex];
   let position = input.localPosition;
 
-  var color = float4(0.0);
+  // var color = float4(0.0);
+  var color = float4(input.localPosition, 0.0, 1.0);
   float coverage = 0.0;
 
   // return float4(input.localPosition, 1.0, 0.5);
 
   if (renderNode.brushKind == BrushKind.solid) {
-    var brush = bit_cast<SolidColorBrush>(renderNode.brushData);
+    var brush = bit_cast<SolidColorBrush>(renderNode.brushData0);
     color = brush.color;
   }
 

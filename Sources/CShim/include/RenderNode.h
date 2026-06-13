@@ -63,18 +63,41 @@ enum __attribute__((enum_extensibility(closed))) BrushKind : uint32_t {
   texture = 2
 };
 
+enum __attribute__((enum_extensibility(closed))) TextureFillMode : uint32_t {
+  tex_stretch = 0,
+  tex_tile = 1,
+};
+
 struct SolidColorBrush {
-  float color[4];
+  float color[4];       // 16 bytes
+};
+
+// Layout: textureIndex(4) + fillMode(4) + tileScale(8) + crop(16) + nineSlices(16) = 48 bytes
+struct TextureBrush {
+  uint32_t textureIndex;  // index into bound texture descriptor array
+  uint32_t fillMode;      // TextureFillMode
+  float tileScaleX;
+  float tileScaleY;
+  // normalized UV sub-region to sample
+  float cropLeft;
+  float cropTop;
+  float cropWidth;
+  float cropHeight;
+  // normalized nine-slice insets
+  float sliceLeft;
+  float sliceTop;
+  float sliceWidth;
+  float sliceHeight;
 };
 
 union Brush {
   struct SolidColorBrush solid;
-  // struct Gradient1DBrush gradient1d;
-  // struct TextureBrush texture;
+  struct TextureBrush texture;
+  // union size = 48 bytes
 };
 
 // Matches RenderNode in types.slang exactly.
-// Layout: affine(64) + shapeData(16) + brushData(16) + oneOrManyKind(4) + shapeKind(4) + brushKind(4) + _pad(4) = 112 bytes
+// Layout: affine(64) + shapeData(16) + brushData(48) + oneOrManyKind(4) + shapeKind(4) + brushKind(4) + _pad(4) = 144 bytes
 struct RenderNode {
   float affine[16];
 

@@ -43,8 +43,29 @@ public enum BrushKind : uint {
   texture = 2
 };
 
+public enum TextureFillMode : uint {
+  stretch = 0,
+  tile = 1,
+};
+
 public struct SolidColorBrush {
-  public float4 color;
+  public float4 color;  // 16 bytes
+};
+
+// Layout matches C TextureBrush exactly (48 bytes).
+public struct TextureBrush {
+  public uint textureIndex;
+  public uint fillMode;     // TextureFillMode
+  public float tileScaleX;
+  public float tileScaleY;
+  public float cropLeft;
+  public float cropTop;
+  public float cropWidth;
+  public float cropHeight;
+  public float sliceLeft;
+  public float sliceTop;
+  public float sliceWidth;
+  public float sliceHeight;
 };
 
 public enum MergeMode : uint {
@@ -99,7 +120,7 @@ public struct ShapeMergingEntry {
 };
 
 // Matches C struct RenderNode exactly.
-// Layout: affine(64) + shapeData(16) + brushData(16) + oneOrManyKind(4) + shapeKind(4) + brushKind(4) + _pad(4) = 112 bytes
+// Layout: affine(64) + shapeData(16) + brushData(48) + oneOrManyKind(4) + shapeKind(4) + brushKind(4) + _pad(4) = 144 bytes
 public struct RenderNode {
   public float4x4 affine;
 
@@ -107,7 +128,12 @@ public struct RenderNode {
   // many_shapes: .x = startIndex, .y = count into ShapeMergingInstruction buffer
   public uint4 shapeData;
 
-  public uint4 brushData;   // raw Brush union — bit_cast to SolidColorBrush/etc.
+  // raw Brush union (48 bytes) split into three uint4 chunks.
+  // solid:   bit_cast<SolidColorBrush>(brushData0)
+  // texture: bit_cast<TextureBrush>(brushData0, brushData1, brushData2)
+  public uint4 brushData0;
+  public uint4 brushData1;
+  public uint4 brushData2;
 
   public OneOrManyShapeKind oneOrManyKind;
   public ShapeKind shapeKind;   // valid when one_shape

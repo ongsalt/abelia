@@ -68,7 +68,8 @@ func Text(_ text: @autoclosure @escaping () -> some StringProtocol) -> View {
 component boundary do not exist as we cant really transform function content. So every lifecycle stuff need to be tied to parent element scope.
 
 # Planning
-- stop doing anchor center?
+- shadow falloff should be ^2.2
+- query hdr support
 - copying texture
 - `RenderNodeRenderer` render to an any image
 - `GradientRegistry` may render and return an image with wait commands 

@@ -25,9 +25,38 @@ extension RenderNode {
 
     switch brush {
     case .solid(let color):
-      data.brushKind = BrushKind.solid
+      data.brushKind = .solid
       let (r, g, b, a) = color.values
       data.brushData.solid = CShim.SolidColorBrush(color: (r, g, b, a))
+    case .texture(_, let fillMode, let crop, let nineSlices):
+      data.brushKind = .texture
+      let fillModeRaw: UInt32
+      let tileScaleX: Float
+      let tileScaleY: Float
+      switch fillMode {
+      case .stretch:
+        fillModeRaw = 0
+        tileScaleX = 1
+        tileScaleY = 1
+      case .tile(let s, _):
+        fillModeRaw = 1
+        tileScaleX = s.x
+        tileScaleY = s.y
+      }
+      data.brushData.texture = CShim.TextureBrush(
+        textureIndex: 0,  // resolved externally when binding textures
+        fillMode: fillModeRaw,
+        tileScaleX: tileScaleX,
+        tileScaleY: tileScaleY,
+        cropLeft: crop.left,
+        cropTop: crop.top,
+        cropWidth: crop.width,
+        cropHeight: crop.height,
+        sliceLeft: nineSlices.left,
+        sliceTop: nineSlices.top,
+        sliceWidth: nineSlices.width,
+        sliceHeight: nineSlices.height
+      )
     }
 
   }

@@ -1,7 +1,7 @@
 public struct Rect: Sendable {
     public static let zero = Rect(top: 0, left: 0, width: 0, height: 0)
     public static let one = Rect(top: 1, left: 1, width: 1, height: 1)
-    public static let unit = one
+    public static let unit = Rect(top: 0, left: 0, width: 1, height: 1)
 
     public var top: Float
     public var left: Float
