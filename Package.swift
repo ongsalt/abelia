@@ -42,7 +42,7 @@ let package = Package(
         .target(name: "CEmaPlatforms"),
 
         .target(
-            name: "EmaCore",
+            name: "Legacy",
             dependencies: [
                 "Reactivity",
                 "Pointer",
@@ -61,9 +61,9 @@ let package = Package(
         ),
 
         .target(
-            name: "Ema",
+            name: "AbeliaUI",
             dependencies: [
-                "EmaCore",
+                "Legacy",
                 "DSLMacro",
                 .product(name: "Swinit", package: "swinit"),
             ],
@@ -85,13 +85,13 @@ let package = Package(
             ]
         ),
 
-        .testTarget(
-            name: "EmaTests",
-            dependencies: [
-                "Ema",
-                "EmaCore",
-            ]
-        ),
+        // .testTarget(
+        //     name: "EmaTests",
+        //     dependencies: [
+        //         "Ema",
+        //         "EmaCore",
+        //     ]
+        // ),
 
         .target(
             name: "AbeliaGraphics",

@@ -70,6 +70,7 @@ component boundary do not exist as we cant really transform function content. So
 - many surface might reuse same device context
 - every render function should produce a waitable object
 - extract FrameScheduler? 
+    - DXGI swapchain
 - gradient
 - basic compositing + effect layer scheduling
 - 9 grid

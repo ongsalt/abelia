@@ -33,10 +33,21 @@ runEventLoop { eventLoop in
 
     let nodes = [node, node2, node3]
 
-    let renderer = try Renderer(context: context.surfaceContexts[0])
+    let (renderer, frameScheduler) = try context.createRenderer()
     renderer.viewAffine = Affine().rotated(.degrees(10), axis: [1, 0, 0])
 
-    try renderer.draw(nodes)
+    try frameScheduler.render { image, imageView, commandBuffer, frameIndex, size in
+        try? renderer.draw(
+            to: image, 
+            view: imageView, 
+            commandBuffer: commandBuffer,
+            frameIndex: frameIndex,
+            size: size,
+            nodes: nodes, 
+        )
+    }
+
+    // try renderer.draw(nodes)
     
     // Task {
     //     while !Task.isCancelled {
@@ -52,8 +63,8 @@ runEventLoop { eventLoop in
         switch event {
         case .resized(let size, let isFinal):
             if isFinal {
-                try renderer.resize(w: size.width, h: size.height)
-                try renderer.draw(nodes)
+                // try renderer.resize(w: size.width, h: size.height)
+                // try renderer.draw(nodes)
             }
 
         case .closeRequested:

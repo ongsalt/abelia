@@ -11,7 +11,7 @@ class GPUStorage<T> {
         vmaBuffer.bufferPointer!.assumingMemoryBound(to: T.self)
     }
 
-    init(context: borrowing SurfaceContext, count: UInt64 = 16 * 1024) throws(Vulkan.Result) {
+    init(context: borrowing DeviceContext, count: UInt64 = 16 * 1024) throws(Vulkan.Result) {
         let size = count * UInt64(MemoryLayout<T>.size)
         self.vmaBuffer = try context.createVmaBuffer(size: size)
     }

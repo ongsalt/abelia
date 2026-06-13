@@ -3,83 +3,36 @@
 import Vulkan
 
 public final class Renderer {
-    let context: SurfaceContext
-    let swapchainImageFormat: Format
-    let swapchainImageColorSpace: ColorSpaceKHR
+    let context: DeviceContext
     let pipelines: Pipelines
-    var swapchain: SwapchainKHR
 
-    var swapchainImages: [Image]
-    var swapchainImageViews: [ImageView]
-
-    var frameResources: [FrameResource] = []
-    var currentFrameResource: FrameResource {
-        frameResources[currentFrameInFlightIndex]
-    }
-    var lastFrameResource: FrameResource {
-        frameResources[(currentFrameInFlightIndex + Self.maxFrameInFlightCount - 1) % Self.maxFrameInFlightCount]
-    }
+    private var frameResources: [RendererFrameResource]
 
     public var viewAffine: Affine = .identity
-
-    let releaseQueue: ReleaseQueue = ReleaseQueue()
-
-    static let maxFrameInFlightCount = 2
-    private var currentFrameInFlightIndex: Int = 0
-
-    var width: UInt32
-    var height: UInt32
-
-    public init(context: SurfaceContext, initialSize: SIMD2<UInt32> = SIMD2(800, 600)) throws(Vulkan
-        .Result)
-    {
+    public init(context: DeviceContext, maxFrameInFlightCount: Int) throws(Vulkan.Result) {
         self.context = context
-        let physicalDevice = context.physicalDevice
-        let device = context.device
-        let surface = context.surface
-
-        let caps = try physicalDevice.getSurfaceCapabilitiesKHR(surface: surface)
-        let formats = try physicalDevice.getSurfaceFormatsKHR(surface: surface)
-
-        self.swapchainImageFormat = .b8g8r8a8Unorm
-        self.swapchainImageColorSpace = .srgbNonlinear
-
-        // for surfaceFormat in formats {
-            // let properties = physicalDevice.getFormatProperties(format: surfaceFormat.format)
-            // print("\(surfaceFormat.format) in \(surfaceFormat.colorSpace):")
-            // print(" - buffer: \(properties.bufferFeatures)")
-            // print(" - linearTiling: \(properties.linearTilingFeatures)")
-            // print(" - optimalTiling: \(properties.optimalTilingFeatures)")
-            // print()
-        // }
-
-        let extent =
-            if caps.currentExtent.width == UInt32.max {
-                Extent2D(width: initialSize.x, height: initialSize.y)
-            } else {
-                caps.currentExtent
-            }
-
-        let (swapchain, images, views) = try Self.recreateSwapchain(
-            device: device, surface: surface, caps: caps, imageFormat: swapchainImageFormat,
-            colorspace: swapchainImageColorSpace, extent: extent)
-        self.swapchain = swapchain
-        self.swapchainImages = images
-        self.swapchainImageViews = views
-
-        self.width = extent.width
-        self.height = extent.height
-
+        
         let pipelines = try Pipelines(
-            compatibleWith: swapchain, format: swapchainImageFormat, extent: extent, context: context)
+            format: .b8g8r8a8Srgb, 
+            // extent: context.extent,
+            context: context
+        )
         self.pipelines = pipelines
-        self.frameResources = try (0..<Self.maxFrameInFlightCount).map { i throws(Vulkan.Result) in
-            try FrameResource(index: i, context: context, pipelines: pipelines)
+        self.frameResources = try (0..<maxFrameInFlightCount).map { i throws(Vulkan.Result) in
+            try RendererFrameResource(index: i, context: context, pipelines: pipelines)
         }
     }
 
     // temporary api
-    public func draw(_ nodes: [RenderNode]) throws {
+    public func draw(
+        to image: Image, 
+        view: ImageView, 
+        commandBuffer: CommandBuffer,
+        frameIndex: Int,
+        size: SIMD2<UInt32>,
+        nodes: [RenderNode], 
+    ) throws {
+        let currentFrameResource = frameResources[frameIndex]
         for node in nodes {
             currentFrameResource.renderNodeStorage.update(
                 node: node, shapeGroupStorage: currentFrameResource.shapeGroupStorage)
@@ -87,89 +40,14 @@ public final class Renderer {
         currentFrameResource.drawListStorage.write(
             nodes.map(\.id), renderNodeStorage: currentFrameResource.renderNodeStorage)
 
-        try self.render(nodeCount: UInt32(nodes.count))
-    }
-
-    public func isWaitingForImage() throws -> Bool {
-        do {
-            try context.device.waitForFences(
-                fences: [currentFrameResource.everythingCompletedFence], waitAll: true, timeout: 0)
-            return false
-        } catch {
-            if error == .timeout {
-                return true
-            }
-            throw error
-        }
-    }
-
-    public func waitForImage(reset: Bool = true) throws {
-        try context.device.waitForFences(
-            fences: [currentFrameResource.everythingCompletedFence], waitAll: true,
-            timeout: UInt64.max)
-        if reset {
-            try context.device.resetFences(fences: [currentFrameResource.everythingCompletedFence])
-        }
-    }
-
-    public func waitLastImage(reset: Bool = true) throws {
-        let res = lastFrameResource
-        try context.device.waitForFences(
-            fences: [res.everythingCompletedFence], waitAll: true, timeout: UInt64.max)
-        if reset {
-            try context.device.resetFences(fences: [res.everythingCompletedFence])
-        }
-    }
-
-    func render(nodeCount renderNodeCount: UInt32) throws {
-        try self.waitForImage()
-        let res = currentFrameResource
-        res.releaseQueue.flush()
-        self.releaseQueue.flush()
-        currentFrameInFlightIndex = (currentFrameInFlightIndex + 1) % Self.maxFrameInFlightCount
-
-        let imageIndex = try context.device.acquireNextImage2KHR(
-            .init(
-                swapchain: swapchain, timeout: UInt64.max,
-                semaphore: res.imageAvailableSemaphore, deviceMask: 1
-            )
+        try self.recordCommands(
+            into: commandBuffer,
+            image: image,
+            imageView: view,
+            renderNodeCount: UInt32(nodes.count),
+            frameResource: currentFrameResource,
+            size: size,
         )
-
-        try recordCommands(
-            into: res.commandBuffer,
-            image: swapchainImages[Int(imageIndex)],
-            imageView: swapchainImageViews[Int(imageIndex)],
-            renderNodeCount: renderNodeCount,
-            frameResource: res
-        )
-
-        let graphicsSubmit = SubmitInfo2(
-            waitSemaphoreInfos: [
-                .init(
-                    semaphore: res.imageAvailableSemaphore, value: 0,
-                    stageMask: .colorAttachmentOutput, deviceIndex: 0
-                )
-            ],
-            commandBufferInfos: [.init(commandBuffer: res.commandBuffer, deviceMask: 0)],
-            signalSemaphoreInfos: [
-                .init(
-                    semaphore: res.renderCompletedSemaphore, value: 0,
-                    stageMask: .colorAttachmentOutput, deviceIndex: 0
-                )
-            ]
-        )
-
-        try context.graphicsQueue.submit2(
-            submits: [graphicsSubmit], fence: res.everythingCompletedFence)
-
-        try context.graphicsQueue.presentKHR(
-            .init(
-                waitSemaphores: [res.renderCompletedSemaphore],
-                swapchains: [swapchain],
-                imageIndices: [imageIndex],
-            )
-        )
-
     }
 
     private func recordCommands(
@@ -177,8 +55,9 @@ public final class Renderer {
         image: Image,
         imageView: ImageView,
         renderNodeCount: UInt32,
-        frameResource: FrameResource
-    ) throws {
+        frameResource: RendererFrameResource,
+        size: SIMD2<UInt32>,
+    ) throws(Vulkan.Result) {
         try cmd.reset()
         try cmd.begin()
 
@@ -201,18 +80,21 @@ public final class Renderer {
             ]))
 
         cmd.beginRendering(
-            .init(
-                renderArea: .init(
-                    offset: .zero, extent: Extent2D(width: self.width, height: self.height)),
-                layerCount: 1, viewMask: 0,
+            RenderingInfo(
+                renderArea: .init(offset: .zero, extent: Extent2D(width: size.x, height: size.y)),
+                layerCount: 1, 
+                viewMask: 0,
                 colorAttachments: [
                     .init(
                         imageView: imageView, imageLayout: .colorAttachmentOptimal,
                         resolveMode: .none, resolveImageView: nil,
                         resolveImageLayout: .undefined, loadOp: .clear,
                         storeOp: .store,
-                        clearValue: .init(color: .init(float32: (0.0, 0.0, 0.0, 0.1))))
-                ]))
+                        clearValue: .init(color: .init(float32: (0.0, 0.0, 0.0, 0.1)))
+                    )
+                ]
+            )
+        )
 
         cmd.bindPipeline(pipelineBindPoint: .graphics, pipeline: pipelines.compositionPipeline)
         cmd.setViewport(
@@ -221,8 +103,8 @@ public final class Renderer {
                 .init(
                     x: 0,
                     y: 0,
-                    width: Float(self.width),
-                    height: Float(self.height),
+                    width: Float(size.x),
+                    height: Float(size.y),
                     minDepth: 0,
                     maxDepth: 1
                 )
@@ -230,11 +112,12 @@ public final class Renderer {
         cmd.setScissor(
             firstScissor: 0,
             scissors: [
-                .init(offset: .zero, extent: Extent2D(width: self.width, height: self.height))
+                .init(offset: .zero, extent: Extent2D(width: size.x, height: size.y))
             ]
         )
 
-        let w = Float(self.width), h = Float(self.height)
+        let w = Float(size.x)
+        let h = Float(size.y)
         let d: Float = 1000  // perspective depth in pixels; larger = weaker effect
         let projection = Affine(
             col0: SIMD4<Float>(2 / w, 0, 0, 0),
@@ -243,7 +126,7 @@ public final class Renderer {
             col3: SIMD4<Float>(0, 0, 0, 1)
         )
         let viewMatrix = projection.multiplied(by: viewAffine)
-        // let viewport = (self.width, self.height)
+        // let viewport = (size.x, size.y)
         withUnsafeBytes(of: viewMatrix) { viewportBuffer in
             cmd.pushConstants(
                 layout: pipelines.compositionPipelineLayout,
@@ -288,95 +171,16 @@ public final class Renderer {
 
         try cmd.end()
     }
-
-    public func resize(w: UInt32, h: UInt32) throws {
-        self.width = w
-        self.height = h
-        try recreateSwapchain(extent: Extent2D(width: w, height: h))
-    }
-
-    func recreateSwapchain(extent: Extent2D) throws(Vulkan.Result) {
-        let caps = try context.physicalDevice.getSurfaceCapabilitiesKHR(surface: context.surface)
-        nonisolated(unsafe) let prev = self.swapchain
-        let previousSwapchainImageViews = self.swapchainImageViews
-        (swapchain, swapchainImages, swapchainImageViews) = try Self.recreateSwapchain(
-            device: context.device,
-            surface: context.surface,
-            caps: caps,
-            imageFormat: swapchainImageFormat,
-            colorspace: swapchainImageColorSpace,
-            extent: extent.clamped(from: caps.minImageExtent, to: caps.maxImageExtent),
-            previous: prev
-        )
-
-        self.releaseQueue.schedule(in: Self.maxFrameInFlightCount + 1) {
-            for view in previousSwapchainImageViews {
-                view.destroy()
-            }
-            prev.destroyKHR()
-        }
-    }
-
-    private static func recreateSwapchain(
-        device: Device, surface: SurfaceKHR, caps: SurfaceCapabilitiesKHR, imageFormat: Format,
-        colorspace: ColorSpaceKHR, extent: Extent2D, previous: SwapchainKHR? = nil
-    ) throws(Vulkan.Result) -> (SwapchainKHR, [Image], [ImageView]) {
-        let swapchain = try device.createSwapchainKHR(
-            .init(
-                surface: surface,
-                minImageCount: caps.minImageCount,
-                imageFormat: imageFormat,
-                imageColorSpace: colorspace,
-                imageExtent: extent,
-                imageArrayLayers: 1,
-                imageUsage: .colorAttachment,
-                imageSharingMode: .exclusive,
-                preTransform: caps.currentTransform,
-                compositeAlpha: {
-                    #if os(Linux)  // wayland
-                        .preMultiplied
-                    #else
-                        .opaque
-                    #endif
-                }(),
-                presentMode: .fifo,
-                clipped: true,
-                oldSwapchain: previous
-            )
-        )
-        let swapchainImages = try swapchain.getImagesKHR()
-        do {
-            let swapchainImageViews = try swapchainImages.map { image in
-                try device.createImageView(
-                    .init(
-                        image: image, viewType: .type2d, format: imageFormat,
-                        components: .init(r: .r, g: .g, b: .b, a: .a),
-                        subresourceRange: .init(
-                            aspectMask: .color, baseMipLevel: 0, levelCount: 1,
-                            baseArrayLayer: 0, layerCount: 1
-                        )
-                    )
-                )
-            }
-
-            return (swapchain, swapchainImages, swapchainImageViews)
-        } catch {
-            throw error as! Vulkan.Result
-        }
-    }
 }
 final class Pipelines {
     let compositionPipeline: Pipeline
     let compositionPipelineLayout: PipelineLayout
     let mainDescriptorSetLayout: DescriptorSetLayout
-    // let renderNodeStorageDescriptorSet: DescriptorSet
     let descriptorPool: DescriptorPool
 
     init(
-        compatibleWith swapchain: SwapchainKHR,
         format: Format,
-        extent: Extent2D,
-        context: borrowing SurfaceContext
+        context: borrowing DeviceContext
     )
         throws(Vulkan.Result)
     {
@@ -438,13 +242,13 @@ final class Pipelines {
             viewportState: .init(
                 viewports: [
                     .init(
-                        x: 0, y: 0, width: Float(extent.width),
-                        height: Float(extent.height), minDepth: 1, maxDepth: 1)
+                        x: 0, y: 0, width: 1000,
+                        height: 1000, minDepth: 1, maxDepth: 1)
                 ],
                 scissors: [
                     .init(
                         offset: Offset2D(x: 0, y: 0),
-                        extent: extent
+                        extent: Extent2D(width: 1000, height: 1000)
                     )
                 ]
             ),
@@ -502,7 +306,7 @@ final class Pipelines {
     }
 
     func createMainDescriptorSet(
-        _ context: borrowing SurfaceContext
+        _ context: borrowing DeviceContext
     )
         throws(Vulkan.Result) -> DescriptorSet
     {
@@ -516,30 +320,15 @@ final class Pipelines {
         return descriptorSets[0]
     }
 }
-class FrameResource {
-    let index: Int
-    let commandPool: CommandPool
-    let commandBuffer: CommandBuffer
-
-    let renderCompletedSemaphore: Semaphore
-    let imageAvailableSemaphore: Semaphore
-    let everythingCompletedFence: Fence
-
+struct RendererFrameResource {
     let mainDescriptorSet: DescriptorSet
     let renderNodeStorage: RenderNodeStorage
     let shapeGroupStorage: ShapeGroupStorage
     let drawListStorage: DrawListStorage
 
-    let releaseQueue: ReleaseQueue = ReleaseQueue()
-
-    init(index: Int, context: borrowing SurfaceContext, pipelines: borrowing Pipelines)
+    init(index: Int, context: borrowing DeviceContext, pipelines: borrowing Pipelines)
         throws(Vulkan.Result)
     {
-        let commandPool = try context.device.createCommandPool(
-            .init(flags: .resetCommandBuffer, queueFamilyIndex: context.graphicsFamilyIndex))
-        let commandBuffer = try context.device.allocateCommandBuffers(
-            .init(commandPool: commandPool, level: .primary, commandBufferCount: 1))
-
         let mainDescriptorSet = try pipelines.createMainDescriptorSet(context)
         let renderNodeStorage = try RenderNodeStorage(context: context)
         let shapeGroupStorage = try ShapeGroupStorage(context: context)
@@ -585,12 +374,6 @@ class FrameResource {
 
         ])
 
-        self.index = index
-        self.commandPool = commandPool
-        self.commandBuffer = commandBuffer[0]
-        self.renderCompletedSemaphore = try context.device.createSemaphore()
-        self.imageAvailableSemaphore = try context.device.createSemaphore()
-        self.everythingCompletedFence = try context.device.createFence(.init(flags: .signaled))
         self.mainDescriptorSet = mainDescriptorSet
         self.renderNodeStorage = renderNodeStorage
         self.shapeGroupStorage = shapeGroupStorage

@@ -84,15 +84,21 @@ public class GraphicsContext: @unchecked Sendable {
     public func initDevice(compatibleWith surface: SurfaceKHR)
         throws(DeviceInitializationError)
     {
-        self.surfaceContexts.append(try SurfaceContext(compatibleWith: surface, context: self))
+        self.surfaceContexts.append(try SurfaceContext(surface: surface, context: self))
+    }
+
+    // temporary api
+    public func createRenderer() throws -> (Renderer, any FrameSchedulerProtocol) {
+        let surfaceContext = surfaceContexts[0]
+        let renderer = try Renderer(context: surfaceContext.associatedDevice, maxFrameInFlightCount: 2)
+        return (renderer, surfaceContext.frameScheduler)
     }
 
 }
 public enum DeviceInitializationError: Error {
     case noUsableDevice
 }
-public class SurfaceContext: @unchecked Sendable {
-    let surface: SurfaceKHR
+public class DeviceContext: @unchecked Sendable {
     let physicalDevice: PhysicalDevice
     let graphicsFamilyIndex: UInt32
     let presentationFamilyIndex: UInt32
@@ -101,9 +107,7 @@ public class SurfaceContext: @unchecked Sendable {
     let device: Device
     let allocator: VmaAllocator
 
-    public init(compatibleWith surface: SurfaceKHR, context: borrowing GraphicsContext)
-        throws(DeviceInitializationError)
-    {
+    init(compatibleWith surface: SurfaceKHR, context: borrowing GraphicsContext) throws(DeviceInitializationError) {
         guard
             let (graphicsFamilyIndex, presentationFamilyIndex, physicalDevice) =
                 try? Self.selectPhysicalDevice(context.vulkanInstance, compatibleWith: surface),
@@ -165,7 +169,6 @@ public class SurfaceContext: @unchecked Sendable {
             vmaCreateAllocator(&vmaCi, &allocator)
         }
 
-        self.surface = surface
         self.physicalDevice = physicalDevice
         self.graphicsFamilyIndex = graphicsFamilyIndex
         self.presentationFamilyIndex = presentationFamilyIndex
@@ -236,5 +239,20 @@ public class SurfaceContext: @unchecked Sendable {
         }
 
         return nil
+    }
+}
+
+public class SurfaceContext: @unchecked Sendable {
+    let surface: SurfaceKHR
+    let associatedDevice: DeviceContext
+    let frameScheduler: any FrameSchedulerProtocol
+
+    public init(surface: SurfaceKHR, context: borrowing GraphicsContext)
+        throws(DeviceInitializationError)
+    {
+        self.surface = surface
+        // TODO: stop creating device context every time, may be getOrCreate
+        self.associatedDevice = try DeviceContext(compatibleWith: surface, context: context)
+        self.frameScheduler = try! FrameScheduler(context: associatedDevice, surface: surface)
     }
 }

@@ -22,7 +22,7 @@ class VmaBuffer {
   }
 }
 
-extension SurfaceContext {
+extension DeviceContext {
   func createVmaBuffer(
     size: UInt64,
     usages: BufferUsageFlags = .storageBuffer,
