@@ -47,11 +47,11 @@ extension Shape {
       )
     case .arc(let radius, let angle, let thickness):
       shapeKind = ShapeKind.arc
-      shape.arc = CShim.Arc(radius: radius, angle: angle, thickness: thickness)
+      shape.arc = CShim.Arc(radius: radius, angle: angle.radians, thickness: thickness)
     case .pie(let radius, let angle, let perimeterOffset):
       shapeKind = ShapeKind.pie
       shape.pie = CShim.Pie(
-        radius: radius, angle: angle, perimeterOffset: perimeterOffset)
+        radius: radius, angle: angle.radians, perimeterOffset: perimeterOffset)
     case .ellipse(let radiusX, let radiusY):
       shapeKind = ShapeKind.ellipse
       shape.ellipse = CShim.Ellipse(radiusX: radiusX, radiusY: radiusY)

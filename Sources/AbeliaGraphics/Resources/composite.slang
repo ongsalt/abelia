@@ -182,7 +182,7 @@ float sdf(float2 position, ShapeKind kind, uint4 data) {
 }
 
 float smoothCoverageOf(float distance) {
-  float edgeWidth = fwidth(distance);
+  float edgeWidth = fwidth(distance) * 0.5;
   return smoothstep(edgeWidth, -edgeWidth, distance);
 }
 

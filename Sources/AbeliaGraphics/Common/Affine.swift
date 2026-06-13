@@ -1,6 +1,6 @@
 import Foundation
 
-public enum Rotation {
+public enum Angle: Sendable {
     case radians(Float)
     case degrees(Float)
     case pi(Float)
@@ -76,7 +76,7 @@ public struct Affine: Sendable {
         return self.multiplied(by: translationMatrix)
     }
 
-    public func rotated(_ angle: Rotation, axis: SIMD3<Float> = SIMD3<Float>(0, 0, 1)) -> Affine {
+    public func rotated(_ angle: Angle, axis: SIMD3<Float> = SIMD3<Float>(0, 0, 1)) -> Affine {
         let r = angle.radians
         let length = sqrt(axis.x * axis.x + axis.y * axis.y + axis.z * axis.z)
         let n = axis / length
@@ -106,7 +106,7 @@ public struct Affine: Sendable {
         self = self.translated(x: x, y: y, z: z)
     }
 
-    public mutating func rotate(_ angle: Rotation, axis: SIMD3<Float> = SIMD3<Float>(0, 0, 1)) {
+    public mutating func rotate(_ angle: Angle, axis: SIMD3<Float> = SIMD3<Float>(0, 0, 1)) {
         self = self.rotated(angle, axis: axis)
     }
 }

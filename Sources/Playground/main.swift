@@ -1,59 +1,54 @@
 import AbeliaGraphics
 
 func makeNodes() -> [RenderNode] {
-    let node = RenderNode(
-        shape: Shape.circle(50),
-        brush: .solid(.red),
-        offset: [200, 0, 0]
+    let center: SIMD3<Float> = [300, 300, 0]
+
+    // 180° rotation puts the closed end at 12 o'clock (gap at bottom), matching Apple Health style
+
+    // Outer ring — Move (red), 75%
+    let moveProgress: Float = 0.75
+    let moveBg = RenderNode(
+        shape: Shape.arc(radius: 140, angle: .pi(2), thickness: 26),
+        brush: .solid(Color(red: 0.5, green: 0.05, blue: 0.15, alpha: 0.4)),
+        offset: center
+    )
+    let moveFg = RenderNode(
+        shape: Shape.arc(radius: 140, angle: .radians(.pi * 2 * moveProgress), thickness: 26),
+        brush: .solid(Color(red: 1, green: 0.1, blue: 0.3)),
+        offset: center,
+        rotation: .degrees(180)
     )
 
-    let node2 = RenderNode(
-        shape: Shape.rect(width: 300, height: 300, cornerRadius: 100)
-            .union(Shape.circle(100), offset: [150, 80], smoothing: 40)
-            .intersect(Shape.circle(200), offset: [100, 100], smoothing: 36),
-        brush: .solid(.blue),
-        offset: [-140, -100, 0]
+    // Middle ring — Exercise (green), 60%
+    let exerciseProgress: Float = 0.60
+    let exerciseBg = RenderNode(
+        shape: Shape.arc(radius: 104, angle: .pi(2), thickness: 26),
+        brush: .solid(Color(red: 0.05, green: 0.35, blue: 0.1, alpha: 0.4)),
+        offset: center
+    )
+    let exerciseFg = RenderNode(
+        shape: Shape.arc(radius: 104, angle: .radians(.pi * 2 * exerciseProgress), thickness: 26),
+        brush: .solid(Color(red: 0.2, green: 1, blue: 0.35)),
+        offset: center,
+        rotation: .degrees(180)
     )
 
-    // flipped on Y axis around its right edge
-    let node3 = RenderNode(
-        shape: Shape.rect(width: 100, height: 100, cornerRadius: 0),
-        brush: .solid(.green),
-        offset: [200, 150, -100],
-        rotation: .degrees(-50),
-        rotationAxis: [0, 1, 0],
-        transformOrigin: [50, 0]
+    // Inner ring — Stand (cyan), 90%
+    let standProgress: Float = 0.90
+    let standBg = RenderNode(
+        shape: Shape.arc(radius: 68, angle: .pi(2), thickness: 26),
+        brush: .solid(Color(red: 0.05, green: 0.25, blue: 0.45, alpha: 0.4)),
+        offset: center
+    )
+    let standFg = RenderNode(
+        shape: Shape.arc(radius: 68, angle: .radians(.pi * 2 * standProgress), thickness: 26),
+        brush: .solid(Color(red: 0.4, green: 0.9, blue: 1)),
+        offset: center,
+        rotation: .degrees(180)
     )
 
-    // pill rotated 45° in-plane, scaled non-uniformly, pivot at center-bottom
-    let node4 = RenderNode(
-        shape: Shape.rect(width: 40, height: 160, cornerRadius: 20),
-        brush: .solid(Color(red: 1, green: 0.5, blue: 0)),
-        offset: [-80, 120, 0],
-        scale: [1.5, 0.8],
-        rotation: .degrees(45),
-        transformOrigin: [0, 80]
-    )
-
-    // ring subtracted from a wide rect, tilted in 3D
-    let node5 = RenderNode(
-        shape: Shape.rect(width: 200, height: 80, cornerRadius: 8)
-            .subtract(Shape.circle(30), offset: [0, 0]),
-        brush: .solid(Color(red: 0.6, green: 0.2, blue: 0.9)),
-        offset: [0, -180, 0],
-        rotation: .degrees(20),
-        rotationAxis: [1, 0.4, 0],
-        transformOrigin: [0, 40]
-    )
-
-    // semi-transparent overlay sitting in front of node2
-    let node6 = RenderNode(
-        shape: Shape.circle(120),
-        brush: .solid(Color(red: 1, green: 1, blue: 1, alpha: 0.25)),
-        offset: [-80, -80, 10]
-    )
-
-    return [node, node2, node3, node4, node5, node6]
+    // backgrounds first so foreground arcs composite on top
+    return [moveBg, exerciseBg, standBg, moveFg, exerciseFg, standFg]
 }
 
 runEventLoop { eventLoop in
@@ -72,7 +67,7 @@ runEventLoop { eventLoop in
     let nodes = makeNodes()
 
     let (renderer, frameScheduler) = try context.createRenderer()
-    renderer.viewAffine = Affine().rotated(.degrees(10), axis: [1, 0, 0])
+    // renderer.viewAffine = Affine().rotated(.degrees(10), axis: [1, 0, 0])
 
     func render() throws {
         try frameScheduler.render { image, imageView, commandBuffer, frameIndex, size in

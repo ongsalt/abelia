@@ -26,7 +26,7 @@ public class RenderNode: Identifiable {
         didSet { dirty = true }
     }
 
-    public var rotation: Rotation = .radians(0) {
+    public var rotation: Angle = .radians(0) {
         didSet { dirty = true }
     }
 
@@ -59,7 +59,7 @@ public class RenderNode: Identifiable {
         brush: Brush = .solid(.transparent),
         offset: SIMD3<Float> = .zero,
         scale: SIMD2<Float> = .one,
-        rotation: Rotation = .radians(0),
+        rotation: Angle = .radians(0),
         rotationAxis: SIMD3<Float> = [0, 0, 1],
         transformOrigin: SIMD2<Float> = .zero,
         affine: Affine = .identity

@@ -27,8 +27,8 @@ public protocol ShapeProtocol: Sendable {
 /// perimeterOffset just directly subtract the distance, effectively moving isoperimeter out and rounding it
 public enum Shape: Sendable {
   case rect(width: Float, height: Float, cornerRadius: Float = 0, cornerDegree: Float = 4)
-  case arc(radius: Float, angle: Float, thickness: Float)
-  case pie(radius: Float, angle: Float, perimeterOffset: Float = 0)
+  case arc(radius: Float, angle: Angle, thickness: Float)
+  case pie(radius: Float, angle: Angle, perimeterOffset: Float = 0)
   /// 0, 0 is the center
   // case polygon(_ vertices: [SIMD2<Float>], perimeterOffset: Float = 0)
   case ellipse(radiusX: Float, radiusY: Float)
@@ -54,7 +54,7 @@ extension Shape: ShapeProtocol {
     case .arc(let radius, _, let thickness):
       let s = (radius + thickness / 2) * 2
       return Rect(center: .zero, size: SIMD2(s, s))
-    case .pie(let radius, _, let perimeterOffset):
+    case .pie(let radius, _, let perimeterOffset):  // angle unused for bounds
       let s = max(radius + perimeterOffset, 0) * 2
       return Rect(center: .zero, size: SIMD2(s, s))
     case .ellipse(let radiusX, let radiusY):
@@ -67,9 +67,9 @@ extension Shape: ShapeProtocol {
     case .rect(let width, let height, let cornerRadius, let cornerDegree):
       return _sdfRoundRect(p, size: SIMD2(width, height), radius: cornerRadius, degree: cornerDegree)
     case .arc(let radius, let angle, let thickness):
-      return _sdfArc(p, radius: radius, angle: angle, thickness: thickness)
+      return _sdfArc(p, radius: radius, angle: angle.radians, thickness: thickness)
     case .pie(let radius, let angle, let perimeterOffset):
-      return _sdfPie(p, radius: radius, angle: angle, perimeterOffset: perimeterOffset)
+      return _sdfPie(p, radius: radius, angle: angle.radians, perimeterOffset: perimeterOffset)
     case .ellipse(let radiusX, let radiusY):
       return _sdfEllipse(p, ab: SIMD2(radiusX, radiusY))
     }
