@@ -10,6 +10,24 @@ public float sdfRoundRect(float2 position, float2 size, float radius, float degr
   return min(0, max(v.x, v.y)) + outer - radius;
 }
 
+// arc pointing up (+Y), angle is total arc span in radians, thickness is stroke width
+public float sdfArc(float2 p, float radius, float angle, float thickness) {
+  float s = sin(angle * 0.5);
+  float c = cos(angle * 0.5);
+  p.x = abs(p.x);
+  return ((c * p.x > s * p.y) ? length(p - float2(s, c) * radius) : abs(length(p) - radius)) - thickness * 0.5;
+}
+
+// pie/wedge pointing up (+Y), angle is total arc span in radians
+public float sdfPie(float2 p, float radius, float angle, float perimeterOffset) {
+  float s = sin(angle * 0.5);
+  float c = cos(angle * 0.5);
+  p.x = abs(p.x);
+  float l = length(p) - radius;
+  float m = length(p - float2(s, c) * clamp(dot(p, float2(s, c)), 0.0, radius));
+  return max(l, m * sign(c * p.x - s * p.y)) - perimeterOffset;
+}
+
 // copied from https://www.shadertoy.com/view/4sS3zz
 public float sdfEllipse(float2 position, float2 size) {
   position = abs(position);

@@ -1,3 +1,5 @@
+import Foundation
+
 public struct ShapeMetadata: Sendable {
   public var shape: Shape
   public var offset: SIMD2<Float>
@@ -17,6 +19,9 @@ public enum ShapeMergingInstruction {
 public protocol ShapeProtocol: Sendable {
   associatedtype DrawInstructions: Sequence<ShapeMergingInstruction>
   var drawInstructions: DrawInstructions { get }
+  var bounds: Rect { get }
+  func sdf(_ p: SIMD2<Float>) -> Float
+  func contains(_ point: SIMD2<Float>) -> Bool
 }
 
 /// perimeterOffset just directly subtract the distance, effectively moving isoperimeter out and rounding it
@@ -35,10 +40,48 @@ extension Shape {
   }
 }
 
+// we basically need 2 copy of sdf code, one in the shader, one here
 extension Shape: ShapeProtocol {
   @inlinable
   public var drawInstructions: some Sequence<ShapeMergingInstruction> {
     CollectionOfOne(.push(ShapeMetadata(self, .zero)))
+  }
+
+  public var bounds: Rect {
+    switch self {
+    case .rect(let width, let height, _, _):
+      return Rect(center: .zero, size: SIMD2(width, height))
+    case .arc(let radius, _, let thickness):
+      let s = (radius + thickness / 2) * 2
+      return Rect(center: .zero, size: SIMD2(s, s))
+    case .pie(let radius, _, let perimeterOffset):
+      let s = max(radius + perimeterOffset, 0) * 2
+      return Rect(center: .zero, size: SIMD2(s, s))
+    case .ellipse(let radiusX, let radiusY):
+      return Rect(center: .zero, size: SIMD2(radiusX * 2, radiusY * 2))
+    }
+  }
+
+  public func sdf(_ p: SIMD2<Float>) -> Float {
+    switch self {
+    case .rect(let width, let height, let cornerRadius, let cornerDegree):
+      return _sdfRoundRect(p, size: SIMD2(width, height), radius: cornerRadius, degree: cornerDegree)
+    case .arc(let radius, let angle, let thickness):
+      return _sdfArc(p, radius: radius, angle: angle, thickness: thickness)
+    case .pie(let radius, let angle, let perimeterOffset):
+      return _sdfPie(p, radius: radius, angle: angle, perimeterOffset: perimeterOffset)
+    case .ellipse(let radiusX, let radiusY):
+      return _sdfEllipse(p, ab: SIMD2(radiusX, radiusY))
+    }
+  }
+
+  public func contains(_ point: SIMD2<Float>) -> Bool {
+    // fast algebraic test for ellipse: (x/a)²+(y/b)² <= 1
+    if case .ellipse(let rx, let ry) = self {
+      let nx = point.x / rx, ny = point.y / ry
+      return nx * nx + ny * ny <= 1
+    }
+    return sdf(point) <= 0
   }
 }
 
@@ -69,6 +112,34 @@ extension MergedShape: ShapeProtocol {
         return .push(ShapeMetadata(meta.shape, meta.offset + secondOffset))
       })
       .chain(CollectionOfOne(.merge(self.mode, smoothing: self.smoothing)))
+  }
+
+  public var bounds: Rect {
+    let a = first.bounds
+    let b = second.bounds.offset(secondOffset)
+    let left = min(a.left, b.left)
+    let top = min(a.top, b.top)
+    return Rect(topLeft: SIMD2(left, top), size: SIMD2(max(a.right, b.right) - left, max(a.bottom, b.bottom) - top))
+  }
+
+  public func sdf(_ p: SIMD2<Float>) -> Float {
+    let d1 = first.sdf(p)
+    let d2 = second.sdf(p - secondOffset)
+    let k = smoothing
+    switch mode {
+    case .union:
+      return k <= 0 ? min(d1, d2) : _sdfSmoothUnion(d1, d2, k)
+    case .intersect:
+      return k <= 0 ? max(d1, d2) : -_sdfSmoothUnion(-d1, -d2, k)
+    case .subtract:
+      return k <= 0 ? max(d1, -d2) : -_sdfSmoothUnion(-d1, d2, k)
+    case .xor:
+      return max(min(d1, d2), -max(d1, d2))
+    }
+  }
+
+  public func contains(_ point: SIMD2<Float>) -> Bool {
+    sdf(point) <= 0
   }
 }
 
@@ -115,4 +186,75 @@ extension ShapeProtocol {
   ) -> MergedShape<Self, Other> {
     MergedShape(mode: .xor, smoothing: smoothing, first: self, second: other, secondOffset: offset)
   }
+}
+
+// MARK: - SDF helpers
+
+private func _sdfRoundRect(_ position: SIMD2<Float>, size: SIMD2<Float>, radius: Float, degree: Float) -> Float {
+  let vx = abs(position.x) - size.x / 2 + radius
+  let vy = abs(position.y) - size.y / 2 + radius
+  let mx = max(vx, 0), my = max(vy, 0)
+  let outer = pow(pow(mx, degree) + pow(my, degree), 1 / degree)
+  return min(0, max(vx, vy)) + outer - radius
+}
+
+private func _sdfArc(_ p: SIMD2<Float>, radius: Float, angle: Float, thickness: Float) -> Float {
+  let s = sin(angle * 0.5)
+  let c = cos(angle * 0.5)
+  let qx = abs(p.x), qy = p.y
+  let dist = (c * qx > s * qy)
+    ? sqrt((qx - s * radius) * (qx - s * radius) + (qy - c * radius) * (qy - c * radius))
+    : abs(sqrt(qx * qx + qy * qy) - radius)
+  return dist - thickness * 0.5
+}
+
+private func _sdfPie(_ p: SIMD2<Float>, radius: Float, angle: Float, perimeterOffset: Float) -> Float {
+  let s = sin(angle * 0.5)
+  let c = cos(angle * 0.5)
+  let qx = abs(p.x), qy = p.y
+  let t = min(max(qx * s + qy * c, 0), radius)
+  let l = (qx * qx + qy * qy).squareRoot() - radius
+  let dx = qx - s * t, dy = qy - c * t
+  let m = (dx * dx + dy * dy).squareRoot()
+  let sign: Float = c * qx - s * qy >= 0 ? 1 : -1
+  return max(l, m * sign) - perimeterOffset
+}
+
+private func _sdfSmoothUnion(_ d1: Float, _ d2: Float, _ k: Float) -> Float {
+  let h = max(0, min(1, 0.5 + 0.5 * (d2 - d1) / k))
+  return d2 + h * (d1 - d2) - k * h * (1 - h)
+}
+
+// ported from https://www.shadertoy.com/view/4sS3zz
+private func _sdfEllipse(_ position: SIMD2<Float>, ab: SIMD2<Float>) -> Float {
+  var px = abs(position.x), py = abs(position.y)
+  var ax = ab.x, ay = ab.y
+  if px > py { swap(&px, &py); swap(&ax, &ay) }
+  let l = ay * ay - ax * ax
+  let m = ax * px / l;  let m2 = m * m
+  let n = ay * py / l;  let n2 = n * n
+  let c = (m2 + n2 - 1) / 3
+  let c3 = c * c * c
+  let q = c3 + m2 * n2 * 2
+  let d = c3 + m2 * n2
+  let g = m + m * n2
+  let co: Float
+  if d < 0 {
+    let h = acos(q / c3) / 3
+    let s = cos(h), t = sin(h) * sqrt(3)
+    let rx = sqrt(-c * (s + t + 2) + m2)
+    let ry = sqrt(-c * (s - t + 2) + m2)
+    co = (ry + (l >= 0 ? 1 : -1) * rx + abs(g) / (rx * ry) - m) / 2
+  } else {
+    let h = 2 * m * n * sqrt(d)
+    let cbrt = { (x: Float) -> Float in x < 0 ? -pow(-x, 1/3) : pow(x, 1/3) }
+    let s = cbrt(q + h), u = cbrt(q - h)
+    let rx = -s - u - c * 4 + 2 * m2
+    let ry = (s - u) * sqrt(3)
+    let rm = sqrt(rx * rx + ry * ry)
+    co = (ry / sqrt(rm - rx) + 2 * g / rm - m) / 2
+  }
+  let rx = ax * co, ry = ay * sqrt(1 - co * co)
+  let dx = rx - px, dy = ry - py
+  return sqrt(dx * dx + dy * dy) * (py >= ry ? 1 : -1)
 }

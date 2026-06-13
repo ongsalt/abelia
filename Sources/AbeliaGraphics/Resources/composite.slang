@@ -167,6 +167,12 @@ float sdf(float2 position, ShapeKind kind, uint4 data) {
   case ShapeKind.rect:
     var rect = bit_cast<Rect>(data);
     return sdfRoundRect(position, float2(rect.width, rect.height), rect.cornerRadius, rect.cornerDegree);
+  case ShapeKind.arc:
+    var arc = bit_cast<Arc>(data.xyz);
+    return sdfArc(position, arc.radius, arc.angle, arc.thickness);
+  case ShapeKind.pie:
+    var pie = bit_cast<Pie>(data.xyz);
+    return sdfPie(position, pie.radius, pie.angle, pie.perimeterOffset);
   case ShapeKind.ellipse:
     var ellipse = bit_cast<Ellipse>(data.xy);
     return sdfEllipse(position, float2(ellipse.radiusX, ellipse.radiusY));
@@ -188,6 +194,16 @@ float2 getShapeBound(uint corner, ShapeKind kind, uint4 data, float bias = 0.0) 
     // sdfRoundRect divides by 2 internally, so half-extent is width/2, height/2
     var rect = bit_cast<Rect>(data);
     half = float2(rect.width, rect.height) * 0.5 + bias;
+    break;
+  case ShapeKind.arc:
+    var arc = bit_cast<Arc>(data.xyz);
+    let arcOuter = arc.radius + arc.thickness * 0.5 + bias;
+    half = float2(arcOuter, arcOuter);
+    break;
+  case ShapeKind.pie:
+    var pie = bit_cast<Pie>(data.xyz);
+    let pieR = pie.radius + max(pie.perimeterOffset, 0.0) + bias;
+    half = float2(pieR, pieR);
     break;
   case ShapeKind.ellipse:
     var ellipse = bit_cast<Ellipse>(data.xy);

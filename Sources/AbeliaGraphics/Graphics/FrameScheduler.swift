@@ -208,7 +208,6 @@ public final class FrameScheduler: FrameSchedulerProtocol {
 
   func recreateSwapchain(extent: Extent2D) throws(Vulkan.Result) {
     let caps = try context.physicalDevice.getSurfaceCapabilitiesKHR(surface: surface)
-    print(caps)
     let clamped = extent.clamped(from: caps.minImageExtent, to: caps.maxImageExtent)
     self.width = clamped.width
     self.height = clamped.height

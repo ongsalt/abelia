@@ -22,7 +22,7 @@ control composition + render ordering, merging multiple layer into 1 draw call. 
 
 Clipping is at `Layer` level. allowing sdf shape clip OR alpha mask form another layer (later)
 
-# Flow
+## Flow
 - layer was mutated OR requestAnimationFrame 
 - tell the renderer we need flush request\
 - once it can render -> it will sync main thread, high priority
@@ -30,13 +30,18 @@ Clipping is at `Layer` level. allowing sdf shape clip OR alpha mask form another
     - flush the layer tree
 - we are done with main thread, the renderer thread now doing its thing 
 
-# Color
+## Color
 in order to do gradient we must generate an intermediate 1d texture to sample from later on.
 2d (mesh) gradient are done by triangluate 
 
-## TODO
-- fuckkkkkkkkkkkkk
-- use `VK_FORMAT_R32G32B32A32_SFLOAT` color texture
+## Texture management
+- texture atlas
+- font
+    - im not doing this myself.
+    - or maybe directwrite on windows, pango on linux
+    - `libharfbuzz-gpu` ?
+- blur/effect texture: 2 per rasterizationRoot (pingponging)
+    - refraction require sdf function to return a vector back instead?
 
 # UI Layer
 basically solidjs with macro generaing an overload to allow reactive binding
@@ -63,6 +68,7 @@ func Text(_ text: @autoclosure @escaping () -> some StringProtocol) -> View {
 component boundary do not exist as we cant really transform function content. So every lifecycle stuff need to be tied to parent element scope.
 
 # Planning
+- stop doing anchor center?
 - copying texture
 - `RenderNodeRenderer` render to an any image
 - `GradientRegistry` may render and return an image with wait commands 
@@ -74,9 +80,11 @@ component boundary do not exist as we cant really transform function content. So
 - gradient
 - basic compositing + effect layer scheduling
 - 9 grid
-- clip
+- clip: seem like this require a rasterize into a mask layer for best perf
     - sdf shape
     - CALayer-like mask
+    - rect clip is easily computable tho
 
-- use `libharfbuzz-gpu`
+- fuckkkkkkkkkkkkk
+- use `VK_FORMAT_R16G16B16A16_SFLOAT` color texture
 

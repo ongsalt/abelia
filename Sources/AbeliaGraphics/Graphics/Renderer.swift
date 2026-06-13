@@ -124,7 +124,7 @@ public final class Renderer {
             col2: SIMD4<Float>(0, 0, 0, 1 / d),  // z bleeds into w → perspective divide
             col3: SIMD4<Float>(0, 0, 0, 1)
         )
-        let viewMatrix = projection.multiplied(by: viewAffine)
+        let viewMatrix = projection.translated(x: -0.5, y: -0.5).multiplied(by: viewAffine)
         // let viewport = (size.x, size.y)
         withUnsafeBytes(of: viewMatrix) { viewportBuffer in
             cmd.pushConstants(
