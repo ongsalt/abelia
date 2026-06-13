@@ -1,10 +1,10 @@
-class LayerOrchestrator {
+class Compositor {
     // private(set) var root: RootLayer!
 
-    var dirtyLayers: [Layer] = []
+    var dirtyLayers: [CompositionNode] = []
     var dirtyLayerIds: Set<ObjectIdentifier> = []
 
-    func markDirty(_ layer: Layer, accumulated: Bool = false, shouldRecreateSwapchain: Bool = false)
+    func markDirty(_ layer: CompositionNode, accumulated: Bool = false, shouldRecreateSwapchain: Bool = false)
     {
         let (inserted, _) = dirtyLayerIds.insert(layer.id)
         if inserted {

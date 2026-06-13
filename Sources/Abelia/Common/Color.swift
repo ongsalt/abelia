@@ -1,9 +1,11 @@
+// we might internally store oklch color AS IS (so an enum),
+
 public struct Color: Sendable {
   public var red: Float
   public var green: Float
   public var blue: Float
   public var alpha: Float = 1.0
-  public var colorSpace: ColorSpace = .srgb
+  public var colorSpace: ColorSpace
 
   public init(
     _ colorSpace: ColorSpace = .srgb, red: Float, green: Float, blue: Float, alpha: Float = 1.0,
@@ -15,11 +17,22 @@ public struct Color: Sendable {
     self.colorSpace = colorSpace
   }
 
-  var asTuple: (Float, Float, Float, Float) {
+  public init(hex rgb: UInt32, alpha: Float = 1.0) {
+    let r = Float((rgb >> 16) & 0xFF) / 255.0
+    let g = Float((rgb >> 8) & 0xFF) / 255.0
+    let b = Float((rgb >> 0) & 0xFF) / 255.0
+    self = Color(.srgb, red: r, green: g, blue: b, alpha: 1.0)
+  }
+
+  // public static func oklch(lightness: Float, chroma: Float, hue: Float) -> Self {
+
+  // }
+
+  var values: (Float, Float, Float, Float) {
     (red, green, blue, alpha)
   }
 
-  var asPremultiplied: Color {
+  var premultiplied: Color {
     Color(
       colorSpace,
       red: red * alpha,
@@ -33,16 +46,13 @@ public struct Color: Sendable {
 public enum ColorSpace: Sendable {
   case srgb
   case displayP3
-  // cielab???
 }
 
-extension Color {
-  public init(hex rgb: UInt32, alpha: Float = 1.0) {
-    let r = Float((rgb >> 16) & 0xFF) / 255.0
-    let g = Float((rgb >> 8) & 0xFF) / 255.0
-    let b = Float((rgb >> 0) & 0xFF) / 255.0
-    self = Color(red: r, green: g, blue: b, alpha: 1.0)
-  }
+public enum ColorInterpolatingSpace: UInt32, Sendable {
+  case srgb = 0
+  case displayP3 = 1
+  case oklch = 2 
+  case oklab = 3
 }
 
 extension Color {

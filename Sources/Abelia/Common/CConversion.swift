@@ -27,7 +27,7 @@ extension RenderNode {
     switch brush {
     case .solid(let color):
       data.brushKind = BrushKind.solid
-      let (r, g, b, a) = color.asTuple
+      let (r, g, b, a) = color.values
       data.brushData.solid = CShim.SolidColorBrush(color: (r, g, b, a))
     }
 

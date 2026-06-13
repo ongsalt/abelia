@@ -8,12 +8,12 @@ struct LayerDirtyFlags: OptionSet {
 }
 
 // TODO: move layer dimension calculating to render thread
-public class Layer: Identifiable {
-    var orchestrator: LayerOrchestrator? {
+public class CompositionNode: Identifiable {
+    var compositor: Compositor? {
         didSet {
-            if let orchestrator {
+            if let compositor {
                 for c in children {
-                    c.orchestrator = orchestrator
+                    c.compositor = compositor
                 }
             }
         }
@@ -23,40 +23,40 @@ public class Layer: Identifiable {
     /// currently just redraw everything
     var dirtyFlags: LayerDirtyFlags = []
 
-    private(set) var parent: Layer!
-    private(set) var children: [Layer] = []
+    private(set) var parent: CompositionNode!
+    private(set) var children: [CompositionNode] = []
 
     public var offset: SIMD2<Float> = .zero
     public var size: SIMD2<Float> = .zero
 
-    public func insert(_ layer: Layer, before: Layer? = nil) {
-        orchestrator?.markDirty(layer)
+    public func insert(_ layer: CompositionNode, before: CompositionNode? = nil) {
+        compositor?.markDirty(layer)
         children.append(layer)
         layer.parent = self
     }
 
-    public func remove(_ layer: Layer) {
+    public func remove(_ layer: CompositionNode) {
         layer.parent = nil
         children.removeAll { $0.id == layer.id }
-        orchestrator?.markDirty(self)
+        compositor?.markDirty(self)
     }
 }
 
 @MainActor
-class SpriteLayer: Layer {
+class SpriteLayer: CompositionNode {
     // var brush: Brush
 }
 
 @resultBuilder
 public struct LayerBuilder {
-    public static func buildBlock(_ layers: Layer...) -> [Layer] { layers }
-    public static func buildArray(_ layers: [[Layer]]) -> [Layer] { layers.flatMap { $0 } }
-    public static func buildOptional(_ layers: [Layer]?) -> [Layer] { layers ?? [] }
-    public static func buildEither(first layers: [Layer]) -> [Layer] { layers }
-    public static func buildEither(second layers: [Layer]) -> [Layer] { layers }
+    public static func buildBlock(_ layers: CompositionNode...) -> [CompositionNode] { layers }
+    public static func buildArray(_ layers: [[CompositionNode]]) -> [CompositionNode] { layers.flatMap { $0 } }
+    public static func buildOptional(_ layers: [CompositionNode]?) -> [CompositionNode] { layers ?? [] }
+    public static func buildEither(first layers: [CompositionNode]) -> [CompositionNode] { layers }
+    public static func buildEither(second layers: [CompositionNode]) -> [CompositionNode] { layers }
 }
 
-extension Layer: CustomStringConvertible {
+extension CompositionNode: CustomStringConvertible {
     nonisolated public var description: String {
         let name = label ?? "(unnamed)"
         let offset = (self.offset.x, self.offset.y)
@@ -65,7 +65,7 @@ extension Layer: CustomStringConvertible {
     }
 }
 
-extension Layer {
+extension CompositionNode {
     public func printDebugInfo(indent: Int = 0) {
         let prefix = String(repeating: "  ", count: indent)
         print("\(prefix)\(description)")
@@ -77,7 +77,7 @@ extension Layer {
     public convenience init(
         offset: SIMD2<Float> = .zero,
         size: SIMD2<Float> = .zero,
-        @LayerBuilder children: () -> [Layer] = { [] }
+        @LayerBuilder children: () -> [CompositionNode] = { [] }
     ) {
         self.init()
         self.offset = offset
@@ -91,10 +91,10 @@ extension Layer {
 // MARK: walking
 // dfs preorder, for calculating accumulated transformation
 @MainActor
-public func sortLayer(_ root: Layer) -> [LayerGrouping] {
+public func sortLayer(_ root: CompositionNode) -> [LayerGrouping] {
     var layers: [LayerGrouping] = []
 
-    func walk(_ layer: Layer) {
+    func walk(_ layer: CompositionNode) {
         layers.append(.layer(layer))
         if !layer.children.isEmpty {
             layers.append(.push)
@@ -110,7 +110,7 @@ public func sortLayer(_ root: Layer) -> [LayerGrouping] {
 }
 
 public enum LayerGrouping {
-    case layer(Layer)
+    case layer(CompositionNode)
     case push
     case pop
 }
