@@ -2,11 +2,13 @@ import Vulkan
 
 // this should not be public in the final release
 public protocol FrameSchedulerProtocol {
+  func reconfigure() throws
   func render(body: (Image, ImageView, CommandBuffer, Int, SIMD2<UInt32>) -> Void) throws
   var swapchainImageFormat: Format { get }
   var swapchainImageColorSpace: ColorSpaceKHR { get }
 }
 
+// this is ugly
 public final class FrameScheduler: FrameSchedulerProtocol {
   let surface: SurfaceKHR
   let context: DeviceContext
@@ -26,21 +28,24 @@ public final class FrameScheduler: FrameSchedulerProtocol {
     frameResources[currentFrameInFlightIndex]
   }
 
-  var lastFrameResource:  FrameResource {
-    frameResources[(currentFrameInFlightIndex - 1 + Self.maxFrameInFlightCount) % Self.maxFrameInFlightCount]
+  var lastFrameResource: FrameResource {
+    frameResources[
+      (currentFrameInFlightIndex - 1 + Self.maxFrameInFlightCount) % Self.maxFrameInFlightCount]
   }
 
   var width: UInt32
   var height: UInt32
 
-  public init(context: DeviceContext, surface: SurfaceKHR, initialSize: SIMD2<UInt32> = SIMD2(800, 600))
+  public init(
+    context: DeviceContext, surface: SurfaceKHR, initialSize: SIMD2<UInt32> = SIMD2(800, 600)
+  )
     throws(Vulkan.Result)
   {
     self.context = context
     self.surface = surface
     let physicalDevice = context.physicalDevice
     let device = context.device
-    
+
     let caps = try physicalDevice.getSurfaceCapabilitiesKHR(surface: surface)
     let formats = try physicalDevice.getSurfaceFormatsKHR(surface: surface)
 
@@ -71,26 +76,11 @@ public final class FrameScheduler: FrameSchedulerProtocol {
       try FrameResource(index: i, context: context)
     }
 
-
-
     self.swapchain = swapchain
     self.swapchainImages = images
     self.swapchainImageViews = views
     self.width = extent.width
     self.height = extent.height
-  }
-
-  public func isWaitingForImage() throws -> Bool {
-    do {
-      try context.device.waitForFences(
-        fences: [currentFrameResource.everythingCompletedFence], waitAll: true, timeout: 0)
-      return false
-    } catch {
-      if error == .timeout {
-        return true
-      }
-      throw error
-    }
   }
 
   public func waitForImage(reset: Bool = true) throws {
@@ -126,10 +116,60 @@ public final class FrameScheduler: FrameSchedulerProtocol {
       )
     )
 
+    try res.commandBuffer.reset()
+    try res.commandBuffer.begin()
+
     let image = swapchainImages[Int(imageIndex)]
     let imageView = swapchainImageViews[Int(imageIndex)]
-    body(image, imageView, res.commandBuffer, currentFrameInFlightIndex, SIMD2(self.width, self.height))
+    // transition swapchain image to colorAttachmentOptimal
+    res.commandBuffer.pipelineBarrier2(
+      .init(imageMemoryBarriers: [
+        .init(
+          srcStageMask: .topOfPipe,
+          srcAccessMask: .none,
+          dstStageMask: .colorAttachmentOutput,
+          dstAccessMask: [.colorAttachmentWrite, .colorAttachmentRead],
+          oldLayout: .undefined,
+          newLayout: .colorAttachmentOptimal,
+          srcQueueFamilyIndex: 0,
+          dstQueueFamilyIndex: 0,
+          image: image,
+          subresourceRange: .init(
+            aspectMask: .color, baseMipLevel: 0, levelCount: 1, baseArrayLayer: 0,
+            layerCount: 1),
+        )
+      ]))
 
+    body(
+      image, imageView, res.commandBuffer, currentFrameInFlightIndex, SIMD2(self.width, self.height)
+    )
+
+    // transition it to presentSrcKHR
+    res.commandBuffer.pipelineBarrier2(
+      .init(imageMemoryBarriers: [
+        .init(
+          srcStageMask: .colorAttachmentOutput,
+          srcAccessMask: [.colorAttachmentWrite, .colorAttachmentRead],
+          dstStageMask: .bottomOfPipe,
+          dstAccessMask: .none,
+          oldLayout: .colorAttachmentOptimal,
+          newLayout: .presentSrcKHR,
+          srcQueueFamilyIndex: 0,
+          dstQueueFamilyIndex: 0,
+          image: image,
+          subresourceRange: .init(
+            aspectMask: .color,
+            baseMipLevel: 0,
+            levelCount: 1,
+            baseArrayLayer: 0,
+            layerCount: 1
+          ),
+        )
+      ])
+    )
+
+    try res.commandBuffer.end()
+    
     let graphicsSubmit = SubmitInfo2(
       waitSemaphoreInfos: [
         .init(
@@ -158,14 +198,21 @@ public final class FrameScheduler: FrameSchedulerProtocol {
     )
   }
 
+  public func reconfigure() throws {
+    try self.resize(w: 999999, h: 999999)
+  }
+
   public func resize(w: UInt32, h: UInt32) throws {
-    self.width = w
-    self.height = h
     try recreateSwapchain(extent: Extent2D(width: w, height: h))
   }
 
   func recreateSwapchain(extent: Extent2D) throws(Vulkan.Result) {
     let caps = try context.physicalDevice.getSurfaceCapabilitiesKHR(surface: surface)
+    print(caps)
+    let clamped = extent.clamped(from: caps.minImageExtent, to: caps.maxImageExtent)
+    self.width = clamped.width
+    self.height = clamped.height
+    
     nonisolated(unsafe) let prev = self.swapchain
     let previousSwapchainImageViews = self.swapchainImageViews
     (swapchain, swapchainImages, swapchainImageViews) = try Self.recreateSwapchain(
@@ -174,7 +221,7 @@ public final class FrameScheduler: FrameSchedulerProtocol {
       caps: caps,
       imageFormat: swapchainImageFormat,
       colorspace: swapchainImageColorSpace,
-      extent: extent.clamped(from: caps.minImageExtent, to: caps.maxImageExtent),
+      extent: clamped,
       previous: prev
     )
 

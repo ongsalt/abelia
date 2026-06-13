@@ -155,6 +155,8 @@ float4 fsMain(VertexOutput input): SV_Target {
     coverage = smoothCoverageOf(stack[0]);
   }
 
+  // TODO: fix this, when doing 3d transform, smoothCoverageOf dont work
+
   color.w *= coverage;
   return color;
 }

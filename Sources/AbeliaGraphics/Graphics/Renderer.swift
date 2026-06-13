@@ -11,9 +11,9 @@ public final class Renderer {
     public var viewAffine: Affine = .identity
     public init(context: DeviceContext, maxFrameInFlightCount: Int) throws(Vulkan.Result) {
         self.context = context
-        
+
         let pipelines = try Pipelines(
-            format: .b8g8r8a8Srgb, 
+            format: .b8g8r8a8Unorm,
             // extent: context.extent,
             context: context
         )
@@ -24,14 +24,13 @@ public final class Renderer {
     }
 
     // temporary api
-    public func draw(
-        to image: Image, 
-        view: ImageView, 
-        commandBuffer: CommandBuffer,
+    public func createDrawTask(
+        to image: Image,
+        view: ImageView,
         frameIndex: Int,
         size: SIMD2<UInt32>,
-        nodes: [RenderNode], 
-    ) throws {
+        nodes: [RenderNode],
+    ) throws -> RenderTask {
         let currentFrameResource = frameResources[frameIndex]
         for node in nodes {
             currentFrameResource.renderNodeStorage.update(
@@ -40,14 +39,35 @@ public final class Renderer {
         currentFrameResource.drawListStorage.write(
             nodes.map(\.id), renderNodeStorage: currentFrameResource.renderNodeStorage)
 
-        try self.recordCommands(
-            into: commandBuffer,
+        let renderFinishedBarrier = ImageMemoryBarrier2(
+            srcStageMask: .colorAttachmentOutput,
+            srcAccessMask: [.colorAttachmentWrite, .colorAttachmentRead],
+            dstStageMask: .fragmentShader,
+            dstAccessMask: .shaderSampledRead,
+            oldLayout: .colorAttachmentOptimal,
+            newLayout: .shaderReadOnlyOptimal,
+            srcQueueFamilyIndex: 0,
+            dstQueueFamilyIndex: 0,
             image: image,
-            imageView: view,
-            renderNodeCount: UInt32(nodes.count),
-            frameResource: currentFrameResource,
-            size: size,
+            subresourceRange: .init(
+                aspectMask: .color,
+                baseMipLevel: 0,
+                levelCount: 1,
+                baseArrayLayer: 0,
+                layerCount: 1
+            ),
         )
+
+        return RenderTask(barriers: [renderFinishedBarrier]) {
+            self.recordCommands(
+                into: $0,
+                image: image,
+                imageView: view,
+                renderNodeCount: UInt32(nodes.count),
+                frameResource: currentFrameResource,
+                size: size,
+            )
+        }
     }
 
     private func recordCommands(
@@ -57,32 +77,11 @@ public final class Renderer {
         renderNodeCount: UInt32,
         frameResource: RendererFrameResource,
         size: SIMD2<UInt32>,
-    ) throws(Vulkan.Result) {
-        try cmd.reset()
-        try cmd.begin()
-
-        cmd.pipelineBarrier2(
-            .init(imageMemoryBarriers: [
-                .init(
-                    srcStageMask: .topOfPipe,
-                    srcAccessMask: .none,
-                    dstStageMask: .colorAttachmentOutput,
-                    dstAccessMask: [.colorAttachmentWrite, .colorAttachmentRead],
-                    oldLayout: .undefined,
-                    newLayout: .colorAttachmentOptimal,
-                    srcQueueFamilyIndex: 0,
-                    dstQueueFamilyIndex: 0,
-                    image: image,
-                    subresourceRange: .init(
-                        aspectMask: .color, baseMipLevel: 0, levelCount: 1, baseArrayLayer: 0,
-                        layerCount: 1),
-                )
-            ]))
-
+    ) {
         cmd.beginRendering(
             RenderingInfo(
                 renderArea: .init(offset: .zero, extent: Extent2D(width: size.x, height: size.y)),
-                layerCount: 1, 
+                layerCount: 1,
                 viewMask: 0,
                 colorAttachments: [
                     .init(
@@ -146,30 +145,6 @@ public final class Renderer {
 
         cmd.draw(vertexCount: 6, instanceCount: renderNodeCount, firstVertex: 0, firstInstance: 0)
         cmd.endRendering()
-
-        cmd.pipelineBarrier2(
-            .init(imageMemoryBarriers: [
-                .init(
-                    srcStageMask: .colorAttachmentOutput,
-                    srcAccessMask: [.colorAttachmentWrite, .colorAttachmentRead],
-                    dstStageMask: .bottomOfPipe,
-                    dstAccessMask: .none,
-                    oldLayout: .colorAttachmentOptimal,
-                    newLayout: .presentSrcKHR,
-                    srcQueueFamilyIndex: 0,
-                    dstQueueFamilyIndex: 0,
-                    image: image,
-                    subresourceRange: .init(
-                        aspectMask: .color,
-                        baseMipLevel: 0,
-                        levelCount: 1,
-                        baseArrayLayer: 0,
-                        layerCount: 1
-                    ),
-                )
-            ]))
-
-        try cmd.end()
     }
 }
 final class Pipelines {

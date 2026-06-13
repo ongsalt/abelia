@@ -1,13 +1,13 @@
 import Vulkan
 
-struct RenderCommands: RenderCommandsProtocol {
+public struct RenderCommands: RenderCommandsProtocol {
   let record: (borrowing CommandBuffer) -> Void
 
-  func apply(to commandBuffer: borrowing CommandBuffer) {
+  public func apply(to commandBuffer: borrowing CommandBuffer) {
     record(commandBuffer)
   }
 }
 
-protocol RenderCommandsProtocol {
+public protocol RenderCommandsProtocol {
   func apply(to commandBuffer: borrowing CommandBuffer)
 }

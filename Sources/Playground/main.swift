@@ -36,19 +36,23 @@ runEventLoop { eventLoop in
     let (renderer, frameScheduler) = try context.createRenderer()
     renderer.viewAffine = Affine().rotated(.degrees(10), axis: [1, 0, 0])
 
-    try frameScheduler.render { image, imageView, commandBuffer, frameIndex, size in
-        try? renderer.draw(
-            to: image, 
-            view: imageView, 
-            commandBuffer: commandBuffer,
-            frameIndex: frameIndex,
-            size: size,
-            nodes: nodes, 
-        )
+    func render() throws {
+        try frameScheduler.render { image, imageView, commandBuffer, frameIndex, size in
+            let task = try! renderer.createDrawTask(
+                to: image,
+                view: imageView,
+                frameIndex: frameIndex,
+                size: size,
+                nodes: nodes,
+            )
+
+            task.work.apply(to: commandBuffer)
+        }
     }
 
+    try render()
+
     // try renderer.draw(nodes)
-    
     // Task {
     //     while !Task.isCancelled {
     //         // this is ass, the render thread should actually poll us
@@ -62,10 +66,12 @@ runEventLoop { eventLoop in
     return { id, event in
         switch event {
         case .resized(let size, let isFinal):
-            if isFinal {
-                // try renderer.resize(w: size.width, h: size.height)
+            // if isFinal {
+                // try frameScheduler.resize(w: size.width, h: size.height)
+                try frameScheduler.reconfigure()
+                try render()
                 // try renderer.draw(nodes)
-            }
+            // }
 
         case .closeRequested:
             window = nil
