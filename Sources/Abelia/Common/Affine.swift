@@ -1,7 +1,20 @@
 import Foundation
 
+public enum Rotation {
+    case radians(Float)
+    case degrees(Float)
+    case pi(Float)
+
+    var radians: Float {
+        switch self {
+        case .radians(let r): return r
+        case .degrees(let d): return d * .pi / 180
+        case .pi(let p): return p * .pi
+        }
+    }
+}
+
 public struct Affine: Sendable {
-    // Column-major representation using standard library cross-platform SIMD types
     public var col0: SIMD4<Float>
     public var col1: SIMD4<Float>
     public var col2: SIMD4<Float>
@@ -21,9 +34,12 @@ public struct Affine: Sendable {
         self.col3 = col3
     }
 
+    public init() {
+        self = .identity
+    }
+
     // MARK: - Core Multiplication
-    
-    // Helper to multiply the matrix by a single column vector
+
     @inline(__always)
     private func multiplyVector(_ v: SIMD4<Float>) -> SIMD4<Float> {
         return (v.x * col0) + (v.y * col1) + (v.z * col2) + (v.w * col3)
@@ -60,17 +76,17 @@ public struct Affine: Sendable {
         return self.multiplied(by: translationMatrix)
     }
 
-    public func rotated(radians: Float, axis: SIMD3<Float> = SIMD3<Float>(0, 0, 1)) -> Affine {
-        // Manual axis-angle rotation matrix (since simd_quatf isn't available)
+    public func rotated(_ angle: Rotation, axis: SIMD3<Float> = SIMD3<Float>(0, 0, 1)) -> Affine {
+        let r = angle.radians
         let length = sqrt(axis.x * axis.x + axis.y * axis.y + axis.z * axis.z)
         let n = axis / length
-        
-        let c = cos(radians)
-        let s = sin(radians)
+
+        let c = cos(r)
+        let s = sin(r)
         let t = 1.0 - c
-        
+
         let x = n.x, y = n.y, z = n.z
-        
+
         let rotationMatrix = Affine(
             col0: SIMD4<Float>(t*x*x + c,   t*x*y + s*z, t*x*z - s*y, 0),
             col1: SIMD4<Float>(t*x*y - s*z, t*y*y + c,   t*y*z + s*x, 0),
@@ -90,7 +106,7 @@ public struct Affine: Sendable {
         self = self.translated(x: x, y: y, z: z)
     }
 
-    public mutating func rotate(radians: Float, axis: SIMD3<Float> = SIMD3<Float>(0, 0, 1)) {
-        self = self.rotated(radians: radians, axis: axis)
+    public mutating func rotate(_ angle: Rotation, axis: SIMD3<Float> = SIMD3<Float>(0, 0, 1)) {
+        self = self.rotated(angle, axis: axis)
     }
 }

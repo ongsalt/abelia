@@ -63,19 +63,13 @@ func Text(_ text: @autoclosure @escaping () -> some StringProtocol) -> View {
 component boundary do not exist as we cant really transform function content. So every lifecycle stuff need to be tied to parent element scope.
 
 # Planning
-- sdf shape drawing
 - copying texture
 - gradient
-- ReleaseQueue
 - basic compositing + effect layer scheduling
 - 9 grid
 - clip
-    - simple rect
     - sdf shape
     - CALayer-like mask
 
-- remove blend2d
 - use `libharfbuzz-gpu`
 
-## Actual work
-- setup storage buffer and its binding, per frame

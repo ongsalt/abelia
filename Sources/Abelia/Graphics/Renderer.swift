@@ -20,6 +20,8 @@ public final class Renderer {
         frameResources[(currentFrameInFlightIndex + Self.maxFrameInFlightCount - 1) % Self.maxFrameInFlightCount]
     }
 
+    public var viewAffine: Affine = .identity
+
     let releaseQueue: ReleaseQueue = ReleaseQueue()
 
     static let maxFrameInFlightCount = 2
@@ -230,7 +232,15 @@ public final class Renderer {
             ]
         )
 
-        let viewMatrix = Affine.identity.scaled(x: 2 / Float(self.width), y: 2 / Float(self.height))
+        let w = Float(self.width), h = Float(self.height)
+        let d: Float = 1000  // perspective depth in pixels; larger = weaker effect
+        let projection = Affine(
+            col0: SIMD4<Float>(2 / w, 0, 0, 0),
+            col1: SIMD4<Float>(0, 2 / h, 0, 0),
+            col2: SIMD4<Float>(0, 0, 0, 1 / d),  // z bleeds into w → perspective divide
+            col3: SIMD4<Float>(0, 0, 0, 1)
+        )
+        let viewMatrix = projection.multiplied(by: viewAffine)
         // let viewport = (self.width, self.height)
         withUnsafeBytes(of: viewMatrix) { viewportBuffer in
             cmd.pushConstants(
