@@ -14,19 +14,19 @@ runEventLoop { eventLoop in
     try context.initDevice(compatibleWith: surface)
 
     let node = RenderNode()
-    node.offset = [200, 0]
+    node.offset = [200, 0, 0]
     node.brush = .solid(.red)
     node.shape = Shape.circle(50)
 
     let node2 = RenderNode()
-    node2.offset = [-140, -100]
+    node2.offset = [-140, -100, 0]
     node2.shape = Shape.rect(width: 300, height: 300, cornerRadius: 100)
         .union(Shape.circle(100), offset: [150, 80], smoothing: 40)
         .intersect(Shape.circle(200), offset: [100, 100], smoothing: 36)
     node2.brush = .solid(.blue)
 
     let node3 = RenderNode()
-    node3.offset = [200, 150]
+    node3.offset = [200, 150, -100]
     node3.brush = .solid(.green)
     node3.shape = Shape.rect(width: 100, height: 100, cornerRadius: 0)
     node3.affine = Affine().rotated(.degrees(-50), axis: [0, 1, 0])

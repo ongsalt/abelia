@@ -17,7 +17,7 @@ public class RenderNode: Identifiable {
         didSet { dirty = true }
     }
 
-    public var offset: SIMD2<Float> = .zero {
+    public var offset: SIMD3<Float> = .zero {
         didSet { dirty = true }
     }
 
@@ -31,7 +31,7 @@ public class RenderNode: Identifiable {
         Affine
             .identity
             .scaled(x: scale.x, y: scale.y)
-            .translated(x: offset.x, y: offset.y)
+            .translated(x: offset.x, y: offset.y, z: offset.z)
             .multiplied(by: affine)
     }
 
