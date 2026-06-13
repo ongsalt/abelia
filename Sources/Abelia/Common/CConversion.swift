@@ -21,7 +21,7 @@ extension RenderNode {
       print(instructions)
       let startIndex = shapeGroupStorage.update(ownerIdentity: identity, data: instructions)
       data.shapeData.many = CShim.ManyShapeRef(startIndex: UInt32(startIndex!), count: UInt32(instructions.count))
-      shapeGroupStorage.print(offset: startIndex!, count: instructions.count)
+      // shapeGroupStorage.print(offset: startIndex!, count: instructions.count)
     }
 
     switch brush {
@@ -88,7 +88,8 @@ extension ShapeMergingInstruction {
       entry.kind = .merge
       entry.data.merge = CShim.MergeNode(
         mode: CShim.MergeMode(rawValue: mode.rawValue)!,
-        smoothing: max(smoothing, Float.leastNonzeroMagnitude)
+        // smoothing: max(smoothing, Float.leastNonzeroMagnitude)
+        smoothing: smoothing
       )
     case .push(let metadata):
       let (kind, shapeData) = metadata.shape.c

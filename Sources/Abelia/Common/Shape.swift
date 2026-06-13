@@ -31,7 +31,7 @@ public enum Shape: Sendable {
 
 extension Shape {
   public static func circle(_ radius: Float) -> Self {
-    .ellipse(radiusX: radius, radiusY: radius)
+    .rect(width: radius * 2, height: radius * 2, cornerRadius: radius, cornerDegree: 2)
   }
 }
 

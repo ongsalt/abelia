@@ -101,7 +101,7 @@ float4 fsMain(VertexOutput input): SV_Target {
   var color = float4(0.0);
   float coverage = 0.0;
 
-  // return float4(input.localPosition, 1.0, 1.0);
+  // return float4(input.localPosition, 1.0, 0.5);
 
   if (renderNode.brushKind == BrushKind.solid) {
     var brush = bit_cast<SolidColorBrush>(renderNode.brushData);
@@ -110,7 +110,7 @@ float4 fsMain(VertexOutput input): SV_Target {
 
   switch (renderNode.oneOrManyKind) {
   case OneOrManyShapeKind.one_shape:
-    coverage = coverageFromSdf(position, renderNode.shapeKind, renderNode.shapeData);
+    coverage = smoothCoverageOf(sdf(position, renderNode.shapeKind, renderNode.shapeData));
     break;
   case OneOrManyShapeKind.many_shapes:
     let shapeGroup = renderNode.shapeData;
@@ -118,20 +118,20 @@ float4 fsMain(VertexOutput input): SV_Target {
     uint count = shapeGroup.y;
 
     // merge stack
-    uint topIndex = 0;
+    uint top = 0;
     float[STACK_SIZE] stack;
     for (uint i = 0u; i < count; i++) {
       ShapeMergingEntry entry = shapeGroupData[startIndex + i];
       if (entry.kind == ShapeMergingInstructionKind.push) {
-        stack[topIndex] = coverageFromSdf(position - entry.offset, bit_cast<ShapeKind>(entry.mergeMode_or_shapeKind), entry.data);
-        topIndex += 1;
+        stack[top] = sdf(position - entry.offset, bit_cast<ShapeKind>(entry.mergeMode_or_shapeKind), entry.data);
+        top += 1;
       } else {
         // merge
         let mergeMode = bit_cast<MergeMode>(entry.mergeMode_or_shapeKind);
         let k = bit_cast<float>(entry.data0); // smoothing stored as float bits
-        let a = stack[topIndex - 1]; // top = last pushed
-        let b = stack[topIndex - 2]; // second = first pushed
-        float result;
+        let a = stack[top - 1]; // top = last pushed
+        let b = stack[top - 2]; // second = first pushed
+        float result = b;
         switch (mergeMode) {
         case MergeMode.union_:
           result = k <= 0 ? min(a, b) : sdfSmoothUnion(a, b, k);
@@ -147,12 +147,12 @@ float4 fsMain(VertexOutput input): SV_Target {
           result = max(min(a, b), -max(a, b));
           break;
         }
-        stack[topIndex - 2] = result;
-        topIndex -= 1;
+        stack[top - 2] = result;
+        top -= 1;
       }
     }
 
-    coverage = stack[0];
+    coverage = smoothCoverageOf(stack[0]);
   }
 
   return color * coverage;
@@ -172,8 +172,7 @@ float sdf(float2 position, ShapeKind kind, uint4 data) {
   return distance;
 }
 
-float coverageFromSdf(float2 position, ShapeKind kind, uint4 data) {
-  let distance = sdf(position, kind, data);
+float smoothCoverageOf(float distance) {
   float edgeWidth = fwidth(distance);
   return smoothstep(edgeWidth, -edgeWidth, distance);
 }
