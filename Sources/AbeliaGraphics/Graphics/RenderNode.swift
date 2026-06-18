@@ -39,6 +39,8 @@ public class RenderNode: Identifiable {
         didSet { dirty = true }
     }
 
+    var hidden: Bool
+
     private(set) var dirty: Bool = false
 
     var nodeTotalAffine: Affine {

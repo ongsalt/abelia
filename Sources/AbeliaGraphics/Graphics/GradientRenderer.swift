@@ -1,9 +1,13 @@
 class GradientRenderer {
 
-  func get() -> (RenderTexture, wait: RenderCommands) {
-    fatalError("unimplemented")
-  }
+  // func get() -> GPUTask<GradientTexture> {
+  //   fatalError("unimplemented")
+  // }
+}
 
+struct GradientTexture {
+  let texture: RenderTexture
+  // let dimension  
 }
 
 public func gradient(@ColorStopBuilder<Float> builder: () -> [ColorStop<Float>]) -> [ColorStop<

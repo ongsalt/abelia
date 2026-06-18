@@ -1,5 +1,5 @@
-import CShim
 import CSTBImage
+import CShim
 import Vulkan
 
 class VmaImage {
@@ -37,22 +37,29 @@ struct ImageUploadTicket {
     let commandPool: CommandPool
 
     func cleanup(device: Device) throws(Vulkan.Result) {
+        // TODO: integrate this with
         try device.waitForFences(fences: [fence], waitAll: true, timeout: .max)
         staging.destroy()
     }
 }
 
+// TODO: proper resource loading queue
 extension DeviceContext {
     /// Decode an image from `fd` and begin uploading it to the GPU immediately.
     /// - Returns: The GPU image and a ticket for synchronizing / cleaning up the upload.
-    func loadImage(fd: Int32) throws(Vulkan.Result) -> (image: VmaImage, ticket: ImageUploadTicket) {
+    func loadImage(filename: String) throws(Vulkan.Result) -> (
+        image: VmaImage, ticket: ImageUploadTicket
+    ) {
         // --- Decode ---
-        var w: Int32 = 0, h: Int32 = 0, ch: Int32 = 0
-        guard let pixels = stbi_load_from_fd(fd, &w, &h, &ch, 4) else {
+        var w: Int32 = 0
+        var h: Int32 = 0
+        var ch: Int32 = 0
+        guard let pixels = stbi_load(filename, &w, &h, &ch, 4) else {
             fatalError("stbi_load_from_fd: failed to decode image")
         }
         defer { stbi_image_free(pixels) }
-        let width = UInt32(w), height = UInt32(h)
+        let width = UInt32(w)
+        let height = UInt32(h)
         let byteCount = Int(width) * Int(height) * 4
 
         // --- Staging buffer (host-visible, pre-mapped) ---
@@ -82,15 +89,16 @@ extension DeviceContext {
         )
 
         let image = Image(handle: vkImage!, device: device)
-        let view = try device.createImageView(.init(
-            image: image,
-            viewType: .type2d,
-            format: .r8g8b8a8Srgb,
-            components: .init(r: .r, g: .g, b: .b, a: .a),
-            subresourceRange: .init(
-                aspectMask: .color, baseMipLevel: 0, levelCount: 1,
-                baseArrayLayer: 0, layerCount: 1)
-        ))
+        let view = try device.createImageView(
+            .init(
+                image: image,
+                viewType: .type2d,
+                format: .r8g8b8a8Srgb,
+                components: .init(r: .r, g: .g, b: .b, a: .a),
+                subresourceRange: .init(
+                    aspectMask: .color, baseMipLevel: 0, levelCount: 1,
+                    baseArrayLayer: 0, layerCount: 1)
+            ))
 
         // --- One-time upload command buffer ---
         let pool = try device.createCommandPool(
@@ -104,37 +112,41 @@ extension DeviceContext {
         let qf = graphicsFamilyIndex
 
         // UNDEFINED → TRANSFER_DST_OPTIMAL
-        cmd.pipelineBarrier2(.init(imageMemoryBarriers: [
-            ImageMemoryBarrier2(
-                srcStageMask: .none, srcAccessMask: [],
-                dstStageMask: .copy, dstAccessMask: .transferWrite,
-                oldLayout: .undefined, newLayout: .transferDstOptimal,
-                srcQueueFamilyIndex: qf, dstQueueFamilyIndex: qf,
-                image: image, subresourceRange: sub)
-        ]))
+        cmd.pipelineBarrier2(
+            .init(imageMemoryBarriers: [
+                ImageMemoryBarrier2(
+                    srcStageMask: .none, srcAccessMask: [],
+                    dstStageMask: .copy, dstAccessMask: .transferWrite,
+                    oldLayout: .undefined, newLayout: .transferDstOptimal,
+                    srcQueueFamilyIndex: qf, dstQueueFamilyIndex: qf,
+                    image: image, subresourceRange: sub)
+            ]))
 
         // Buffer → Image
         cmd.copyBufferToImage(
             srcBuffer: staging.buffer,
             dstImage: image,
             dstImageLayout: .transferDstOptimal,
-            regions: [BufferImageCopy(
-                bufferOffset: 0, bufferRowLength: 0, bufferImageHeight: 0,
-                imageSubresource: ImageSubresourceLayers(
-                    aspectMask: .color, mipLevel: 0, baseArrayLayer: 0, layerCount: 1),
-                imageOffset: Offset3D(x: 0, y: 0, z: 0),
-                imageExtent: extent)]
+            regions: [
+                BufferImageCopy(
+                    bufferOffset: 0, bufferRowLength: 0, bufferImageHeight: 0,
+                    imageSubresource: ImageSubresourceLayers(
+                        aspectMask: .color, mipLevel: 0, baseArrayLayer: 0, layerCount: 1),
+                    imageOffset: Offset3D(x: 0, y: 0, z: 0),
+                    imageExtent: extent)
+            ]
         )
 
         // TRANSFER_DST_OPTIMAL → SHADER_READ_ONLY_OPTIMAL
-        cmd.pipelineBarrier2(.init(imageMemoryBarriers: [
-            ImageMemoryBarrier2(
-                srcStageMask: .copy, srcAccessMask: .transferWrite,
-                dstStageMask: .fragmentShader, dstAccessMask: .shaderSampledRead,
-                oldLayout: .transferDstOptimal, newLayout: .shaderReadOnlyOptimal,
-                srcQueueFamilyIndex: qf, dstQueueFamilyIndex: qf,
-                image: image, subresourceRange: sub)
-        ]))
+        cmd.pipelineBarrier2(
+            .init(imageMemoryBarriers: [
+                ImageMemoryBarrier2(
+                    srcStageMask: .copy, srcAccessMask: .transferWrite,
+                    dstStageMask: .fragmentShader, dstAccessMask: .shaderSampledRead,
+                    oldLayout: .transferDstOptimal, newLayout: .shaderReadOnlyOptimal,
+                    srcQueueFamilyIndex: qf, dstQueueFamilyIndex: qf,
+                    image: image, subresourceRange: sub)
+            ]))
 
         try cmd.end()
 
@@ -142,13 +154,17 @@ extension DeviceContext {
         let uploadSemaphore = try device.createSemaphore()
         let fence = try device.createFence(.init())
         try graphicsQueue.submit2(
-            submits: [SubmitInfo2(
-                waitSemaphoreInfos: [],
-                commandBufferInfos: [.init(commandBuffer: cmd, deviceMask: 0)],
-                signalSemaphoreInfos: [
-                    .init(semaphore: uploadSemaphore, value: 0, stageMask: .allTransfer, deviceIndex: 0)
-                ]
-            )],
+            submits: [
+                SubmitInfo2(
+                    waitSemaphoreInfos: [],
+                    commandBufferInfos: [.init(commandBuffer: cmd, deviceMask: 0)],
+                    signalSemaphoreInfos: [
+                        .init(
+                            semaphore: uploadSemaphore, value: 0, stageMask: .allTransfer,
+                            deviceIndex: 0)
+                    ]
+                )
+            ],
             fence: fence)
 
         return (

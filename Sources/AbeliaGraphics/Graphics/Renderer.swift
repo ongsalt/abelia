@@ -23,6 +23,10 @@ public final class Renderer {
         }
     }
 
+    // func render(nodes: [RenderNode], to texture: RenderTexture, frameIndex: Int) -> GPUTask<RenderTexture> {
+
+    // }
+
     // temporary api
     public func createDrawTask(
         to image: Image,
@@ -30,14 +34,19 @@ public final class Renderer {
         frameIndex: Int,
         size: SIMD2<UInt32>,
         nodes: [RenderNode],
-    ) throws -> RenderTask {
+    ) throws -> GPUTask<()> {
         let currentFrameResource = frameResources[frameIndex]
         for node in nodes {
             currentFrameResource.renderNodeStorage.update(
-                node: node, shapeGroupStorage: currentFrameResource.shapeGroupStorage)
+                node: node, 
+                shapeGroupStorage: currentFrameResource.shapeGroupStorage
+            )
         }
+
         currentFrameResource.drawListStorage.write(
-            nodes.map(\.id), renderNodeStorage: currentFrameResource.renderNodeStorage)
+            nodes.filter({ !$0.hidden }).map(\.id), 
+            renderNodeStorage: currentFrameResource.renderNodeStorage
+        )
 
         let renderFinishedBarrier = ImageMemoryBarrier2(
             srcStageMask: .colorAttachmentOutput,
@@ -58,7 +67,7 @@ public final class Renderer {
             ),
         )
 
-        return RenderTask(barriers: [renderFinishedBarrier]) {
+        return GPUTask(yielding: (), barriers: [renderFinishedBarrier]) {
             self.recordCommands(
                 into: $0,
                 image: image,
@@ -119,12 +128,13 @@ public final class Renderer {
         let h = Float(size.y)
         let d: Float = 1000  // perspective depth in pixels; larger = weaker effect
         let projection = Affine().translated(x: -1, y: -1)
-            .multiplied(by: Affine(
-                col0: SIMD4<Float>(2 / w, 0, 0, 0),
-                col1: SIMD4<Float>(0, 2 / h, 0, 0),
-                col2: SIMD4<Float>(0, 0, 0, 1 / d),  // z bleeds into w → perspective divide
-                col3: SIMD4<Float>(0, 0, 0, 1)
-            ))
+            .multiplied(
+                by: Affine(
+                    col0: SIMD4<Float>(2 / w, 0, 0, 0),
+                    col1: SIMD4<Float>(0, 2 / h, 0, 0),
+                    col2: SIMD4<Float>(0, 0, 0, 1 / d),  // z bleeds into w → perspective divide
+                    col3: SIMD4<Float>(0, 0, 0, 1)
+                ))
         let viewMatrix = projection.multiplied(by: viewAffine)
         // let viewport = (size.x, size.y)
         withUnsafeBytes(of: viewMatrix) { viewportBuffer in

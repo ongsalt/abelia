@@ -21,7 +21,7 @@ class Compositor {
         // renderer.markRerenderNeeded(shouldRecreateSwapchain: shouldRecreateSwapchain)
     }
 
-    func produceSnapshot() {
+    // func render(to texture: RenderTexture) {
 
-    }
+    // }
 }
