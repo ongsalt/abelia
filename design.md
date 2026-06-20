@@ -69,10 +69,10 @@ component boundary do not exist as we cant really transform function content. So
 
 - top level waiter and normal renderer
 
-# Planning
-- image sampling
-- shadow falloff should be ^2.2
-- customizable scaling (down/up) mode (VK_FILTER_NEAREST, VK_FILTER_LINEAR
+# TODO
+- image ninegrid
+- wayland expect a premultiplied gamma-encoded srgb not gamma-encoded srgb premultiplied.
+- customizable scaling (down/up) mode
 - mipmap?
 - `RenderNodeRenderer` render to an any image
 - `GradientRegistry`

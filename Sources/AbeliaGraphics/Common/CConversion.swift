@@ -25,7 +25,7 @@ extension RenderNode {
     switch brush {
     case .solid(let color):
       data.brushKind = .solid
-      let (r, g, b, a) = color.values
+      let (r, g, b, a) = color.linearized.premultiplied.values
       data.brushData.solid = CShim.SolidColorBrush(color: (r, g, b, a))
     case .texture(let texture, let fillMode, let crop, let nineSlices):
       data.brushKind = .texture

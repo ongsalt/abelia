@@ -16,7 +16,7 @@ public final class Renderer {
         self.context = context
 
         let pipelines = try Pipelines(
-            format: .b8g8r8a8Unorm,
+            format: .b8g8r8a8Srgb,
             // extent: context.extent,
             context: context
         )
@@ -105,7 +105,7 @@ public final class Renderer {
                         resolveMode: .none, resolveImageView: nil,
                         resolveImageLayout: .undefined, loadOp: .clear,
                         storeOp: .store,
-                        clearValue: .init(color: .init(float32: (0.0, 0.0, 0.0, 0.1)))
+                        clearValue: .init(color: .init(float32: (0.0, 0.0, 0.0, 0.0)))
                     )
                 ]
             )
@@ -324,7 +324,7 @@ final class Pipelines {
                 logicOp: .copy,
                 attachments: [
                     .init(
-                        blendEnable: true, srcColorBlendFactor: .srcAlpha,
+                        blendEnable: true, srcColorBlendFactor: .one,
                         dstColorBlendFactor: .oneMinusSrcAlpha, colorBlendOp: .add,
                         srcAlphaBlendFactor: .one, dstAlphaBlendFactor: .oneMinusSrcAlpha,
                         alphaBlendOp: .add, colorWriteMask: [.a, .r, .g, .b])

@@ -1,5 +1,6 @@
-// we might internally store oklch color AS IS (so an enum),
+import Foundation
 
+// store
 public struct Color: Sendable {
   public var red: Float
   public var green: Float
@@ -8,7 +9,7 @@ public struct Color: Sendable {
   public var colorSpace: ColorSpace
 
   public init(
-    _ colorSpace: ColorSpace = .srgb, red: Float, green: Float, blue: Float, alpha: Float = 1.0,
+    _ colorSpace: ColorSpace = .displayP3, red: Float, green: Float, blue: Float, alpha: Float = 1.0,
   ) {
     self.red = red
     self.green = green
@@ -41,6 +42,24 @@ public struct Color: Sendable {
       alpha: alpha,
     )
   }
+
+  // this should depends on working space, probably the same as what tell us swapchain
+  var linearized: Color {
+    func apply(_ x: Float) -> Float {
+      if x <= 0.04045 {
+        x / 12.92
+      } else {
+        pow((x + 0.055) / 1.055, 2.4)
+      }
+    }
+    return Color(
+      colorSpace,
+      red: apply(red),
+      green: apply(green),
+      blue: apply(blue),
+      alpha: alpha,
+    )
+  }
 }
 
 public enum ColorSpace: Sendable {
@@ -51,26 +70,32 @@ public enum ColorSpace: Sendable {
 public enum ColorInterpolatingSpace: UInt32, Sendable {
   case srgb = 0
   case displayP3 = 1
-  case oklch = 2 
+  case oklch = 2
   case oklab = 3
 }
 
 extension Color {
-  public static let transparent = Color(hex: 0x000000, alpha: 0.0)
-  public static let black = Color(hex: 0x000000)
-  public static let white = Color(hex: 0xFFFFFF)
+  public static let transparent = Color(red: 0, green: 0, blue: 0, alpha: 0)
+  public static let black = Color(red: 0, green: 0, blue: 0)
+  public static let white = Color(red: 1, green: 1, blue: 1)
 
   // Apple Human Interface Guidelines Colors
-  public static let red = Color(hex: 0xFF383C)
-  public static let orange = Color(hex: 0xFF8D28)
-  public static let yellow = Color(hex: 0xFFCC00)
-  public static let green = Color(hex: 0x34C759)
-  public static let mint = Color(hex: 0x00C8B3)
-  public static let teal = Color(hex: 0x00C3D0)
-  public static let cyan = Color(hex: 0x00C0E8)
-  public static let blue = Color(hex: 0x0088FF)
-  public static let indigo = Color(hex: 0x6155F5)
-  public static let purple = Color(hex: 0xCB30E0)
-  public static let pink = Color(hex: 0xFF2D55)
-  public static let brown = Color(hex: 0xAC7F5E)
+  public static let red = Color(red: 1.0, green: 0.2196, blue: 0.2353)
+  public static let orange = Color(red: 1.0, green: 0.5529, blue: 0.1569)
+  public static let yellow = Color(red: 1.0, green: 0.8, blue: 0.0)
+  public static let green = Color(red: 0.2039, green: 0.7804, blue: 0.349)
+  public static let mint = Color(red: 0.0, green: 0.7843, blue: 0.702)
+  public static let teal = Color(red: 0.0, green: 0.7647, blue: 0.8157)
+  public static let cyan = Color(red: 0.0, green: 0.7529, blue: 0.9098)
+  public static let blue = Color(red: 0.0, green: 0.5333, blue: 1.0)
+  public static let indigo = Color(red: 0.3804, green: 0.3333, blue: 0.9608)
+  public static let purple = Color(red: 0.7961, green: 0.1882, blue: 0.8784)
+  public static let pink = Color(red: 1.0, green: 0.1765, blue: 0.3333)
+  public static let brown = Color(red: 0.6745, green: 0.498, blue: 0.3686)
+
+  public func with(alpha: Float) -> Self {
+    var new = self
+    new.alpha = alpha
+    return new
+  }
 }

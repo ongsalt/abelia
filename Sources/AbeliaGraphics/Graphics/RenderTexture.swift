@@ -97,7 +97,7 @@ class TextureRegistry {
         _ textureDescriptorSet: DescriptorSet,
         releaseQueue: ReleaseQueue,
         context: DeviceContext,
-        format: Format = .r8g8b8a8Unorm
+        format: Format = .b8g8r8a8Srgb
     ) {
         self.context = context
         self.textureDescriptorSet = textureDescriptorSet

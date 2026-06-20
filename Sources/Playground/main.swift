@@ -112,12 +112,12 @@ func makeNodes() -> [RenderNode] {
     let moveProgress: Float = 0.75
     let moveBg = RenderNode(
         shape: Shape.arc(radius: 140, angle: .pi(2), thickness: 26),
-        brush: .solid(Color(red: 1, green: 0.1, blue: 0.3, alpha: 0.3)),
+        brush: .solid(Color.red.with(alpha: 0.1)),
         offset: center
     )
     let moveFg = RenderNode(
         shape: Shape.arc(radius: 140, angle: .radians(.pi * 2 * moveProgress), thickness: 26),
-        brush: .solid(Color(red: 1, green: 0.1, blue: 0.3)),
+        brush: .solid(.red),
         offset: center,
         rotation: .degrees(180)
     )
@@ -126,12 +126,12 @@ func makeNodes() -> [RenderNode] {
     let exerciseProgress: Float = 0.60
     let exerciseBg = RenderNode(
         shape: Shape.arc(radius: 104, angle: .pi(2), thickness: 26),
-        brush: .solid(Color(red: 0.05, green: 0.35, blue: 0.1, alpha: 0.4)),
+        brush: .solid(.green.with(alpha: 0.1)),
         offset: center
     )
     let exerciseFg = RenderNode(
         shape: Shape.arc(radius: 104, angle: .radians(.pi * 2 * exerciseProgress), thickness: 26),
-        brush: .solid(Color(red: 0.2, green: 1, blue: 0.35)),
+        brush: .solid(.green),
         offset: center,
         rotation: .degrees(180)
     )
@@ -140,12 +140,12 @@ func makeNodes() -> [RenderNode] {
     let standProgress: Float = 0.90
     let standBg = RenderNode(
         shape: Shape.arc(radius: 68, angle: .pi(2), thickness: 26),
-        brush: .solid(Color(red: 0.05, green: 0.25, blue: 0.45, alpha: 0.4)),
+        brush: .solid(.cyan.with(alpha: 0.1)),
         offset: center
     )
     let standFg = RenderNode(
         shape: Shape.arc(radius: 68, angle: .radians(.pi * 2 * standProgress), thickness: 26),
-        brush: .solid(Color(red: 0.4, green: 0.9, blue: 1)),
+        brush: .solid(.cyan),
         offset: center,
         rotation: .degrees(180)
     )
@@ -153,14 +153,14 @@ func makeNodes() -> [RenderNode] {
     let blob = RenderNode(
         shape: Shape.rect(width: 240, height: 240, cornerRadius: 80)
             .union(Shape.circle(100), offset: [100, 100], smoothing: 60),
-        brush: .solid(.blue),
-        offset: [500, 300, 0],
+        brush: .solid(Color(red: 0.5, green: 0.5, blue: 0.5, alpha: 0.9)),
+        offset: [400, 100, 0],
         rotation: .degrees(10),
         rotationAxis: [0.1, 1, 0]
     )
 
     // backgrounds first so foreground arcs composite on top
-    return [moveBg, exerciseBg, standBg, moveFg, exerciseFg, standFg, blob]
+    return [blob, moveBg, exerciseBg, standBg, moveFg, exerciseFg, standFg]
 }
 
 // renderer.viewAffine = Affine().rotated(.degrees(10), axis: [1, 0, 0])

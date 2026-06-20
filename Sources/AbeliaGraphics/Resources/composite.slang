@@ -106,11 +106,9 @@ float4 fsMain(VertexOutput input): SV_Target {
   let renderNode = renderNodeData[input.renderNodeDataIndex];
   let position = input.localPosition;
 
-  // var color = float4(0.0);
-  var color = float4(input.localPosition, 0.0, 1.0);
+  var color = float4(0.0, 0.0, 0.0, 0.0);
+  // var color = float4(input.localPosition, 0.0, 1.0);
   float coverage = 0.0;
-
-  // return float4(input.localPosition, 1.0, 0.5);
 
   if (renderNode.brushKind == BrushKind.solid) {
     var brush = bit_cast<SolidColorBrush>(renderNode.brushData0);
@@ -119,6 +117,8 @@ float4 fsMain(VertexOutput input): SV_Target {
     var brush = unpackTextureBrush(renderNode.brushData0, renderNode.brushData1, renderNode.brushData2, renderNode.brushData3);
     // color = float4(textureLocalPositionOf(input.localPosition, brush), 0.0, 1.0);
     color = textures[brush.textureIndex].Sample(sampler, textureLocalPositionOf(input.localPosition, brush));
+    // premultiply
+    color.xyz *= color.w;
   }
 
   switch (renderNode.oneOrManyKind) {
@@ -169,9 +169,7 @@ float4 fsMain(VertexOutput input): SV_Target {
   }
 
   // TODO: fix this, when doing 3d transform, smoothCoverageOf dont work
-
-  color.w *= coverage;
-  return color;
+  return color * coverage;
 }
 
 float2 textureLocalPositionOf(float2 position, TextureBrush brush) {

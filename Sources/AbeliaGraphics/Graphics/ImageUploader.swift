@@ -24,7 +24,7 @@ extension TextureRegistry {
         // --- GPU-local image ---
         let texture = try createRenderTexture(
             size: SIMD2(width, height),
-            format: .r8g8b8a8Unorm,
+            format: .b8g8r8a8Srgb,
             usages: [.sampled, .transferDst]
         )
 
