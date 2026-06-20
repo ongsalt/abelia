@@ -66,6 +66,7 @@ class App: Swinit.EventLoopDelegate {
         let res = try renderLoop.waitForAvailableFrameInFlight()
         let backBuffer = try! surface.acquireCurrentTexture(signalling: res.imageAvailableSemaphore)
         let commands = GPUCommands { [self] commandBuffer in
+            backBuffer.prepareRender().apply(to: commandBuffer)
             let task = try! renderer.createDrawTask(
                 to: backBuffer.texture.image,
                 view: backBuffer.texture.view,
@@ -74,6 +75,7 @@ class App: Swinit.EventLoopDelegate {
                 nodes: nodes,
             )
             task.work.apply(to: commandBuffer)
+            backBuffer.preparePresent().apply(to: commandBuffer)
         }
 
         try renderLoop.render(
