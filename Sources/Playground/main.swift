@@ -43,7 +43,7 @@ class App: Swinit.EventLoopDelegate {
                 shape: Shape.rect(width: 300, height: 300, cornerRadius: 40),
                 brush: .texture(image),
                 offset: [200, 480, 0],
-                rotation: .degrees(-90),
+                rotation: .degrees(90)
             )
         )
 

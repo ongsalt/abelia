@@ -117,7 +117,8 @@ float4 fsMain(VertexOutput input): SV_Target {
     color = brush.color;
   } else if (renderNode.brushKind == BrushKind.texture) {
     var brush = unpackTextureBrush(renderNode.brushData0, renderNode.brushData1, renderNode.brushData2, renderNode.brushData3);
-    color = textures[brush.textureIndex].Sample(sampler, input.localPosition/brush.size - float2(0.5, 0.5));
+    // color = float4(textureLocalPositionOf(input.localPosition, brush), 0.0, 1.0);
+    color = textures[brush.textureIndex].Sample(sampler, textureLocalPositionOf(input.localPosition, brush));
   }
 
   switch (renderNode.oneOrManyKind) {
@@ -173,8 +174,15 @@ float4 fsMain(VertexOutput input): SV_Target {
   return color;
 }
 
-float2 textureLocalPosition(float2 position, float2 size, TextureBrush brush) {
-  return float2(0, 0);
+float2 textureLocalPositionOf(float2 position, TextureBrush brush) {
+  let scaled = position * float2(brush.tileScaleX, brush.tileScaleY) + float2(0.5, 0.5);
+
+  // TODO: repeat stuff, and
+
+  // its clamped to edge
+  let cropped = clamp(scaled, float2(brush.cropLeft, brush.cropTop), float2(brush.cropLeft + brush.cropWidth, brush.cropTop + brush.cropHeight));
+
+  return cropped;
 }
 
 float sdf(float2 position, ShapeKind kind, uint4 data) {

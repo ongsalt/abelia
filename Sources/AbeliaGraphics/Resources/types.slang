@@ -134,7 +134,7 @@ public TextureBrush unpackTextureBrush(uint4 d0, uint4 d1, uint4 d2, uint4 d3) {
   b.sliceTop     = asfloat(d2.y);
   b.sliceWidth   = asfloat(d2.z);
   b.sliceHeight  = asfloat(d2.w);
-  b.size         = float2(asfloat(d3.x), asfloat(d3.y));
+  b.size         = float2(asfloat(d3.x), asfloat(d3.y)); // reserved
   return b;
 }
 

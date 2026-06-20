@@ -42,11 +42,12 @@ extension RenderNode {
         tileScaleX = s.x
         tileScaleY = s.y
       }
+
       data.brushData.texture = CShim.TextureBrush(
         textureIndex: UInt32(texture.index),  // resolved externally when binding textures
         fillMode: fillModeRaw,
-        tileScaleX: tileScaleX,
-        tileScaleY: tileScaleY,
+        tileScaleX: tileScaleX / Float(texture.size.x),
+        tileScaleY: tileScaleY / Float(texture.size.y),
         cropLeft: crop.left,
         cropTop: crop.top,
         cropWidth: crop.width,
@@ -55,8 +56,8 @@ extension RenderNode {
         sliceTop: nineSlices.top,
         sliceWidth: nineSlices.width,
         sliceHeight: nineSlices.height,
-        sizeX: Float(texture.size.x),
-        sizeY: Float(texture.size.y)
+        sizeX: 0,
+        sizeY: 0
       )
     }
 

@@ -396,11 +396,11 @@ final class Pipelines {
         let sampler = try context.device.createSampler(
             SamplerCreateInfo(
                 magFilter: .linear, minFilter: .linear,
-                mipmapMode: .linear, addressModeU: .mirroredRepeat,
-                addressModeV: .mirroredRepeat, addressModeW: .mirroredRepeat,
+                mipmapMode: .linear, addressModeU: .clampToEdge,
+                addressModeV: .clampToEdge, addressModeW: .clampToEdge,
                 mipLodBias: 0, anisotropyEnable: false, maxAnisotropy: 0,
                 compareEnable: false, compareOp: .never, minLod: 0, maxLod: 0,
-                borderColor: .floatOpaqueBlack, unnormalizedCoordinates: false
+                borderColor: .floatTransparentBlack, unnormalizedCoordinates: false
             ))
         // leak btw
 
