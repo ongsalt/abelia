@@ -61,6 +61,7 @@ struct ConfiguredSurfaceInfo {
 /// pls keep the window alive
 public class Surface: SurfaceProtocol {
     let handle: SurfaceKHR
+    let releaseQueue: ReleaseQueue = ReleaseQueue()
     var configuredInfo: ConfiguredSurfaceInfo?
 
     var device: Device {
@@ -81,7 +82,7 @@ public class Surface: SurfaceProtocol {
 
         nonisolated(unsafe) let prev = configuredInfo?.swapchain
         let previousSwapchainImageViews = configuredInfo?.imageViews
-        let previousSemaphores = configuredInfo?.renderFinishedSemaphores
+        let previousSemaphores = configuredInfo?.renderFinishedSemaphores // tf i do with this
 
         let (swapchain, swapchainImages, swapchainImageViews) = try Self.recreateSwapchain(
             device: configuration.device.device,
@@ -100,12 +101,20 @@ public class Surface: SurfaceProtocol {
             )
         }
 
-        // self.releaseQueue.schedule(in: Self.maxFrameInFlightCount + 1) {
-        //     for view in previousSwapchainImageViews {
-        //         view.destroy()
-        //     }
-        //     prev.destroyKHR()
-        // }
+        // everytime present is called
+        self.releaseQueue.scheduleNextCycle {
+            if let previousSwapchainImageViews {
+                for view in previousSwapchainImageViews {
+                    view.destroy()
+                }
+            }
+            prev?.destroyKHR()
+            if let previousSemaphores {
+                for s in previousSemaphores {
+                    s.destroy()
+                }
+            }
+        }
 
         self.configuredInfo = ConfiguredSurfaceInfo(
             width: width,
@@ -119,7 +128,9 @@ public class Surface: SurfaceProtocol {
     }
 
     // TODO: return outofdate/invalid
-    public func acquireCurrentTexture(signalling semaphore: Semaphore) throws -> some SurfaceTextureProtocol {
+    public func acquireCurrentTexture(signalling semaphore: Semaphore) throws
+        -> some SurfaceTextureProtocol
+    {
         guard let configuredInfo else {
             fatalError("Please call .configure first")
         }
@@ -139,6 +150,7 @@ public class Surface: SurfaceProtocol {
                 view: configuredInfo.imageViews[Int(index)]
             ),
             renderCompletedSemaphore: configuredInfo.renderFinishedSemaphores[Int(index)],
+            releaseQueue: self.releaseQueue,
             queue: configuredInfo.associatedDevice.graphicsQueue,
             swapchain: configuredInfo.swapchain,
             imageIndex: index
@@ -197,6 +209,7 @@ public class Surface: SurfaceProtocol {
 struct SurfaceTexture: SurfaceTextureProtocol {
     let texture: RenderTexture
     let renderCompletedSemaphore: Vulkan.Semaphore
+    let releaseQueue: ReleaseQueue
 
     private let queue: Queue
     private let swapchain: SwapchainKHR
@@ -205,11 +218,13 @@ struct SurfaceTexture: SurfaceTextureProtocol {
     init(
         texture: RenderTexture,
         renderCompletedSemaphore: Semaphore,
+        releaseQueue: ReleaseQueue,
         queue: Queue,
         swapchain: SwapchainKHR,
         imageIndex: UInt32
     ) {
         self.texture = texture
+        self.releaseQueue = releaseQueue
         self.renderCompletedSemaphore = renderCompletedSemaphore
         self.queue = queue
         self.swapchain = swapchain
@@ -269,6 +284,7 @@ struct SurfaceTexture: SurfaceTextureProtocol {
     }
 
     func present() throws {
+        self.releaseQueue.flush()
         try queue.presentKHR(
             .init(
                 waitSemaphores: [renderCompletedSemaphore],
