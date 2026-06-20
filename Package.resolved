@@ -1,5 +1,5 @@
 {
-  "originHash" : "7ff385f8ef5306f56a56e9bcabc6be7213505c98a9e69961b51833c87abea3b4",
+  "originHash" : "785bdf0264d3e9e85f063def97fe4fdbcdb1f8264586ef5b48b026cd7092c8fd",
   "pins" : [
     {
       "identity" : "swift-argument-parser",
@@ -8,15 +8,6 @@
       "state" : {
         "revision" : "6a52f3251125d74daf04fcbd5e6f08a75d074382",
         "version" : "1.8.2"
-      }
-    },
-    {
-      "identity" : "swift-blend2d",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/LuizZak/swift-blend2d",
-      "state" : {
-        "branch" : "master",
-        "revision" : "df2a566c5bbf406f5a28b0fca87b318195fd0d99"
       }
     },
     {
@@ -33,7 +24,7 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/ongsalt/swift-vulkan",
       "state" : {
-        "revision" : "03b43f505c73e3e710e567e27f38b6f2540ad90c"
+        "revision" : "ad4cffdd4e159479b1ebcbd06a8c68a122bf9520"
       }
     },
     {

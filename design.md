@@ -70,16 +70,14 @@ component boundary do not exist as we cant really transform function content. So
 - top level waiter and normal renderer
 
 # Planning
+- image sampling
 - shadow falloff should be ^2.2
-- copying texture + make its descriptor 
+- customizable scaling (down/up) mode (VK_FILTER_NEAREST, VK_FILTER_LINEAR
+- mipmap?
 - `RenderNodeRenderer` render to an any image
-- `GradientRegistry` may render and return an image with wait commands 
+- `GradientRegistry`
 - `Compositor` schedule multiple `CompositionNode` rendering with `RenderNodeRenderer` 
-- many surface might reuse same device context
-- every render function should produce some kind of waitable object
-- extract FrameScheduler? 
-    - DXGI swapchain
-- gradient
+- DXGI swapchain
 - basic compositing + effect layer scheduling
 - 9 grid
 - clip: seem like this require a rasterize into a mask layer for best perf
@@ -87,7 +85,7 @@ component boundary do not exist as we cant really transform function content. So
     - CALayer-like mask
     - rect clip is easily computable tho
 
-- fuckkkkkkkkkkkkk
 - query hdr support
+    - fuckkkkkkkkkkkkk, out chain
 - use `VK_FORMAT_R16G16B16A16_SFLOAT` color texture
 

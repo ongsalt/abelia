@@ -18,6 +18,7 @@ class VmaBuffer {
   }
 
   func destroy() {
+    // vmaUnmapMemory(allocator, allocation)
     vmaDestroyBuffer(allocator, buffer.handle, allocation)
   }
 }

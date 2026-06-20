@@ -35,6 +35,18 @@ class App: Swinit.EventLoopDelegate {
         self.renderer = try! context.createRenderer(for: surface, device: device)
         self.renderLoop = try! RenderLoop(context: device)
 
+        let image = try! renderer.loadImage(filename: "Resources/wi.jpg")
+        print(image.size)
+
+        nodes.append(
+            RenderNode(
+                shape: Shape.rect(width: 300, height: 300, cornerRadius: 40),
+                brush: .texture(image),
+                offset: [200, 480, 0],
+                rotation: .degrees(-90),
+            )
+        )
+
         try! self.render()
     }
 
@@ -43,12 +55,12 @@ class App: Swinit.EventLoopDelegate {
     ) {
         switch event {
         case .resized(let size, let isFinal):
+            surfaceConfig.width = size.width
+            surfaceConfig.height = size.height
+            try! surface.configure(surfaceConfig)
+            try! render()
             if isFinal {
                 // try frameScheduler.resize(w: size.width, h: size.height)
-                surfaceConfig.width = size.width
-                surfaceConfig.height = size.height
-                try! surface.configure(surfaceConfig)
-                try! render()
                 // try renderer.draw(nodes)
             }
 
@@ -92,7 +104,7 @@ class App: Swinit.EventLoopDelegate {
 EventLoop().run(App())
 
 func makeNodes() -> [RenderNode] {
-    let center: SIMD3<Float> = [300, 300, 0]
+    let center: SIMD3<Float> = [200, 200, 0]
 
     // 180° rotation puts the closed end at 12 o'clock (gap at bottom), matching Apple Health style
 
@@ -100,7 +112,7 @@ func makeNodes() -> [RenderNode] {
     let moveProgress: Float = 0.75
     let moveBg = RenderNode(
         shape: Shape.arc(radius: 140, angle: .pi(2), thickness: 26),
-        brush: .solid(Color(red: 0.5, green: 0.05, blue: 0.15, alpha: 0.4)),
+        brush: .solid(Color(red: 1, green: 0.1, blue: 0.3, alpha: 0.3)),
         offset: center
     )
     let moveFg = RenderNode(
@@ -138,8 +150,17 @@ func makeNodes() -> [RenderNode] {
         rotation: .degrees(180)
     )
 
+    let blob = RenderNode(
+        shape: Shape.rect(width: 240, height: 240, cornerRadius: 80)
+            .union(Shape.circle(100), offset: [100, 100], smoothing: 60),
+        brush: .solid(.blue),
+        offset: [500, 300, 0],
+        rotation: .degrees(10),
+        rotationAxis: [0.1, 1, 0]
+    )
+
     // backgrounds first so foreground arcs composite on top
-    return [moveBg, exerciseBg, standBg, moveFg, exerciseFg, standFg]
+    return [moveBg, exerciseBg, standBg, moveFg, exerciseFg, standFg, blob]
 }
 
 // renderer.viewAffine = Affine().rotated(.degrees(10), axis: [1, 0, 0])

@@ -20,7 +20,6 @@ extension RenderNode {
       data.oneOrManyKind = .many_shapes
       let startIndex = shapeGroupStorage.update(ownerIdentity: identity, data: instructions)
       data.shapeData.many = CShim.ManyShapeRef(startIndex: UInt32(startIndex!), count: UInt32(instructions.count))
-      // shapeGroupStorage.print(offset: startIndex!, count: instructions.count)
     }
 
     switch brush {
@@ -28,7 +27,7 @@ extension RenderNode {
       data.brushKind = .solid
       let (r, g, b, a) = color.values
       data.brushData.solid = CShim.SolidColorBrush(color: (r, g, b, a))
-    case .texture(_, let fillMode, let crop, let nineSlices):
+    case .texture(let texture, let fillMode, let crop, let nineSlices):
       data.brushKind = .texture
       let fillModeRaw: UInt32
       let tileScaleX: Float
@@ -44,7 +43,7 @@ extension RenderNode {
         tileScaleY = s.y
       }
       data.brushData.texture = CShim.TextureBrush(
-        textureIndex: 0,  // resolved externally when binding textures
+        textureIndex: UInt32(texture.index),  // resolved externally when binding textures
         fillMode: fillModeRaw,
         tileScaleX: tileScaleX,
         tileScaleY: tileScaleY,
@@ -55,7 +54,9 @@ extension RenderNode {
         sliceLeft: nineSlices.left,
         sliceTop: nineSlices.top,
         sliceWidth: nineSlices.width,
-        sliceHeight: nineSlices.height
+        sliceHeight: nineSlices.height,
+        sizeX: Float(texture.size.x),
+        sizeY: Float(texture.size.y)
       )
     }
 

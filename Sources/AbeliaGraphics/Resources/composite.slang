@@ -16,11 +16,11 @@ uniform StructuredBuffer<ShapeMergingEntry> shapeGroupData;
 uniform StructuredBuffer<uint32_t> drawList;
 
 [[vk::binding(0, 1)]]
-uniform StructuredBuffer<DescriptorHandle<Texture2D>> textures;
+uniform Texture2D[] textures;
 
 // global fr
 [[vk::binding(0, 2)]]
-uniform Sampler2D sampler;
+uniform SamplerState sampler;
 
 
 struct VertexInput {
@@ -115,6 +115,9 @@ float4 fsMain(VertexOutput input): SV_Target {
   if (renderNode.brushKind == BrushKind.solid) {
     var brush = bit_cast<SolidColorBrush>(renderNode.brushData0);
     color = brush.color;
+  } else if (renderNode.brushKind == BrushKind.texture) {
+    var brush = unpackTextureBrush(renderNode.brushData0, renderNode.brushData1, renderNode.brushData2, renderNode.brushData3);
+    color = textures[brush.textureIndex].Sample(sampler, input.localPosition/brush.size - float2(0.5, 0.5));
   }
 
   switch (renderNode.oneOrManyKind) {

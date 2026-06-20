@@ -21,8 +21,8 @@ let package = Package(
         .package(url: "https://github.com/ongsalt/swinit", branch: "main"),
         .package(
             url: "https://github.com/ongsalt/swift-vulkan",
-            revision: "03b43f505c73e3e710e567e27f38b6f2540ad90c"),
-        .package(url: "https://github.com/LuizZak/swift-blend2d", branch: "master"),
+            revision: "ad4cffdd4e159479b1ebcbd06a8c68a122bf9520"),
+        // .package(url: "https://github.com/LuizZak/swift-blend2d", branch: "master"),
 
     ],
     targets: [

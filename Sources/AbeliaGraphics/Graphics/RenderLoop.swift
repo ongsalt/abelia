@@ -38,7 +38,7 @@ public final class RenderLoop {
     signalling renderFinishedSemaphore: Semaphore,
     commands: GPUCommands
   ) throws {
-    self.releaseQueue.flush()
+    self.releaseQueue.flushWithFences(context)
 
     let res = currentFrameResource
     defer {
@@ -74,10 +74,6 @@ public final class RenderLoop {
     try context.graphicsQueue.submit2(
       submits: [graphicsSubmit], fence: res.everythingCompletedFence)
   }
-
-  // public func reconfigure() throws {
-  //   try self.resize(w: 999999, h: 999999)
-  // }
 }
 
 public class _FrameResource {

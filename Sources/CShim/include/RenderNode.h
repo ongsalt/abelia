@@ -72,7 +72,7 @@ struct SolidColorBrush {
   float color[4];       // 16 bytes
 };
 
-// Layout: textureIndex(4) + fillMode(4) + tileScale(8) + crop(16) + nineSlices(16) = 48 bytes
+// Layout: textureIndex(4) + fillMode(4) + tileScale(8) + crop(16) + nineSlices(16) + size(8) = 56 bytes
 struct TextureBrush {
   uint32_t textureIndex;  // index into bound texture descriptor array
   uint32_t fillMode;      // TextureFillMode
@@ -88,16 +88,19 @@ struct TextureBrush {
   float sliceTop;
   float sliceWidth;
   float sliceHeight;
+  // physical pixel size of the rendered region (for UV scaling)
+  float sizeX;
+  float sizeY;
 };
 
 union Brush {
   struct SolidColorBrush solid;
   struct TextureBrush texture;
-  // union size = 48 bytes
+  uint32_t _pad[16]; // union size = 64 bytes to match GPU layout (4 × uint4)
 };
 
 // Matches RenderNode in types.slang exactly.
-// Layout: affine(64) + shapeData(16) + brushData(48) + oneOrManyKind(4) + shapeKind(4) + brushKind(4) + _pad(4) = 144 bytes
+// Layout: affine(64) + shapeData(16) + brushData(64) + oneOrManyKind(4) + shapeKind(4) + brushKind(4) + _pad(4) = 160 bytes
 struct RenderNode {
   float affine[16];
 

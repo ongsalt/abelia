@@ -20,8 +20,4 @@ class Compositor {
         // tell renderer we need rerender
         // renderer.markRerenderNeeded(shouldRecreateSwapchain: shouldRecreateSwapchain)
     }
-
-    // func render(to texture: RenderTexture) {
-
-    // }
 }

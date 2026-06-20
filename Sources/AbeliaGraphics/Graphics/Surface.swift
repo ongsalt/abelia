@@ -10,7 +10,7 @@ public protocol SurfaceProtocol {
 }
 
 public protocol SurfaceTextureProtocol {
-    var texture: RenderTexture { get }
+    var texture: ImageAndView { get }
     var renderCompletedSemaphore: Semaphore { get }
     var imageIndex: UInt32 { get }
 
@@ -145,7 +145,7 @@ public class Surface: SurfaceProtocol {
         )
 
         return SurfaceTexture(
-            texture: RenderTexture(
+            texture: ImageAndView(
                 image: configuredInfo.images[Int(index)],
                 view: configuredInfo.imageViews[Int(index)]
             ),
@@ -207,7 +207,7 @@ public class Surface: SurfaceProtocol {
 }
 
 struct SurfaceTexture: SurfaceTextureProtocol {
-    let texture: RenderTexture
+    let texture: ImageAndView
     let renderCompletedSemaphore: Vulkan.Semaphore
     let releaseQueue: ReleaseQueue
 
@@ -216,7 +216,7 @@ struct SurfaceTexture: SurfaceTextureProtocol {
     public let imageIndex: UInt32
 
     init(
-        texture: RenderTexture,
+        texture: ImageAndView,
         renderCompletedSemaphore: Semaphore,
         releaseQueue: ReleaseQueue,
         queue: Queue,

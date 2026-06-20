@@ -119,9 +119,7 @@ public class DeviceContext: @unchecked Sendable {
                     queueCreateInfos: Set([graphicsFamilyIndex, presentationFamilyIndex])
                         .map { .init(queueFamilyIndex: $0, queuePriorities: [1.0]) },
                     enabledExtensionNames: {
-                        var names = [
-                            "VK_KHR_swapchain"
-                        ]
+                        var names = ["VK_KHR_swapchain"]
 
                         #if os(Windows)
                             names += [
@@ -133,14 +131,22 @@ public class DeviceContext: @unchecked Sendable {
                         return names
                     }(),
                 )
-                .push(PhysicalDeviceBufferDeviceAddressFeatures(bufferDeviceAddress: true))
+                .push(PhysicalDeviceVulkan12Features(
+                    shaderSampledImageArrayNonUniformIndexing: true,
+                    // shaderStorageBufferArrayNonUniformIndexing: true,
+                    descriptorBindingSampledImageUpdateAfterBind: true,
+                    descriptorBindingPartiallyBound: true,
+                    descriptorBindingVariableDescriptorCount: true,
+                    runtimeDescriptorArray: true,
+                    bufferDeviceAddress: true,
+                ))
+                .push(PhysicalDeviceVulkan11Features(shaderDrawParameters: true))
                 .push(
                     PhysicalDeviceVulkan13Features(
                         synchronization2: true,
                         dynamicRendering: true,
                     )
                 )
-                .push(PhysicalDeviceVulkan11Features(shaderDrawParameters: true))
             )
         else {
             throw .noUsableDevice

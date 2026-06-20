@@ -52,7 +52,7 @@ public struct SolidColorBrush {
   public float4 color;  // 16 bytes
 };
 
-// Layout matches C TextureBrush exactly (48 bytes).
+// Layout matches C TextureBrush exactly (56 bytes).
 public struct TextureBrush {
   public uint textureIndex;
   public uint fillMode;     // TextureFillMode
@@ -66,6 +66,7 @@ public struct TextureBrush {
   public float sliceTop;
   public float sliceWidth;
   public float sliceHeight;
+  public float2 size;       // physical pixel size of the rendered region
 };
 
 public enum MergeMode : uint {
@@ -119,8 +120,26 @@ public struct ShapeMergingEntry {
   public property float2 offset { get { return float2(offsetX, offsetY); } }
 };
 
+public TextureBrush unpackTextureBrush(uint4 d0, uint4 d1, uint4 d2, uint4 d3) {
+  TextureBrush b;
+  b.textureIndex = d0.x;
+  b.fillMode     = d0.y;
+  b.tileScaleX   = asfloat(d0.z);
+  b.tileScaleY   = asfloat(d0.w);
+  b.cropLeft     = asfloat(d1.x);
+  b.cropTop      = asfloat(d1.y);
+  b.cropWidth    = asfloat(d1.z);
+  b.cropHeight   = asfloat(d1.w);
+  b.sliceLeft    = asfloat(d2.x);
+  b.sliceTop     = asfloat(d2.y);
+  b.sliceWidth   = asfloat(d2.z);
+  b.sliceHeight  = asfloat(d2.w);
+  b.size         = float2(asfloat(d3.x), asfloat(d3.y));
+  return b;
+}
+
 // Matches C struct RenderNode exactly.
-// Layout: affine(64) + shapeData(16) + brushData(48) + oneOrManyKind(4) + shapeKind(4) + brushKind(4) + _pad(4) = 144 bytes
+// Layout: affine(64) + shapeData(16) + brushData(64) + oneOrManyKind(4) + shapeKind(4) + brushKind(4) + _pad(4) = 160 bytes
 public struct RenderNode {
   public float4x4 affine;
 
@@ -128,12 +147,13 @@ public struct RenderNode {
   // many_shapes: .x = startIndex, .y = count into ShapeMergingInstruction buffer
   public uint4 shapeData;
 
-  // raw Brush union (48 bytes) split into three uint4 chunks.
+  // raw Brush union (64 bytes) split into four uint4 chunks.
   // solid:   bit_cast<SolidColorBrush>(brushData0)
-  // texture: bit_cast<TextureBrush>(brushData0, brushData1, brushData2)
+  // texture: bit_cast<TextureBrush>(brushData0, brushData1, brushData2, brushData3[0..1])
   public uint4 brushData0;
   public uint4 brushData1;
   public uint4 brushData2;
+  public uint4 brushData3;
 
   public OneOrManyShapeKind oneOrManyKind;
   public ShapeKind shapeKind;   // valid when one_shape

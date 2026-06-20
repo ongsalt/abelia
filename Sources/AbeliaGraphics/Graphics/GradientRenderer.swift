@@ -6,7 +6,7 @@ class GradientRenderer {
 }
 
 struct GradientTexture {
-  let texture: RenderTexture
+  let texture: ImageAndView
   // let dimension  
 }
 

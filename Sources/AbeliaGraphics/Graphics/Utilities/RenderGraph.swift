@@ -67,6 +67,13 @@ extension GPUTask {
   }
 }
 
+
+/// execute immediately, expose a semaphore
+public struct GPUFuture<T> {
+  let value: T
+  let semaphore: Semaphore
+}
+
 public struct GPUCommands: GPUCommandsProtocol {
   let record: (borrowing CommandBuffer) -> Void
   public init(record: @escaping (borrowing CommandBuffer) -> Void) {
