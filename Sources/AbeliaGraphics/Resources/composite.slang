@@ -9,11 +9,19 @@ uniform ConstantBuffer<float4x4> viewMatrix;
 [[vk::binding(0, 0)]]
 uniform StructuredBuffer<RenderNode> renderNodeData;
 
-[[vk_binding(1, 0)]]
+[[vk::binding(1, 0)]]
 uniform StructuredBuffer<ShapeMergingEntry> shapeGroupData;
 
-[[vk_binding(2, 0)]]
+[[vk::binding(2, 0)]]
 uniform StructuredBuffer<uint32_t> drawList;
+
+[[vk::binding(0, 1)]]
+uniform StructuredBuffer<DescriptorHandle<Texture2D>> textures;
+
+// global fr
+[[vk::binding(0, 2)]]
+uniform Sampler2D sampler;
+
 
 struct VertexInput {
   uint32_t instanceIndex : SV_InstanceID;
@@ -52,7 +60,7 @@ VertexOutput vsMain(VertexInput input) {
     uint startIndex = shapeGroup.x;
     uint count = shapeGroup.y;
 
-    // First entry is always a push — use it to seed the AABB
+    // this is per node tho, we are doing 6x more work than needed
     ShapeMergingEntry first = shapeGroupData[startIndex];
     let firstKind = bit_cast<ShapeKind>(first.mergeMode_or_shapeKind);
     float2 boundsMin = getShapeBound(0, firstKind, first.data) + first.offset;
@@ -63,8 +71,8 @@ VertexOutput vsMain(VertexInput input) {
       ShapeMergingEntry entry = shapeGroupData[startIndex + i];
       if (entry.kind == ShapeMergingInstructionKind.push) {
         let shapeKind = bit_cast<ShapeKind>(entry.mergeMode_or_shapeKind);
-        boundsMin = min(boundsMin, getShapeBound(0, shapeKind, entry.data) + entry.offset);
-        boundsMax = max(boundsMax, getShapeBound(2, shapeKind, entry.data) + entry.offset);
+        boundsMin = min(boundsMin, getShapeBound(0, shapeKind, entry.data) + entry.offset) - 4; // to fix jagged edge on node with 3d transform 
+        boundsMax = max(boundsMax, getShapeBound(2, shapeKind, entry.data) + entry.offset) + 4; // not mathematically correct but often good enough
       }
     }
 
@@ -160,6 +168,10 @@ float4 fsMain(VertexOutput input): SV_Target {
 
   color.w *= coverage;
   return color;
+}
+
+float2 textureLocalPosition(float2 position, float2 size, TextureBrush brush) {
+  return float2(0, 0);
 }
 
 float sdf(float2 position, ShapeKind kind, uint4 data) {
