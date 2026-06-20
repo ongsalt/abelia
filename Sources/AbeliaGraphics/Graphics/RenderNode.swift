@@ -39,7 +39,7 @@ public class RenderNode: Identifiable {
         didSet { dirty = true }
     }
 
-    var hidden: Bool
+    var hidden: Bool = false
 
     private(set) var dirty: Bool = false
 

@@ -67,15 +67,16 @@ func Text(_ text: @autoclosure @escaping () -> some StringProtocol) -> View {
 
 component boundary do not exist as we cant really transform function content. So every lifecycle stuff need to be tied to parent element scope.
 
+- top level waiter and normal renderer
+
 # Planning
 - shadow falloff should be ^2.2
-- query hdr support
-- copying texture
+- copying texture + make its descriptor 
 - `RenderNodeRenderer` render to an any image
 - `GradientRegistry` may render and return an image with wait commands 
 - `Compositor` schedule multiple `CompositionNode` rendering with `RenderNodeRenderer` 
 - many surface might reuse same device context
-- every render function should produce a waitable object
+- every render function should produce some kind of waitable object
 - extract FrameScheduler? 
     - DXGI swapchain
 - gradient
@@ -87,5 +88,6 @@ component boundary do not exist as we cant really transform function content. So
     - rect clip is easily computable tho
 
 - fuckkkkkkkkkkkkk
+- query hdr support
 - use `VK_FORMAT_R16G16B16A16_SFLOAT` color texture
 

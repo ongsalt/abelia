@@ -100,6 +100,7 @@ let package = Package(
                 "CShim",
                 "CSTBImage",
                 .product(name: "Vulkan", package: "swift-vulkan"),
+                .product(name: "Swinit", package: "swinit"),
             ],
             exclude: [
                 "Resources/"

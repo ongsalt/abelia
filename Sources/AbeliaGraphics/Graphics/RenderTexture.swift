@@ -1,21 +1,20 @@
 import Vulkan
 
-class RenderTexture: Identifiable {
-    private(set) unowned var registry: TextureRegistry
-    private(set) var index: Int
-    /// dimension of the image
-    fileprivate(set) var size: SIMD2<UInt32> = .zero
-    /// actual dimension in memory, capacity >= size
-    fileprivate(set) var capacity: SIMD2<UInt32> = .zero
+// public  only fornow
+public class RenderTexture: Identifiable {
+    // private(set) unowned var registry: TextureRegistry
+    // private(set) var index: Int
+    // // /// dimension of the image
+    // fileprivate(set) var size: SIMD2<UInt32> = .zero
+    // /// actual dimension in memory, capacity >= size
+    // fileprivate(set) var capacity: SIMD2<UInt32> = .zero
 
-    fileprivate var image: Image
+    fileprivate(set) public var image: Image
+    fileprivate(set) public var view: ImageView
 
-    var lastContentHash: Int?
-
-    init(_ registry: TextureRegistry, index: Int, image: Image) {
-        self.registry = registry
+    init(image: Image, view: ImageView) {
         self.image = image
-        self.index = index
+        self.view = view
     }
 }
 
@@ -24,37 +23,14 @@ class RenderTexture: Identifiable {
 // - need to group draw call by atlas -> in case we are doing backdrop effect, its all sample from same texture anyway
 class TextureRegistry {
     private let context: DeviceContext
-    let texturesDescriptorPool: DescriptorPool
-    let texturesDescriptorSet: DescriptorSet
 
-    private var pool: [Int:RenderTexture] = [:]
+    private var pool: [Int: RenderTexture] = [:]
     private var inUseTextures: [ObjectIdentifier: RenderTexture] = [:]
-    let maxTextureCount: UInt32 = 65536
+
+    let maxTextureCount: UInt32 = 512 * 1024
 
     init(context: DeviceContext) {
         self.context = context
-    }
-
-    static func createResources(context: DeviceContext) throws -> (DescriptorPool, DescriptorSet,  maxTextureCount: UInt32) {
-        // context.physicalDevice.getProperties2()
-        // TODO: query maxDescriptorSetUpdateAfterBindSampledImages
-        let maxTextureCount: UInt32 = 1024 * 64 // just to be safe 
-        let pool = try context.device.createDescriptorPool(
-            .init(
-                flags: .updateAfterBind, 
-                maxSets: 1, 
-                poolSizes: [
-                    .init(type: .sampledImage, descriptorCount: maxTextureCount)
-                ]
-            )
-        )
-        // let descriptorSets = try device.allocateDescriptorSets(
-        //     .init(
-        //         descriptorPool: descriptorPool,
-        //         setLayouts: [mainDescriptorSetLayout]
-        //     )
-        // )
-
     }
 
     func getOrCreateRenderTexture(size: SIMD2<UInt32>) -> RenderTexture {

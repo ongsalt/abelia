@@ -2,7 +2,7 @@ import Vulkan
 
 // this should not be public in the final release
 public protocol FrameSchedulerProtocol {
-  func reconfigure() throws
+  func resize(w: UInt32, h: UInt32) throws
   func render(body: (Image, ImageView, CommandBuffer, Int, SIMD2<UInt32>) -> Void) throws
   var swapchainImageFormat: Format { get }
   var swapchainImageColorSpace: ColorSpaceKHR { get }
@@ -198,9 +198,9 @@ public final class FrameScheduler: FrameSchedulerProtocol {
     )
   }
 
-  public func reconfigure() throws {
-    try self.resize(w: 999999, h: 999999)
-  }
+  // public func reconfigure() throws {
+  //   try self.resize(w: 999999, h: 999999)
+  // }
 
   public func resize(w: UInt32, h: UInt32) throws {
     try recreateSwapchain(extent: Extent2D(width: w, height: h))

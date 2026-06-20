@@ -1,5 +1,4 @@
 import CShim
-
 import Vulkan
 
 #if os(Windows)
@@ -9,7 +8,6 @@ import Vulkan
 public class GraphicsContext: @unchecked Sendable {
     let vulkanEntry: Entry
     public let vulkanInstance: Instance
-    public private(set) var surfaceContexts: [SurfaceContext] = []
 
     #if DEBUG
         var debugMessenger: DebugUtilsMessengerEXT
@@ -67,31 +65,34 @@ public class GraphicsContext: @unchecked Sendable {
 
     #if os(Linux)
         public func createWaylandSurface(display: OpaquePointer, surface: OpaquePointer)
-            throws(Vulkan.Result) -> SurfaceKHR
+            throws(Vulkan.Result) -> Surface
         {
-            try vulkanInstance.createWaylandSurfaceKHR(.init(display: display, surface: surface))
+            Surface(
+                try vulkanInstance.createWaylandSurfaceKHR(
+                    .init(display: display, surface: surface)))
         }
     #endif
 
     #if os(Windows)
         public func createWin32Surface(hinstance: HINSTANCE, hwnd: HWND)
-            throws(Vulkan.Result) -> SurfaceKHR
+            throws(Vulkan.Result) -> Surface
         {
-            try vulkanInstance.createWin32SurfaceKHR(.init(hinstance: hinstance, hwnd: hwnd))
+            Surface(
+                try vulkanInstance.createWin32SurfaceKHR(.init(hinstance: hinstance, hwnd: hwnd)))
         }
     #endif
 
-    public func initDevice(compatibleWith surface: SurfaceKHR)
-        throws(DeviceInitializationError)
+    public func createDevice(compatibleWith surface: Surface)
+        throws(DeviceInitializationError) -> DeviceContext
     {
-        self.surfaceContexts.append(try SurfaceContext(surface: surface, context: self))
+        return try DeviceContext(compatibleWith: surface, context: self)
     }
 
     // temporary api
-    public func createRenderer() throws -> (Renderer, any FrameSchedulerProtocol) {
-        let surfaceContext = surfaceContexts[0]
-        let renderer = try Renderer(context: surfaceContext.associatedDevice, maxFrameInFlightCount: 2)
-        return (renderer, surfaceContext.frameScheduler)
+    public func createRenderer(for surface: any SurfaceProtocol, device: DeviceContext) throws
+        -> Renderer
+    {
+        try Renderer(context: device, maxFrameInFlightCount: 2)
     }
 
 }
@@ -107,7 +108,9 @@ public class DeviceContext: @unchecked Sendable {
     let device: Device
     let allocator: VmaAllocator
 
-    init(compatibleWith surface: SurfaceKHR, context: borrowing GraphicsContext) throws(DeviceInitializationError) {
+    init(compatibleWith surface: any SurfaceProtocol, context: borrowing GraphicsContext)
+        throws(DeviceInitializationError)
+    {
         guard
             let (graphicsFamilyIndex, presentationFamilyIndex, physicalDevice) =
                 try? Self.selectPhysicalDevice(context.vulkanInstance, compatibleWith: surface),
@@ -180,12 +183,17 @@ public class DeviceContext: @unchecked Sendable {
         self.allocator = allocator!
     }
 
-    static func selectPhysicalDevice(_ instance: Instance, compatibleWith surface: SurfaceKHR)
+    static func selectPhysicalDevice(
+        _ instance: Instance, compatibleWith surface: any SurfaceProtocol
+    )
         throws(Vulkan.Result) -> (
             graphicsFamilyIndex: UInt32, presentationFamilyIndex: UInt32,
             physicalDevice: PhysicalDevice
         )?
     {
+        guard let surface = surface as? Surface else {
+            fatalError("Unimplemented")
+        }
         let physicalDevices = try instance.getPhysicalDevices()
 
         for physicalDevice in physicalDevices {
@@ -201,7 +209,7 @@ public class DeviceContext: @unchecked Sendable {
             }
 
             // Device must support the b8g8r8a8Srgb / srgbNonLinear surface format.
-            let surfaceFormats = try physicalDevice.getSurfaceFormatsKHR(surface: surface)
+            let surfaceFormats = try physicalDevice.getSurfaceFormatsKHR(surface: surface.handle)
             guard
                 surfaceFormats.contains(where: {
                     $0.format == .b8g8r8a8Srgb && $0.colorSpace == .srgbNonlinear
@@ -226,7 +234,7 @@ public class DeviceContext: @unchecked Sendable {
                 guard
                     let presentationFamilyIndex = try queueFamilyIndices.first(where: {
                         try physicalDevice.getSurfaceSupportKHR(
-                            queueFamilyIndex: $0, surface: surface)
+                            queueFamilyIndex: $0, surface: surface.handle)
                     })
                 else {
                     continue
@@ -239,20 +247,5 @@ public class DeviceContext: @unchecked Sendable {
         }
 
         return nil
-    }
-}
-
-public class SurfaceContext: @unchecked Sendable {
-    let surface: SurfaceKHR
-    let associatedDevice: DeviceContext
-    let frameScheduler: any FrameSchedulerProtocol
-
-    public init(surface: SurfaceKHR, context: borrowing GraphicsContext)
-        throws(DeviceInitializationError)
-    {
-        self.surface = surface
-        // TODO: stop creating device context every time, may be getOrCreate
-        self.associatedDevice = try DeviceContext(compatibleWith: surface, context: context)
-        self.frameScheduler = try! FrameScheduler(context: associatedDevice, surface: surface)
     }
 }

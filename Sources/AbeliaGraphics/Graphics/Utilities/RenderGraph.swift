@@ -69,6 +69,9 @@ extension GPUTask {
 
 public struct GPUCommands: GPUCommandsProtocol {
   let record: (borrowing CommandBuffer) -> Void
+  public init(record: @escaping (borrowing CommandBuffer) -> Void) {
+    self.record = record
+  }
 
   public func apply(to commandBuffer: borrowing CommandBuffer) {
     record(commandBuffer)

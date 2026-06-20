@@ -1,4 +1,93 @@
 import AbeliaGraphics
+import Swinit
+
+class App: Swinit.EventLoopDelegate {
+    var nodes = makeNodes()
+
+    var window: Window!
+    var surface: Surface!
+    var surfaceConfig: SurfaceConfiguration!
+    var context: GraphicsContext!
+    var renderer: Renderer!
+    var renderLoop: RenderLoop!
+
+    func canCreateSurfaces(_ eventLoop: Swinit.EventLoop) {
+        self.context = try! GraphicsContext(applicationName: "yomum", version: 12)
+        self.window = eventLoop.openWindow(
+            .init(title: "hihi", size: Size(width: 800, height: 600))
+        )
+
+        #if os(Linux)
+            surface = try! context.createWaylandSurface(
+                display: window!.display.raw,
+                surface: window!.surface.raw
+            )
+        #elseif os(Windows)
+            surface = try context.createWin32Surface(
+                hinstance: window!.hInstance,
+                hwnd: window!.handle
+            )
+        #endif
+
+        let device = try! context.createDevice(compatibleWith: surface)
+        surfaceConfig = device.vulkanSurfaceConfig(width: 800, height: 600)
+        try! surface.configure(surfaceConfig)
+        self.renderer = try! context.createRenderer(for: surface, device: device)
+        self.renderLoop = try! RenderLoop(context: device)
+
+        try! self.render()
+    }
+
+    func windowEvent(
+        _ eventLoop: Swinit.EventLoop, window: Swinit.Window, event: SwinitCore.WindowEvent
+    ) {
+        switch event {
+        case .resized(let size, let isFinal):
+            if isFinal {
+                // try frameScheduler.resize(w: size.width, h: size.height)
+                surfaceConfig.width = size.width
+                surfaceConfig.height = size.height
+                try! surface.configure(surfaceConfig)
+                try! render()
+                // try renderer.draw(nodes)
+            }
+
+        case .closeRequested:
+            window.close()
+            eventLoop.quit()
+        default:
+            do {}
+        // print(event)
+        }
+
+    }
+
+    func render() throws {
+        let res = try renderLoop.waitForAvailableFrameInFlight()
+        let backBuffer = try! surface.acquireCurrentTexture(signalling: res.imageAvailableSemaphore)
+        let commands = GPUCommands { [self] commandBuffer in
+            let task = try! renderer.createDrawTask(
+                to: backBuffer.texture.image,
+                view: backBuffer.texture.view,
+                frameIndex: res.index,
+                size: SIMD2(surfaceConfig.width, surfaceConfig.height),
+                nodes: nodes,
+            )
+            task.work.apply(to: commandBuffer)
+        }
+
+        try renderLoop.render(
+            waiting: res.imageAvailableSemaphore,
+            signalling: backBuffer.renderCompletedSemaphore,
+            commands: commands
+        )
+
+        try! backBuffer.present()
+    }
+
+}
+
+EventLoop().run(App())
 
 func makeNodes() -> [RenderNode] {
     let center: SIMD3<Float> = [300, 300, 0]
@@ -51,67 +140,14 @@ func makeNodes() -> [RenderNode] {
     return [moveBg, exerciseBg, standBg, moveFg, exerciseFg, standFg]
 }
 
-runEventLoop { eventLoop in
-    let context = try GraphicsContext(applicationName: "yomum", version: 12)
-    var window: _? = eventLoop.createWindow(attributes: .init(title: "hihi", size: [600, 600]))
-
-    #if os(Linux)
-        let surface = try context.createWaylandSurface(
-            display: window!.display.raw, surface: window!.surface.raw)
-    #elseif os(Windows)
-        let surface = try context.createWin32Surface(
-            hinstance: window!.hInstance, hwnd: window!.handle)
-    #endif
-    try context.initDevice(compatibleWith: surface)
-
-    let nodes = makeNodes()
-
-    let (renderer, frameScheduler) = try context.createRenderer()
-    // renderer.viewAffine = Affine().rotated(.degrees(10), axis: [1, 0, 0])
-
-    func render() throws {
-        try frameScheduler.render { image, imageView, commandBuffer, frameIndex, size in
-            let task = try! renderer.createDrawTask(
-                to: image,
-                view: imageView,
-                frameIndex: frameIndex,
-                size: size,
-                nodes: nodes,
-            )
-
-            task.work.apply(to: commandBuffer)
-        }
-    }
-
-    try render()
-
-    // try renderer.draw(nodes)
-    // Task {
-    //     while !Task.isCancelled {
-    //         // this is ass, the render thread should actually poll us
-    //         try await Task.sleep(for: .milliseconds(16))
-    //         nodes[0].offset.x += 2
-    //         renderer.updateNodes(nodes)
-    //         try renderer.render(nodeCount: UInt32(nodes.count))
-    //     }
-    // }
-
-    return { id, event in
-        switch event {
-        case .resized(let size, let isFinal):
-            // if isFinal {
-                // try frameScheduler.resize(w: size.width, h: size.height)
-                try frameScheduler.reconfigure()
-                try render()
-                // try renderer.draw(nodes)
-            // }
-
-        case .closeRequested:
-            window = nil
-            eventLoop.stop()
-        default:
-            do {}
-        // print(event)
-        }
-    }
-}
+// renderer.viewAffine = Affine().rotated(.degrees(10), axis: [1, 0, 0])
+// try renderer.draw(nodes)
+// Task {
+//     while !Task.isCancelled {
+//         // this is ass, the render thread should actually poll us
+//         try await Task.sleep(for: .milliseconds(16))
+//         nodes[0].offset.x += 2
+//         renderer.updateNodes(nodes)
+//         try renderer.render(nodeCount: UInt32(nodes.count))
+//     }
+// }

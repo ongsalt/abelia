@@ -158,6 +158,7 @@ public final class Renderer {
         cmd.endRendering()
     }
 }
+
 final class Pipelines {
     let compositionPipeline: Pipeline
     let compositionPipelineLayout: PipelineLayout
@@ -196,7 +197,13 @@ final class Pipelines {
                     descriptorCount: 1,
                     stageFlags: [.vertex]
                 ),
-
+                // Textures
+                // .init(
+                //     binding: 3, 
+                //     descriptorType: .sampledImage, 
+                //     descriptorCount: 1024 * 512, 
+                //     stageFlags: .fragment
+                // )
             ])
         )
 
