@@ -1,15 +1,13 @@
+import Vulkan
+
 class GradientRenderer {
 
-  // func get() -> GPUTask<GradientTexture> {
-  //   fatalError("unimplemented")
-  // }
+  func get() -> GPUTask<RenderTexture> {
+    fatalError("unimplemented")
+  }
 }
 
-struct GradientTexture {
-  let texture: ImageAndView
-  // let dimension  
-}
-
+// TODO: 2d gradient, we have to think abuot bezier control point
 public func gradient(@ColorStopBuilder<Float> builder: () -> [ColorStop<Float>]) -> [ColorStop<
   Float
 >] {
@@ -49,5 +47,25 @@ extension Color {
 
   func at(_ position: SIMD2<Float>) -> ColorStop<SIMD2<Float>> {
     ColorStop(self, at: position)
+  }
+}
+
+struct GradientPipeline {
+  init(context: DeviceContext) throws {
+    let format: Format = .r16g16b16a16Unorm
+    guard let shaderModule = context.device.createShaderModule(filename: "gradient") else {
+      fatalError("cannot load gradient shader")
+    }
+
+    let layout = try context.device.createPipelineLayout(
+      PipelineLayoutCreateInfo(
+        setLayouts: [],
+        pushConstantRanges: [
+          PushConstantRange(
+            stageFlags: [.fragment, .vertex], offset: 0,
+            size: UInt32(MemoryLayout<(UInt32, UInt32)>.size)
+          )
+        ]
+      ))
   }
 }

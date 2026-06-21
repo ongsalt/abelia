@@ -166,3 +166,15 @@ public struct RenderNode {
 // SolidColorBrush myBrush = bit_cast<SolidColorBrush>(node.brushData);
 // uint startIndex = node.shapeData.x; // many_shapes only
 // uint count      = node.shapeData.y; // many_shapes only
+
+
+public enum ColorModel: uint {
+    DisplayP3 = 0,
+    sRGB = 1,
+    OKLCH = 2
+};
+
+public enum ColorSpace: uint {
+    DisplayP3 = 0,
+    sRGB = 1,
+};

@@ -67,19 +67,22 @@ func Text(_ text: @autoclosure @escaping () -> some StringProtocol) -> View {
 
 component boundary do not exist as we cant really transform function content. So every lifecycle stuff need to be tied to parent element scope.
 
-- top level waiter and normal renderer
-
 # TODO
-- image ninegrid
+- basic sdf shadow/border
+- Path Renderer
+- image ninepatch
+- hidpi - screen space and framebuffer size wont match
+    - `wp_fractional_scale_v1`
+    - sdf must be in screenspace
+    - so we have viewport space(logical size * dpi), world space(logical size), object space (transform)
 - wayland expect a premultiplied gamma-encoded srgb not gamma-encoded srgb premultiplied.
 - customizable scaling (down/up) mode
 - mipmap?
 - `RenderNodeRenderer` render to an any image
-- `GradientRegistry`
-- `Compositor` schedule multiple `CompositionNode` rendering with `RenderNodeRenderer` 
+- `GradientRegistry` - 1d for now
+- `Compositor` schedule multiple `CompositionNode` rendering with `Renderer` 
 - DXGI swapchain
 - basic compositing + effect layer scheduling
-- 9 grid
 - clip: seem like this require a rasterize into a mask layer for best perf
     - sdf shape
     - CALayer-like mask

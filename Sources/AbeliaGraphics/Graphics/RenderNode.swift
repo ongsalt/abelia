@@ -11,8 +11,22 @@ public class RenderNode: Identifiable {
         didSet { dirty = true }
     }
 
-    // border
-    // shadow
+    public var border: Affine = .identity {
+        didSet { dirty = true }
+    }
+
+    public var shadowOffset: SIMD2<Float> = .zero {
+        didSet { dirty = true }
+    }
+
+    public var shadowBlur: Float = 0 {
+        didSet { dirty = true }
+    }
+
+    public var shadowSpread: Float = 0 {
+        didSet { dirty = true }
+    }
+
     // TODO: backfaceVisibility
     public var affine: Affine = .identity {
         didSet { dirty = true }
@@ -44,7 +58,8 @@ public class RenderNode: Identifiable {
     private(set) var dirty: Bool = false
 
     var nodeTotalAffine: Affine {
-        let ox = transformOrigin.x, oy = transformOrigin.y
+        let ox = transformOrigin.x
+        let oy = transformOrigin.y
         return Affine.identity
             .translated(x: offset.x, y: offset.y, z: offset.z)
             .translated(x: ox, y: oy)
@@ -77,4 +92,12 @@ public class RenderNode: Identifiable {
         self.affine = affine
         self.dirty = false
     }
+}
+
+struct Border {
+
+}
+
+enum BorderStyle {
+
 }
