@@ -141,7 +141,8 @@ public TextureBrush unpackTextureBrush(uint4 d0, uint4 d1, uint4 d2, uint4 d3) {
 // Matches C struct RenderNode exactly.
 // Layout: affine(64) + shapeData(16) + brushData(64) + oneOrManyKind(4) + shapeKind(4) + brushKind(4) + borderWidth(4)
 //       + shadowOffsetX(4) + shadowOffsetY(4) + shadowBlur(4) + shadowSpread(4)
-//       + borderBrushKind(4) + _pad(12) + borderBrushData(64) + boundMin(8) + boundMax(8) = 272 bytes
+//       + shadowColor(16) + shadowOpacity(4) + borderBrushKind(4) + _pad(8) + borderBrushData(64)
+//       + boundMin(8) + boundMax(8) = 288 bytes
 public struct RenderNode {
   public float4x4 affine;
 
@@ -167,10 +168,12 @@ public struct RenderNode {
   public float shadowBlur;
   public float shadowSpread;
 
+  public float4 shadowColor;
+
+  public float shadowOpacity;
   public BrushKind borderBrushKind;
   public uint _pad0;
   public uint _pad1;
-  public uint _pad2;
 
   // raw border Brush union (64 bytes) split into four uint4 chunks.
   // solid:   bit_cast<SolidColorBrush>(borderBrushData0)

@@ -102,7 +102,8 @@ union Brush {
 // Matches RenderNode in types.slang exactly.
 // Layout: affine(64) + shapeData(16) + brushData(64) + oneOrManyKind(4) + shapeKind(4) + brushKind(4) + borderWidth(4)
 //       + shadowOffsetX(4) + shadowOffsetY(4) + shadowBlur(4) + shadowSpread(4)
-//       + borderBrushKind(4) + _pad(12) + borderBrushData(64) + boundMin(8) + boundMax(8) = 272 bytes
+//       + shadowColor(16) + shadowOpacity(4) + borderBrushKind(4) + _pad(8) + borderBrushData(64)
+//       + boundMin(8) + boundMax(8) = 288 bytes
 struct RenderNode {
   float affine[16];
 
@@ -119,8 +120,14 @@ struct RenderNode {
   float shadowBlur;
   float shadowSpread;
 
+  float shadowColorR;
+  float shadowColorG;
+  float shadowColorB;
+  float shadowColorA;
+
+  float shadowOpacity;
   enum BrushKind borderBrushKind;
-  uint32_t _pad[3];
+  uint32_t _pad[2];
   union Brush borderBrushData;
 
   float boundMinX;
@@ -163,4 +170,16 @@ union ShapeMergingInstruction {
 struct ShapeMergingEntry {
   enum ShapeMergingInstructionKind kind;
   union ShapeMergingInstruction data;
+};
+
+enum __attribute__((enum_extensibility(closed))) DrawMode : uint32_t {
+  fill = 0,
+  stroke = 1,
+  shadow = 2,
+};
+
+// Layout: index(4) + drawMode(4) = 8 bytes
+struct DrawListItem {
+  uint32_t index;
+  enum DrawMode drawMode;
 };

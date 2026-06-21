@@ -8,7 +8,7 @@ struct LayerDirtyFlags: OptionSet {
 }
 
 // TODO: move layer dimension calculating to render thread
-public class CompositionNode: Identifiable {
+public class Layer: Identifiable {
     var compositor: Compositor? {
         didSet {
             if let compositor {
@@ -25,19 +25,19 @@ public class CompositionNode: Identifiable {
     /// currently just redraw everything
     var dirtyFlags: LayerDirtyFlags = []
 
-    private(set) var parent: CompositionNode!
-    private(set) var children: [CompositionNode] = []
+    private(set) var parent: Layer!
+    private(set) var children: [Layer] = []
 
     public var offset: SIMD2<Float> = .zero
     public var size: SIMD2<Float> = .zero
 
-    public func insert(_ layer: CompositionNode, before: CompositionNode? = nil) {
+    public func insert(_ layer: Layer, before: Layer? = nil) {
         compositor?.markDirty(layer)
         children.append(layer)
         layer.parent = self
     }
 
-    public func remove(_ layer: CompositionNode) {
+    public func remove(_ layer: Layer) {
         layer.parent = nil
         children.removeAll { $0.id == layer.id }
         compositor?.markDirty(self)
@@ -45,20 +45,20 @@ public class CompositionNode: Identifiable {
 }
 
 @MainActor
-class SpriteLayer: CompositionNode {
+class SpriteLayer: Layer {
     // var brush: Brush
 }
 
 @resultBuilder
 public struct LayerBuilder {
-    public static func buildBlock(_ layers: CompositionNode...) -> [CompositionNode] { layers }
-    public static func buildArray(_ layers: [[CompositionNode]]) -> [CompositionNode] { layers.flatMap { $0 } }
-    public static func buildOptional(_ layers: [CompositionNode]?) -> [CompositionNode] { layers ?? [] }
-    public static func buildEither(first layers: [CompositionNode]) -> [CompositionNode] { layers }
-    public static func buildEither(second layers: [CompositionNode]) -> [CompositionNode] { layers }
+    public static func buildBlock(_ layers: Layer...) -> [Layer] { layers }
+    public static func buildArray(_ layers: [[Layer]]) -> [Layer] { layers.flatMap { $0 } }
+    public static func buildOptional(_ layers: [Layer]?) -> [Layer] { layers ?? [] }
+    public static func buildEither(first layers: [Layer]) -> [Layer] { layers }
+    public static func buildEither(second layers: [Layer]) -> [Layer] { layers }
 }
 
-extension CompositionNode: CustomStringConvertible {
+extension Layer: CustomStringConvertible {
     nonisolated public var description: String {
         let name = label ?? "(unnamed)"
         let offset = (self.offset.x, self.offset.y)
@@ -67,7 +67,7 @@ extension CompositionNode: CustomStringConvertible {
     }
 }
 
-extension CompositionNode {
+extension Layer {
     public func printDebugInfo(indent: Int = 0) {
         let prefix = String(repeating: "  ", count: indent)
         print("\(prefix)\(description)")
@@ -79,7 +79,7 @@ extension CompositionNode {
     public convenience init(
         offset: SIMD2<Float> = .zero,
         size: SIMD2<Float> = .zero,
-        @LayerBuilder children: () -> [CompositionNode] = { [] }
+        @LayerBuilder children: () -> [Layer] = { [] }
     ) {
         self.init()
         self.offset = offset
@@ -93,13 +93,14 @@ extension CompositionNode {
 // MARK: walking
 // dfs preorder, for calculating accumulated transformation
 @MainActor
-public func sortLayer(_ root: CompositionNode) -> [LayerGrouping] {
+public func sortLayer(_ root: Layer) -> [LayerGrouping] {
     var layers: [LayerGrouping] = []
 
-    func walk(_ layer: CompositionNode) {
-        layers.append(.layer(layer))
-        if !layer.children.isEmpty {
-            layers.append(.push)
+    func walk(_ layer: Layer) {
+        if layer.children.isEmpty {
+            layers.append(.layer(layer))
+        } else {
+            layers.append(.push(layer))
             for c in layer.children {
                 walk(c)
             }
@@ -112,7 +113,7 @@ public func sortLayer(_ root: CompositionNode) -> [LayerGrouping] {
 }
 
 public enum LayerGrouping {
-    case layer(CompositionNode)
-    case push
+    case layer(Layer)
+    case push(Layer)
     case pop
 }

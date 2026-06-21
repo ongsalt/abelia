@@ -50,8 +50,8 @@ public final class Renderer {
             )
         }
 
-        currentFrameResource.drawListStorage.write(
-            nodes.filter({ !$0.hidden }).map(\.id),
+        let drawItemCount = currentFrameResource.drawListStorage.write(
+            nodes.filter({ !$0.hidden }),
             renderNodeStorage: currentFrameResource.renderNodeStorage
         )
 
@@ -79,7 +79,7 @@ public final class Renderer {
                 into: $0,
                 image: image,
                 imageView: view,
-                renderNodeCount: UInt32(nodes.count),
+                renderNodeCount: UInt32(drawItemCount),
                 frameResource: currentFrameResource,
                 size: size,
             )

@@ -31,6 +31,14 @@ public class RenderNode: Identifiable {
         didSet { dirty = true }
     }
 
+    public var shadowColor: Color = .black {
+        didSet { dirty = true }
+    }
+
+    public var shadowOpacity: Float = 0 {
+        didSet { dirty = true }
+    }
+
     // TODO: backfaceVisibility
     public var affine: Affine = .identity {
         didSet { dirty = true }
@@ -78,6 +86,13 @@ public class RenderNode: Identifiable {
     public convenience init(
         shape: any ShapeProtocol,
         brush: Brush = .solid(.transparent),
+        borderWidth: Float = 0,
+        borderBrush: Brush = .solid(.transparent),
+        shadowOffset: SIMD2<Float> = .zero,
+        shadowBlur: Float = 0,
+        shadowSpread: Float = 0,
+        shadowColor: Color = .black,
+        shadowOpacity: Float = 0,
         offset: SIMD3<Float> = .zero,
         scale: SIMD2<Float> = .one,
         rotation: Angle = .radians(0),
@@ -88,6 +103,13 @@ public class RenderNode: Identifiable {
         self.init()
         self.shape = shape
         self.brush = brush
+        self.borderWidth = borderWidth
+        self.borderBrush = borderBrush
+        self.shadowOffset = shadowOffset
+        self.shadowBlur = shadowBlur
+        self.shadowSpread = shadowSpread
+        self.shadowColor = shadowColor
+        self.shadowOpacity = shadowOpacity
         self.offset = offset
         self.scale = scale
         self.rotation = rotation

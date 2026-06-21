@@ -32,7 +32,6 @@ class RenderNodeStorage: GPUStorage<CShim.RenderNode> {
         )
     }
 
-    
     func print(offset: Int, count: Int) {
         Swift.print("\(Self.self)")
         // for i in offset..<offset + count {
@@ -44,7 +43,6 @@ class RenderNodeStorage: GPUStorage<CShim.RenderNode> {
         //     }
         // }
     }
-
 
     func index(of node: borrowing RenderNode) -> Int {
         index(objectId: node.id)
@@ -108,9 +106,13 @@ class ShapeGroupStorage: GPUStorage<CShim.ShapeMergingEntry> {
         for i in offset..<offset + count {
             let data = bufferPointer[i]
             if data.kind == .push {
-                Swift.print("  [\(i)] shapeKind=\(data.data.shape.shapeKind.rawValue) offset=\(data.data.shape.offset)")
+                Swift.print(
+                    "  [\(i)] shapeKind=\(data.data.shape.shapeKind.rawValue) offset=\(data.data.shape.offset)"
+                )
             } else {
-                Swift.print("  [\(i)] merge=\(data.data.merge.mode.rawValue) smoothing=\(data.data.merge.smoothing)")
+                Swift.print(
+                    "  [\(i)] merge=\(data.data.merge.mode.rawValue) smoothing=\(data.data.merge.smoothing)"
+                )
             }
         }
     }
@@ -184,11 +186,39 @@ class ShapeGroupStorage: GPUStorage<CShim.ShapeMergingEntry> {
     }
 }
 
-class DrawListStorage: GPUStorage<UInt32> {
-    func write(_ nodes: borrowing [RenderNode.ID], renderNodeStorage: RenderNodeStorage) {
-        for (index, nodeId) in nodes.enumerated() {
-            let nodeIndex = renderNodeStorage.index(objectId: nodeId)
-            self.bufferPointer[index] = UInt32(nodeIndex)
+class DrawListStorage: GPUStorage<DrawListItem> {
+    func write(
+        _ nodes: [RenderNode], renderNodeStorage: RenderNodeStorage, seperateShadow: Bool = false
+    ) -> Int {
+        var index = 0
+        if seperateShadow {
+            for node in nodes {
+                if node.shadowOpacity != 0 && node.shadowColor.alpha != 0 {
+                    let nodeIndex = renderNodeStorage.index(objectId: node.id)
+                    self.bufferPointer[index] = DrawListItem(
+                        index: UInt32(nodeIndex), drawMode: .shadow)
+                    index += 1
+                }
+            }
         }
+
+        for node in nodes {
+            let nodeIndex = renderNodeStorage.index(objectId: node.id)
+            if !seperateShadow && node.shadowOpacity != 0 && node.shadowColor.alpha != 0 {
+                self.bufferPointer[index] = DrawListItem(
+                    index: UInt32(nodeIndex), drawMode: .shadow)
+                index += 1
+            }
+
+            self.bufferPointer[index] = DrawListItem(index: UInt32(nodeIndex), drawMode: .fill)
+            index += 1
+
+            if node.borderWidth != 0 {
+                self.bufferPointer[index] = DrawListItem(
+                    index: UInt32(nodeIndex), drawMode: .stroke)
+                index += 1
+            }
+        }
+        return index
     }
 }

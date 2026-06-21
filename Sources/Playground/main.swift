@@ -146,6 +146,8 @@ func makeNodes() -> [RenderNode] {
     let standFg = RenderNode(
         shape: Shape.arc(radius: 68, angle: .radians(.pi * 2 * standProgress), thickness: 26),
         brush: .solid(.cyan),
+        borderWidth: 3,
+        borderBrush: .solid(.black),
         offset: center,
         rotation: .degrees(180)
     )
@@ -154,13 +156,19 @@ func makeNodes() -> [RenderNode] {
         shape: Shape.rect(width: 240, height: 240, cornerRadius: 80)
             .union(Shape.circle(100), offset: [100, 100], smoothing: 60),
         brush: .solid(Color(red: 0.5, green: 0.5, blue: 0.5, alpha: 0.9)),
+        borderWidth: 12,
+        borderBrush: .solid(.red),
         offset: [500, 400, 0],
         rotation: .degrees(10),
         rotationAxis: [0.1, 1, 0]
     )
 
     // backgrounds first so foreground arcs composite on top
-    return [blob, moveBg, exerciseBg, standBg, moveFg, exerciseFg, standFg]
+    return [
+        blob,
+        moveBg, exerciseBg, standBg,
+        moveFg, exerciseFg, standFg,
+    ]
 }
 
 // renderer.viewAffine = Affine().rotated(.degrees(10), axis: [1, 0, 0])

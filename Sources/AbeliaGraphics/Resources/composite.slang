@@ -13,7 +13,19 @@ uniform StructuredBuffer<RenderNode> renderNodeData;
 uniform StructuredBuffer<ShapeMergingEntry> shapeGroupData;
 
 [[vk::binding(2, 0)]]
-uniform StructuredBuffer<uint32_t> drawList;
+uniform StructuredBuffer<DrawListItem> drawList;
+
+// this is per node
+struct DrawListItem {
+  uint32_t index;
+  DrawMode drawMode;  
+};
+
+enum DrawMode: uint32_t {
+  Fill = 0,
+  Stroke = 1,
+  Shadow = 2,
+};
 
 [[vk::binding(0, 1)]]
 uniform Texture2D[] textures;
@@ -32,6 +44,7 @@ struct VertexOutput {
   nointerpolation uint32_t renderNodeDataIndex;
   float4 sv_position : SV_Position;
   float2 localPosition;
+  DrawMode drawMode;
 };
 
 static const float2 g_Positions[6] = {
@@ -46,10 +59,11 @@ static const float2 g_Positions[6] = {
 [shader("vertex")]
 VertexOutput vsMain(VertexInput input) {
   VertexOutput output;
-  let renderNodeDataIndex = drawList[input.instanceIndex];
-  output.renderNodeDataIndex = renderNodeDataIndex;
+  let item = drawList[input.instanceIndex];
+  output.renderNodeDataIndex = item.index;
+  output.drawMode = item.drawMode;
 
-  let renderNode = renderNodeData[renderNodeDataIndex];
+  let renderNode = renderNodeData[item.index];
 
   float2 pos;
   switch (input.vertexIndex) {
@@ -79,70 +93,61 @@ float4 fsMain(VertexOutput input): SV_Target {
   let renderNode = renderNodeData[input.renderNodeDataIndex];
   let position = input.localPosition;
 
+  switch (input.drawMode) {
+    case DrawMode.Fill:
+      return computeFill(renderNode, position);
+    case DrawMode.Stroke:
+      return computeBorder(renderNode, position);
+    case DrawMode.Shadow:
+      return computeShadow(renderNode, position);
+  }
+
+  return float4(0.0);
+}
+
+float4 computeBorder(RenderNode renderNode, float2 position) {
+  var d = sdfDistance(renderNode, position);
   var color = float4(0.0, 0.0, 0.0, 0.0);
-  // var color = float4(input.localPosition, 0.0, 1.0);
-  float coverage = 0.0;
+
+  // TODO: correction term when merging
+  if (renderNode.borderBrushKind == BrushKind.solid) {
+    var brush = bit_cast<SolidColorBrush>(renderNode.borderBrushData0);
+    color = brush.color;
+  } else if (renderNode.borderBrushKind == BrushKind.texture) {
+    var brush = unpackTextureBrush(renderNode.borderBrushData0, renderNode.borderBrushData1, renderNode.borderBrushData2, renderNode.borderBrushData3);
+    color = textures[brush.textureIndex].Sample(sampler, textureLocalPositionOf(position, brush));
+    // premultiply
+    color.xyz *= color.w;
+  }
+  
+  float newD = d;
+  if (newD < -(renderNode.borderWidth / 2)) {
+    newD = -newD - renderNode.borderWidth;
+  }
+  
+  return color * smoothCoverageOf(newD);
+}
+
+float4 computeShadow(RenderNode renderNode, float2 position) {
+  return float4(0.0);
+}
+
+
+float4 computeFill(RenderNode renderNode, float2 position) {
+  var d = sdfDistance(renderNode, position) + renderNode.borderWidth / 2;
+  var color = float4(0.0, 0.0, 0.0, 0.0);
 
   if (renderNode.brushKind == BrushKind.solid) {
     var brush = bit_cast<SolidColorBrush>(renderNode.brushData0);
     color = brush.color;
   } else if (renderNode.brushKind == BrushKind.texture) {
     var brush = unpackTextureBrush(renderNode.brushData0, renderNode.brushData1, renderNode.brushData2, renderNode.brushData3);
-    // color = float4(textureLocalPositionOf(input.localPosition, brush), 0.0, 1.0);
-    color = textures[brush.textureIndex].Sample(sampler, textureLocalPositionOf(input.localPosition, brush));
+    color = textures[brush.textureIndex].Sample(sampler, textureLocalPositionOf(position, brush));
     // premultiply
     color.xyz *= color.w;
   }
-
-  switch (renderNode.oneOrManyKind) {
-  case OneOrManyShapeKind.one_shape:
-    coverage = smoothCoverageOf(sdf(position, renderNode.shapeKind, renderNode.shapeData));
-    break;
-  case OneOrManyShapeKind.many_shapes:
-    let shapeGroup = renderNode.shapeData;
-    uint startIndex = shapeGroup.x;
-    uint count = shapeGroup.y;
-
-    // merge stack
-    uint top = 0;
-    float[STACK_SIZE] stack;
-    for (uint i = 0u; i < count; i++) {
-      ShapeMergingEntry entry = shapeGroupData[startIndex + i];
-      if (entry.kind == ShapeMergingInstructionKind.push) {
-        stack[top] = sdf(position - entry.offset, bit_cast<ShapeKind>(entry.mergeMode_or_shapeKind), entry.data);
-        top += 1;
-      } else {
-        // merge
-        let mergeMode = bit_cast<MergeMode>(entry.mergeMode_or_shapeKind);
-        let k = bit_cast<float>(entry.data0); // smoothing stored as float bits
-        let a = stack[top - 1]; // top = last pushed
-        let b = stack[top - 2]; // second = first pushed
-        float result = b;
-        switch (mergeMode) {
-        case MergeMode.union_:
-          result = k <= 0 ? min(a, b) : sdfSmoothUnion(a, b, k);
-          break;
-        case MergeMode.intersect:
-          result = k <= 0 ? max(a, b) : sdfSmoothIntersect(a, b, k);
-          break;
-        case MergeMode.subtract:
-          // b - a: b=first pushed (base), a=top (shape to remove)
-          result = k <= 0 ? max(b, -a) : sdfSmoothSubtract(b, a, k);
-          break;
-        default: // xor_
-          result = max(min(a, b), -max(a, b));
-          break;
-        }
-        stack[top - 2] = result;
-        top -= 1;
-      }
-    }
-
-    coverage = smoothCoverageOf(stack[0]);
-  }
-
-  // TODO: fix this, when doing 3d transform, smoothCoverageOf dont work
-  return color * coverage;
+  
+  return color * smoothCoverageOf(d);
 }
 
 float2 textureLocalPositionOf(float2 position, TextureBrush brush) {
@@ -154,6 +159,59 @@ float2 textureLocalPositionOf(float2 position, TextureBrush brush) {
   let cropped = clamp(scaled, float2(brush.cropLeft, brush.cropTop), float2(brush.cropLeft + brush.cropWidth, brush.cropTop + brush.cropHeight));
 
   return cropped;
+}
+
+float sdfDistance(RenderNode renderNode, float2 position) {
+  switch (renderNode.oneOrManyKind) {
+  case OneOrManyShapeKind.one_shape:
+    return sdf(position, renderNode.shapeKind, renderNode.shapeData);
+  case OneOrManyShapeKind.many_shapes:
+    let shapeGroup = renderNode.shapeData;
+    uint startIndex = shapeGroup.x;
+    uint count = shapeGroup.y;
+
+    return sdfMerge(position, startIndex, count);
+  }
+  return 0;
+}
+
+float sdfMerge(float2 position, uint startIndex, uint count) {
+    // merge stack
+  uint top = 0;
+  float[STACK_SIZE] stack;
+  for (uint i = 0u; i < count; i++) {
+    ShapeMergingEntry entry = shapeGroupData[startIndex + i];
+    if (entry.kind == ShapeMergingInstructionKind.push) {
+      stack[top] = sdf(position - entry.offset, bit_cast<ShapeKind>(entry.mergeMode_or_shapeKind), entry.data);
+      top += 1;
+    } else {
+      // merge
+      let mergeMode = bit_cast<MergeMode>(entry.mergeMode_or_shapeKind);
+      let k = bit_cast<float>(entry.data0); // smoothing stored as float bits
+      let a = stack[top - 1]; // top = last pushed
+      let b = stack[top - 2]; // second = first pushed
+      float result = b;
+      switch (mergeMode) {
+      case MergeMode.union_:
+        result = k <= 0 ? min(a, b) : sdfSmoothUnion(a, b, k);
+        break;
+      case MergeMode.intersect:
+        result = k <= 0 ? max(a, b) : sdfSmoothIntersect(a, b, k);
+        break;
+      case MergeMode.subtract:
+        // b - a: b=first pushed (base), a=top (shape to remove)
+        result = k <= 0 ? max(b, -a) : sdfSmoothSubtract(b, a, k);
+        break;
+      default: // xor_
+        result = max(min(a, b), -max(a, b));
+        break;
+      }
+      stack[top - 2] = result;
+      top -= 1;
+    }
+  }
+
+  return stack[0];
 }
 
 float sdf(float2 position, ShapeKind kind, uint4 data) {
@@ -177,7 +235,7 @@ float sdf(float2 position, ShapeKind kind, uint4 data) {
 }
 
 float smoothCoverageOf(float distance) {
-  float edgeWidth = fwidth(distance) * 0.5;
+  float edgeWidth = 0.5;
   return smoothstep(edgeWidth, -edgeWidth, distance);
 }
 

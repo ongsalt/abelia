@@ -77,6 +77,12 @@ extension RenderNode {
     data.shadowOffsetY = self.shadowOffset.y
     data.shadowBlur = self.shadowBlur
     data.shadowSpread = self.shadowSpread
+    data.shadowOpacity = self.shadowOpacity
+    let (sr, sg, sb, sa) = shadowColor.linearized.premultiplied.values
+    data.shadowColorR = sr
+    data.shadowColorG = sg
+    data.shadowColorB = sb
+    data.shadowColorA = sa
 
     switch borderBrush {
     case .solid(let color):
