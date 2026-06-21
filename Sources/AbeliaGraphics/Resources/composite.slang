@@ -64,24 +64,27 @@ VertexOutput vsMain(VertexInput input) {
   output.drawMode = item.drawMode;
 
   let renderNode = renderNodeData[item.index];
+  
+  let expand: float = item.drawMode == DrawMode.Shadow ? (renderNode.shadowSpread + renderNode.shadowBlur * 2) : 0;
 
   float2 pos;
   switch (input.vertexIndex) {
   case 0:
   case 5:
-    pos = float2(renderNode.boundMinX, renderNode.boundMinY);
+    pos = float2(renderNode.boundMinX, renderNode.boundMinY) - expand;
     break;
   case 1:
-    pos = float2(renderNode.boundMaxX, renderNode.boundMinY);
+    pos = float2(renderNode.boundMaxX + expand, renderNode.boundMinY - expand);
     break;
   case 2:
   case 3:
-    pos = float2(renderNode.boundMaxX, renderNode.boundMaxY);;
+    pos = float2(renderNode.boundMaxX, renderNode.boundMaxY) + expand;
     break;
   default: // case 4
-    pos = float2(renderNode.boundMinX, renderNode.boundMaxY);
+    pos = float2(renderNode.boundMinX - expand, renderNode.boundMaxY + expand);
     break;
   }
+
 
   output.localPosition = pos;
   output.sv_position = mul(viewMatrix, mul(renderNode.affine, float4(pos, 0.0, 1.0)));
@@ -120,21 +123,24 @@ float4 computeBorder(RenderNode renderNode, float2 position) {
     color.xyz *= color.w;
   }
   
-  float newD = d;
-  if (newD < -(renderNode.borderWidth / 2)) {
-    newD = -newD - renderNode.borderWidth;
+  if (d < -(renderNode.borderWidth / 2)) {
+    d = -d - renderNode.borderWidth;
   }
   
-  return color * smoothCoverageOf(newD);
+  return color * smoothCoverageOf(d);
 }
 
 float4 computeShadow(RenderNode renderNode, float2 position) {
-  return float4(0.0);
+  let d = sdfDistance(renderNode, position + float2(renderNode.shadowOffsetX, renderNode.shadowOffsetY)) - renderNode.shadowSpread;
+  let color = renderNode.shadowColor;
+  let progress = clamp(1 - d / (renderNode.shadowBlur * 2), 0, 1);
+
+  return color * renderNode.shadowOpacity * pow(progress, 4);
 }
 
 
 float4 computeFill(RenderNode renderNode, float2 position) {
-  var d = sdfDistance(renderNode, position) + renderNode.borderWidth / 2;
+  let d = sdfDistance(renderNode, position) + renderNode.borderWidth / 2;
   var color = float4(0.0, 0.0, 0.0, 0.0);
 
   if (renderNode.brushKind == BrushKind.solid) {

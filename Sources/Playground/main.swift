@@ -42,8 +42,10 @@ class App: Swinit.EventLoopDelegate {
             RenderNode(
                 shape: Shape.rect(width: 300, height: 300, cornerRadius: 40),
                 brush: .texture(image),
+                shadowBlur: 15,
+                shadowOpacity: 0.5,
                 offset: [200, 480, 0],
-                rotation: .degrees(90)
+                rotation: .degrees(90),
             )
         )
 
@@ -118,6 +120,8 @@ func makeNodes() -> [RenderNode] {
     let moveFg = RenderNode(
         shape: Shape.arc(radius: 140, angle: .radians(.pi * 2 * moveProgress), thickness: 26),
         brush: .solid(.red),
+        shadowBlur: 10,
+        shadowOpacity: 0.3,
         offset: center,
         rotation: .degrees(180)
     )
@@ -146,8 +150,6 @@ func makeNodes() -> [RenderNode] {
     let standFg = RenderNode(
         shape: Shape.arc(radius: 68, angle: .radians(.pi * 2 * standProgress), thickness: 26),
         brush: .solid(.cyan),
-        borderWidth: 3,
-        borderBrush: .solid(.black),
         offset: center,
         rotation: .degrees(180)
     )
@@ -156,9 +158,9 @@ func makeNodes() -> [RenderNode] {
         shape: Shape.rect(width: 240, height: 240, cornerRadius: 80)
             .union(Shape.circle(100), offset: [100, 100], smoothing: 60),
         brush: .solid(Color(red: 0.5, green: 0.5, blue: 0.5, alpha: 0.9)),
-        borderWidth: 12,
-        borderBrush: .solid(.red),
-        offset: [500, 400, 0],
+        borderWidth: 1,
+        borderBrush: .solid(.black),
+        offset: [500, 240, 0],
         rotation: .degrees(10),
         rotationAxis: [0.1, 1, 0]
     )
