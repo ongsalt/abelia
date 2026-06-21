@@ -14,6 +14,9 @@ class ReleaseQueue {
     for (fence, tasks) in values {
       do {
         try context.device.waitForFences(fences: [fence], waitAll: true, timeout: 0)
+
+        // to shit up the validation layer 
+        try context.device.waitForFences(fences: [fence], waitAll: true, timeout: UInt64.max)
         fenceBoundTasks[ObjectIdentifier(fence)] = nil
         for t in tasks { t() }
       } catch {

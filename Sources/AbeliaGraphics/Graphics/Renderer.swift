@@ -130,7 +130,7 @@ public final class Renderer {
                 .init(offset: .zero, extent: Extent2D(width: size.x, height: size.y))
             ]
         )
-        
+
         let w = Float(size.x)
         let h = Float(size.y)
         let d: Float = 1000  // perspective depth in pixels; larger = weaker effect
@@ -141,16 +141,17 @@ public final class Renderer {
                     col1: SIMD4<Float>(0, 2 / h, 0, 0),
                     col2: SIMD4<Float>(0, 0, 0, 1 / d),  // z bleeds into w → perspective divide
                     col3: SIMD4<Float>(0, 0, 0, 1)
-                ))
+                )
+            )
         let viewMatrix = projection.multiplied(by: viewAffine)
         // let viewport = (size.x, size.y)
-        withUnsafeBytes(of: viewMatrix) { viewportBuffer in
+        withUnsafeBytes(of: viewMatrix) { viewMatrix in
             cmd.pushConstants(
                 layout: pipelines.compositionPipelineLayout,
                 stageFlags: [.vertex, .fragment],
                 offset: 0,
-                size: UInt32(viewportBuffer.count),
-                values: viewportBuffer.baseAddress!
+                size: UInt32(viewMatrix.count),
+                values: viewMatrix.baseAddress!
             )
         }
 
