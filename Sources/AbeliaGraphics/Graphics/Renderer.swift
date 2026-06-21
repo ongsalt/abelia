@@ -130,7 +130,7 @@ public final class Renderer {
                 .init(offset: .zero, extent: Extent2D(width: size.x, height: size.y))
             ]
         )
-
+        
         let w = Float(size.x)
         let h = Float(size.y)
         let d: Float = 1000  // perspective depth in pixels; larger = weaker effect

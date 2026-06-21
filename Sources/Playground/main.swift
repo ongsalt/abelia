@@ -154,7 +154,7 @@ func makeNodes() -> [RenderNode] {
         shape: Shape.rect(width: 240, height: 240, cornerRadius: 80)
             .union(Shape.circle(100), offset: [100, 100], smoothing: 60),
         brush: .solid(Color(red: 0.5, green: 0.5, blue: 0.5, alpha: 0.9)),
-        offset: [400, 100, 0],
+        offset: [500, 400, 0],
         rotation: .degrees(10),
         rotationAxis: [0.1, 1, 0]
     )

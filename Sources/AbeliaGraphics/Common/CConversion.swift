@@ -1,7 +1,10 @@
 import CShim
 
 extension RenderNode {
-  func write(to data: inout CShim.RenderNode, identity: ObjectIdentifier, shapeGroupStorage: borrowing ShapeGroupStorage) {
+  func write(
+    to data: inout CShim.RenderNode, identity: ObjectIdentifier,
+    shapeGroupStorage: borrowing ShapeGroupStorage
+  ) {
     // zero it
     data = CShim.RenderNode()
 
@@ -19,8 +22,16 @@ extension RenderNode {
     } else {
       data.oneOrManyKind = .many_shapes
       let startIndex = shapeGroupStorage.update(ownerIdentity: identity, data: instructions)
-      data.shapeData.many = CShim.ManyShapeRef(startIndex: UInt32(startIndex!), count: UInt32(instructions.count))
+      data.shapeData.many = CShim.ManyShapeRef(
+        startIndex: UInt32(startIndex!), count: UInt32(instructions.count))
     }
+
+    // this can be cache
+    let bounds = shape.bounds
+    data.boundMinX = bounds.left - (borderWidth + 2)
+    data.boundMinY = bounds.top - (borderWidth + 2)
+    data.boundMaxX = bounds.right + borderWidth + 2
+    data.boundMaxY = bounds.bottom + borderWidth + 2
 
     switch brush {
     case .solid(let color):
@@ -45,6 +56,51 @@ extension RenderNode {
 
       data.brushData.texture = CShim.TextureBrush(
         textureIndex: UInt32(texture.index),  // resolved externally when binding textures
+        fillMode: fillModeRaw,
+        tileScaleX: tileScaleX / Float(texture.size.x),
+        tileScaleY: tileScaleY / Float(texture.size.y),
+        cropLeft: crop.left,
+        cropTop: crop.top,
+        cropWidth: crop.width,
+        cropHeight: crop.height,
+        sliceLeft: nineSlices.left,
+        sliceTop: nineSlices.top,
+        sliceWidth: nineSlices.width,
+        sliceHeight: nineSlices.height,
+        sizeX: 0,
+        sizeY: 0
+      )
+    }
+
+    data.borderWidth = self.borderWidth
+    data.shadowOffsetX = self.shadowOffset.x
+    data.shadowOffsetY = self.shadowOffset.y
+    data.shadowBlur = self.shadowBlur
+    data.shadowSpread = self.shadowSpread
+
+    switch borderBrush {
+    case .solid(let color):
+      data.borderBrushKind = .solid
+      let (r, g, b, a) = color.linearized.premultiplied.values
+      data.borderBrushData.solid = CShim.SolidColorBrush(color: (r, g, b, a))
+    case .texture(let texture, let fillMode, let crop, let nineSlices):
+      data.borderBrushKind = .texture
+      let fillModeRaw: UInt32
+      let tileScaleX: Float
+      let tileScaleY: Float
+      switch fillMode {
+      case .stretch:
+        fillModeRaw = 0
+        tileScaleX = 1
+        tileScaleY = 1
+      case .tile(let s, _):
+        fillModeRaw = 1
+        tileScaleX = s.x
+        tileScaleY = s.y
+      }
+
+      data.borderBrushData.texture = CShim.TextureBrush(
+        textureIndex: UInt32(texture.index),
         fillMode: fillModeRaw,
         tileScaleX: tileScaleX / Float(texture.size.x),
         tileScaleY: tileScaleY / Float(texture.size.y),

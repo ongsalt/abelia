@@ -71,6 +71,7 @@ component boundary do not exist as we cant really transform function content. So
 - basic sdf shadow/border
 - Path Renderer
 - image ninepatch
+- color blend, like backdrop effect, require layer ordering
 - hidpi - screen space and framebuffer size wont match
     - `wp_fractional_scale_v1`
     - sdf must be in screenspace

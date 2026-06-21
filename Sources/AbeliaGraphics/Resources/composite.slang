@@ -51,53 +51,26 @@ VertexOutput vsMain(VertexInput input) {
 
   let renderNode = renderNodeData[renderNodeDataIndex];
 
-  if (renderNode.oneOrManyKind == OneOrManyShapeKind.one_shape) {
-    let pos = getShapeBound(input.vertexIndex, renderNode.shapeKind, renderNode.shapeData);
-    output.localPosition = pos;
-    output.sv_position = mul(viewMatrix, mul(renderNode.affine, float4(pos, 0.0, 1.0)));
-  } else {
-    let shapeGroup = renderNode.shapeData;
-    uint startIndex = shapeGroup.x;
-    uint count = shapeGroup.y;
-
-    // this is per node tho, we are doing 6x more work than needed
-    ShapeMergingEntry first = shapeGroupData[startIndex];
-    let firstKind = bit_cast<ShapeKind>(first.mergeMode_or_shapeKind);
-    float2 boundsMin = getShapeBound(0, firstKind, first.data) + first.offset;
-    float2 boundsMax = getShapeBound(2, firstKind, first.data) + first.offset;
-
-    // Expand AABB with remaining push entries
-    for (uint i = 1; i < count; i++) {
-      ShapeMergingEntry entry = shapeGroupData[startIndex + i];
-      if (entry.kind == ShapeMergingInstructionKind.push) {
-        let shapeKind = bit_cast<ShapeKind>(entry.mergeMode_or_shapeKind);
-        boundsMin = min(boundsMin, getShapeBound(0, shapeKind, entry.data) + entry.offset) - 4; // to fix jagged edge on node with 3d transform 
-        boundsMax = max(boundsMax, getShapeBound(2, shapeKind, entry.data) + entry.offset) + 4; // not mathematically correct but often good enough
-      }
-    }
-
-    float2 pos;
-    switch (input.vertexIndex) {
-    case 0:
-    case 5:
-      pos = boundsMin;
-      break;
-    case 1:
-      pos = float2(boundsMax.x, boundsMin.y);
-      break;
-    case 2:
-    case 3:
-      pos = boundsMax;
-      break;
-    default: // case 4
-      pos = float2(boundsMin.x, boundsMax.y);
-      break;
-    }
-
-    output.localPosition = pos;
-    output.sv_position = mul(viewMatrix, mul(renderNode.affine, float4(pos, 0.0, 1.0)));
+  float2 pos;
+  switch (input.vertexIndex) {
+  case 0:
+  case 5:
+    pos = float2(renderNode.boundMinX, renderNode.boundMinY);
+    break;
+  case 1:
+    pos = float2(renderNode.boundMaxX, renderNode.boundMinY);
+    break;
+  case 2:
+  case 3:
+    pos = float2(renderNode.boundMaxX, renderNode.boundMaxY);;
+    break;
+  default: // case 4
+    pos = float2(renderNode.boundMinX, renderNode.boundMaxY);
+    break;
   }
 
+  output.localPosition = pos;
+  output.sv_position = mul(viewMatrix, mul(renderNode.affine, float4(pos, 0.0, 1.0)));
   return output;
 }
 

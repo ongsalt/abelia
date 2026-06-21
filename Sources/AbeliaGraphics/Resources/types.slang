@@ -139,7 +139,9 @@ public TextureBrush unpackTextureBrush(uint4 d0, uint4 d1, uint4 d2, uint4 d3) {
 }
 
 // Matches C struct RenderNode exactly.
-// Layout: affine(64) + shapeData(16) + brushData(64) + oneOrManyKind(4) + shapeKind(4) + brushKind(4) + _pad(4) = 160 bytes
+// Layout: affine(64) + shapeData(16) + brushData(64) + oneOrManyKind(4) + shapeKind(4) + brushKind(4) + borderWidth(4)
+//       + shadowOffsetX(4) + shadowOffsetY(4) + shadowBlur(4) + shadowSpread(4)
+//       + borderBrushKind(4) + _pad(12) + borderBrushData(64) + boundMin(8) + boundMax(8) = 272 bytes
 public struct RenderNode {
   public float4x4 affine;
 
@@ -158,14 +160,41 @@ public struct RenderNode {
   public OneOrManyShapeKind oneOrManyKind;
   public ShapeKind shapeKind;   // valid when one_shape
   public BrushKind brushKind;
-  public uint _pad;
+  public float borderWidth;
+
+  public float shadowOffsetX;
+  public float shadowOffsetY;
+  public float shadowBlur;
+  public float shadowSpread;
+
+  public BrushKind borderBrushKind;
+  public uint _pad0;
+  public uint _pad1;
+  public uint _pad2;
+
+  // raw border Brush union (64 bytes) split into four uint4 chunks.
+  // solid:   bit_cast<SolidColorBrush>(borderBrushData0)
+  // texture: bit_cast<TextureBrush>(borderBrushData0..3)
+  public uint4 borderBrushData0;
+  public uint4 borderBrushData1;
+  public uint4 borderBrushData2;
+  public uint4 borderBrushData3;
+
+  public float boundMinX;
+  public float boundMinY;
+  public float boundMaxX;
+  public float boundMaxY;
 };
 
 // Example of how to extract data from a RenderNode:
 // Rect myRect = bit_cast<Rect>(node.shapeData);
-// SolidColorBrush myBrush = bit_cast<SolidColorBrush>(node.brushData);
+// SolidColorBrush myBrush = bit_cast<SolidColorBrush>(node.brushData0);
 // uint startIndex = node.shapeData.x; // many_shapes only
 // uint count      = node.shapeData.y; // many_shapes only
+// SolidColorBrush border = bit_cast<SolidColorBrush>(node.borderBrushData0);
+// float2 shadowOffset = float2(node.shadowOffsetX, node.shadowOffsetY);
+// float2 boundMin = float2(node.boundMinX, node.boundMinY);
+// float2 boundMax = float2(node.boundMaxX, node.boundMaxY);
 
 
 public enum ColorModel: uint {

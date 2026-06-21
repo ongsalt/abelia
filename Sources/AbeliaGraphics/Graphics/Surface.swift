@@ -36,7 +36,7 @@ extension DeviceContext {
             device: self,
             width: width,
             height: height,
-            imageFormat: .b8g8r8a8Unorm,
+            imageFormat: .b8g8r8a8Srgb,
             colorSpace: .srgbNonlinear
         )
     }

@@ -11,7 +11,11 @@ public class RenderNode: Identifiable {
         didSet { dirty = true }
     }
 
-    public var border: Affine = .identity {
+    public var borderWidth: Float = 0 {
+        didSet { dirty = true }
+    }
+
+    public var borderBrush: Brush = .solid(.transparent) {
         didSet { dirty = true }
     }
 

@@ -100,7 +100,9 @@ union Brush {
 };
 
 // Matches RenderNode in types.slang exactly.
-// Layout: affine(64) + shapeData(16) + brushData(64) + oneOrManyKind(4) + shapeKind(4) + brushKind(4) + _pad(4) = 160 bytes
+// Layout: affine(64) + shapeData(16) + brushData(64) + oneOrManyKind(4) + shapeKind(4) + brushKind(4) + borderWidth(4)
+//       + shadowOffsetX(4) + shadowOffsetY(4) + shadowBlur(4) + shadowSpread(4)
+//       + borderBrushKind(4) + _pad(12) + borderBrushData(64) + boundMin(8) + boundMax(8) = 272 bytes
 struct RenderNode {
   float affine[16];
 
@@ -110,7 +112,21 @@ struct RenderNode {
   enum OneOrManyShapeKind oneOrManyKind;
   enum ShapeKind shapeKind;    // valid when oneOrManyKind == one_shape
   enum BrushKind brushKind;
-  uint32_t _pad;
+  float borderWidth;
+
+  float shadowOffsetX;
+  float shadowOffsetY;
+  float shadowBlur;
+  float shadowSpread;
+
+  enum BrushKind borderBrushKind;
+  uint32_t _pad[3];
+  union Brush borderBrushData;
+
+  float boundMinX;
+  float boundMinY;
+  float boundMaxX;
+  float boundMaxY;
 };
 
 
