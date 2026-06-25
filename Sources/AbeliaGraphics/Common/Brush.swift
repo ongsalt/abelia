@@ -2,7 +2,7 @@ public enum Brush {
   case solid(Color)
   /// nineSlices and crop are normalized
   case texture(
-    index: UInt32, 
+    index: Int, 
     fillMode: TextureFillMode = .stretch, 
     crop: Rect = .unit,
     nineSlices: Rect = .unit

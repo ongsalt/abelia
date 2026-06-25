@@ -4,8 +4,20 @@
 public func devEntry() {
     // EventLoop().run(Delegate())
     let layer = nonOverlapBlurGrid(w: 2, h: 2)
+    layer.label = "RootFr"
     layer.insert(Layer(offset: [5, 5, 0], size: [10, 10]))
-    layer.insert(EffectLayer(offset: [12, 12, 0], shape: Shape.rect(width: 3, height: 3), effect: .blur(radius: 10)))
+    // transparent subtree
+    let subtree = Layer(offset: [5, 5, 0], size: [10, 10], opacity: 0.5) {
+        Layer(offset: [1, 1, 1], size: [10, 10])
+        Layer(offset: [2, 2, 2], size: [100, 100])
+    }
+    subtree.label = "subtree"
+    layer.insert(subtree)
+
+    layer.insert(
+        EffectLayer(
+            offset: [12, 12, 0], shape: Shape.rect(width: 3, height: 3), effect: .blur(radius: 10)))
+
     var scheduler = RenderScheduler()
     let a = scheduler.schedule(root: layer)
 
@@ -17,11 +29,12 @@ extension Pass {
         let prefix = String(repeating: "  ", count: indent)
         var info = "\(type(of: self)) "
 
-        let k = switch kind {
+        let k =
+            switch kind {
             case .blur(let regions): "blur (\(regions.count))"
             case .composite(let nodes, _): "composite (\(nodes.count))"
             case .effect(let regions): "effect (\(regions.count))"
-        }
+            }
 
         info += "kind=\(k) target=\(target)"
         var result = "\(prefix)- \(info)\n"

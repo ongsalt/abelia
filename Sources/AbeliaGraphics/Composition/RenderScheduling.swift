@@ -6,7 +6,7 @@ struct RenderScheduler {
     mutating func schedule(root: _BaseLayer) -> RenderSchedule {
         transformResolver.resolve(root: root)
         let group = compositionPlanner.plan(root: root)
-        print(group)
+        // print(group)
         let pass = passScheduler.schedule(root: group, transformResolver)
 
         return RenderSchedule(pass: pass)
@@ -60,8 +60,7 @@ struct CompositionPlanner {
             group.layers.append(layer)
 
             if layer.isRasterizationRoot {
-                var new = CompositionGroup(root: layer, layers: [layer])
-
+                var new = CompositionGroup(root: layer, layers: [])
                 for l in layer.children {
                     walk(l, in: &new)
                 }
@@ -74,7 +73,10 @@ struct CompositionPlanner {
             }
         }
 
-        walk(root, in: &current)
+        for c in root.children {
+            walk(c, in: &current)
+        }
+
         return current
     }
 }
@@ -107,29 +109,29 @@ struct PassScheduler {
                 return new
 
             case .effect:
-                return Pass()
-
+                let new = Pass()
+                new.target = .alternate
+                return new
             }
         }
 
         func walk(_ group: borrowing CompositionGroup) -> Pass {  // return last past
-            var pass = Pass()  // initially composite, might not reuse texture
+            let pass = Pass()  // initially composite, might not reuse texture
+            let idHint = group.root.id
 
             do {
                 let layer = group.root
                 let affine = transformResolver.get(layer)!
                 let bounds = layer.bounds.transformBounds(affine)
 
-                pass.target = .new(size: SIMD2(bounds.size), idHint: layer.id)
+                pass.target = .new(size: SIMD2(bounds.size), idHint: idHint)
             }
 
             // all use the same texture size
             var localPasses = [pass]
             outer: for layer in group.layers {
-                print(layer)
                 let affine = transformResolver.get(layer)!
                 let bounds = layer.bounds.transformBounds(affine)
-                print("[bounds] \(layer.bounds) -> \(bounds) ")
 
                 // add it to topmost non covered matching pass
                 // otherwise create a pass
@@ -137,10 +139,13 @@ struct PassScheduler {
                     switch p.kind {
                     case .composite:
                         if layer.kind == .composite {
-                            p.addRenderNode((layer as! Layer).compositeRenderNode(affine))
                             if layer.isRasterizationRoot {
+                                // add sampling mode
+                                p.addRenderNode((layer as! Layer).renderNode(sampling: idHint, affine))
                                 let new = walk(group.dependencies[layer.id]!)
                                 p.dependencies.append(new)
+                            } else {
+                                p.addRenderNode((layer as! Layer).compositeRenderNode(affine))
                             }
                             continue outer
                         } else if p.overlap(with: bounds) {  // other kind of node that overlap
@@ -180,7 +185,6 @@ struct PassScheduler {
                 localPasses.append(new)
             }
 
-            print(localPasses)
             return localPasses.last!
         }
 
@@ -210,13 +214,11 @@ extension Pass {
         case .blur(let regions):
             for r in regions {
                 let bounds = r.shape.bounds.atOrigin.transformBounds(r.affine)
-                print("comparing \(bounds) with \(rect)")
+                // print("comparing \(bounds) with \(rect)")
                 if bounds.overlap(with: rect) {
-                    print(" > true")
                     return true
                 }
             }
-            print(" > false")
             return false
 
         case .effect(let regions):
@@ -285,6 +287,7 @@ extension _BaseLayer {
 
 enum PassRenderTarget {
     case sameAsPrevious
+    case alternate
     case new(size: SIMD2<UInt32>, idHint: Int? = nil)
 }
 
@@ -307,7 +310,10 @@ extension Layer {
     }
 
     // layer visual
-    func renderNode(sampling textureIndex: UInt32, absolutePosition: Bool = false) -> RenderNode {
+    
+    // textureIndex will be idHint before we resolve that to actual texture id  
+    // it will need to be resove again in writing pass
+    func renderNode(sampling textureIndex: Int, _ affine: Affine) -> RenderNode {
         var node = RenderNode()
         node.brush = .texture(index: textureIndex, fillMode: .absolute)
         node.shape = Shape.rect(
