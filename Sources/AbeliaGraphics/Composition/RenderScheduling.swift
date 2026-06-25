@@ -94,38 +94,39 @@ struct PassScheduler {
         root: borrowing CompositionGroup,
         _ transformResolver: borrowing TransformResolver
     ) -> Pass {
-        func makeNewPass(basedOn layer: _BaseLayer, affine: Affine) -> Pass {
+        func makeNewPass(basedOn layer: _BaseLayer, affine: Affine, key: Int) -> Pass {
             switch layer.kind {
             case .composite:
                 let node = (layer as! Layer).compositeRenderNode(affine)
-                let new = Pass()
+                let new = Pass(target: .sameAsPrevious(key: key))
                 new.addRenderNode(node)
                 return new
 
             case .blur:
                 let region = (layer as! EffectLayer).blurRegion(affine)
-                let new = Pass()
+                let new = Pass(target: .sameAsPrevious(key: key))
                 new.kind = .blur(regions: [region])
                 return new
 
             case .effect:
-                let new = Pass()
-                new.target = .alternate
+                let region = (layer as! EffectLayer).effectRegion(affine)
+                let new = Pass(target: .alternate(key: key))
+                new.kind = .effect(regions: [region])
                 return new
             }
         }
 
         func walk(_ group: borrowing CompositionGroup) -> Pass {  // return last past
-            let pass = Pass()  // initially composite, might not reuse texture
-            let idHint = group.root.id
+            let key = group.root.id
 
-            do {
+            // initially composite, might not reuse texture, also need to calculate it size with child
+            let pass = {
                 let layer = group.root
                 let affine = transformResolver.get(layer)!
                 let bounds = layer.bounds.transformBounds(affine)
 
-                pass.target = .new(size: SIMD2(bounds.size), idHint: idHint)
-            }
+                return Pass(target: .new(size: SIMD2(bounds.size), key: key))
+            }()
 
             // all use the same texture size
             var localPasses = [pass]
@@ -141,7 +142,8 @@ struct PassScheduler {
                         if layer.kind == .composite {
                             if layer.isRasterizationRoot {
                                 // add sampling mode
-                                p.addRenderNode((layer as! Layer).renderNode(sampling: idHint, affine))
+                                p.addRenderNode(
+                                    (layer as! Layer).renderNode(sampling: key, affine))
                                 let new = walk(group.dependencies[layer.id]!)
                                 p.dependencies.append(new)
                             } else {
@@ -150,7 +152,7 @@ struct PassScheduler {
                             continue outer
                         } else if p.overlap(with: bounds) {  // other kind of node that overlap
                             // force new pass
-                            let new = makeNewPass(basedOn: layer, affine: affine)
+                            let new = makeNewPass(basedOn: layer, affine: affine, key: key)
                             new.dependencies.append(localPasses.last!)
                             localPasses.append(new)
                             continue outer
@@ -160,7 +162,7 @@ struct PassScheduler {
                     case .blur:
                         if p.overlap(with: bounds) {
                             // force new pass, based on that node kind
-                            let new = makeNewPass(basedOn: layer, affine: affine)
+                            let new = makeNewPass(basedOn: layer, affine: affine, key: key)
                             new.dependencies.append(localPasses.last!)
                             localPasses.append(new)
                             continue outer
@@ -170,17 +172,22 @@ struct PassScheduler {
                         }
 
                     case .effect:
-                        // if layer.kind == .effect {
-                        //     break
-                        // }
-                        break
+                        if p.overlap(with: bounds) {
+                            let new = makeNewPass(basedOn: layer, affine: affine, key: key)
+                            new.dependencies.append(localPasses.last!)
+                            localPasses.append(new)
+                            continue outer
+                        } else if layer.kind == .effect {
+                            p.addEffectRegion((layer as! EffectLayer).effectRegion(affine))
+                            continue outer
+                        }
                     }
 
                 }
 
                 // not found
                 print("batch not found")
-                let new = makeNewPass(basedOn: layer, affine: affine)
+                let new = makeNewPass(basedOn: layer, affine: affine, key: key)
                 new.dependencies.append(localPasses.last!)
                 localPasses.append(new)
             }
@@ -199,9 +206,9 @@ class Pass {
     // some time this do not change
     var target: PassRenderTarget
 
-    init() {
+    init(target: PassRenderTarget) {
         kind = .composite(nodes: [])
-        target = .sameAsPrevious
+        self.target = target
     }
 }
 
@@ -286,9 +293,9 @@ extension _BaseLayer {
 }
 
 enum PassRenderTarget {
-    case sameAsPrevious
-    case alternate
-    case new(size: SIMD2<UInt32>, idHint: Int? = nil)
+    case sameAsPrevious(key: Int)
+    case alternate(key: Int)
+    case new(size: SIMD2<UInt32>, key: Int)
 }
 
 // write shit to gpu storage
@@ -310,8 +317,8 @@ extension Layer {
     }
 
     // layer visual
-    
-    // textureIndex will be idHint before we resolve that to actual texture id  
+
+    // textureIndex will be key before we resolve that to actual texture id
     // it will need to be resove again in writing pass
     func renderNode(sampling textureIndex: Int, _ affine: Affine) -> RenderNode {
         var node = RenderNode()
@@ -365,6 +372,14 @@ extension EffectLayer {
             shape: shape,
             affine: affine,
             radius: radius
+        )
+    }
+
+    func effectRegion(_ affine: Affine) -> EffectRegion {
+        return EffectRegion(
+            shape: shape,
+            affine: affine,
+            effect: effect
         )
     }
 

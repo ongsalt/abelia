@@ -14,9 +14,13 @@ public func devEntry() {
     subtree.label = "subtree"
     layer.insert(subtree)
 
-    layer.insert(
+    layer.insert {
         EffectLayer(
-            offset: [12, 12, 0], shape: Shape.rect(width: 3, height: 3), effect: .blur(radius: 10)))
+            offset: [12, 12, 0],
+            shape: Shape.rect(width: 3, height: 3),
+            effect: .refraction(amount: 10, height: 10)
+        )
+    }
 
     var scheduler = RenderScheduler()
     let a = scheduler.schedule(root: layer)

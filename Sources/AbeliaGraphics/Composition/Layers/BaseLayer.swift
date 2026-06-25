@@ -83,6 +83,12 @@ public class _BaseLayer: Identifiable {
         layer.parent = self
     }
 
+    public func insert(before: _BaseLayer? = nil, @LayerBuilder builder: () -> [_BaseLayer]) {
+        for layer in builder() {
+            insert(layer, before: before)
+        }
+    }
+
     public func remove(_ layer: _BaseLayer) {
         layer.parent = nil
         children.removeAll { $0.id == layer.id }
