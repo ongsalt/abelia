@@ -8,7 +8,7 @@ extension RenderNode {
     // zero it
     data = CShim.RenderNode()
 
-    data.affine = self.nodeTotalAffine.c
+    data.affine = self.affine.c
     let instructions = Array(shape.drawInstructions)
     if instructions.count <= 1 {
       guard case .push(let metadata) = instructions[0] else {
@@ -21,9 +21,9 @@ extension RenderNode {
       data.shapeData.one = shapeData
     } else {
       data.oneOrManyKind = .many_shapes
-      let startIndex = shapeGroupStorage.update(ownerIdentity: identity, data: instructions)
-      data.shapeData.many = CShim.ManyShapeRef(
-        startIndex: UInt32(startIndex!), count: UInt32(instructions.count))
+      // let startIndex = shapeGroupStorage.update(ownerIdentity: identity, data: instructions)
+      // data.shapeData.many = CShim.ManyShapeRef(
+      //   startIndex: UInt32(startIndex!), count: UInt32(instructions.count))
     }
 
     // this can be cache
@@ -38,7 +38,7 @@ extension RenderNode {
       data.brushKind = .solid
       let (r, g, b, a) = color.linearized.premultiplied.values
       data.brushData.solid = CShim.SolidColorBrush(color: (r, g, b, a))
-    case .texture(let texture, let fillMode, let crop, let nineSlices):
+    case .texture(let index, let fillMode, let crop, let nineSlices):
       data.brushKind = .texture
       let fillModeRaw: UInt32
       let tileScaleX: Float
@@ -52,13 +52,17 @@ extension RenderNode {
         fillModeRaw = 1
         tileScaleX = s.x
         tileScaleY = s.y
+      case .absolute:
+        fillModeRaw = 2
+        tileScaleX = 1
+        tileScaleY = 1
       }
 
       data.brushData.texture = CShim.TextureBrush(
-        textureIndex: UInt32(texture.index),  // resolved externally when binding textures
+        textureIndex: UInt32(index),  // resolved externally when binding textures
         fillMode: fillModeRaw,
-        tileScaleX: tileScaleX / Float(texture.size.x),
-        tileScaleY: tileScaleY / Float(texture.size.y),
+        tileScaleX: tileScaleX,
+        tileScaleY: tileScaleY,
         cropLeft: crop.left,
         cropTop: crop.top,
         cropWidth: crop.width,
@@ -89,7 +93,7 @@ extension RenderNode {
       data.borderBrushKind = .solid
       let (r, g, b, a) = color.linearized.premultiplied.values
       data.borderBrushData.solid = CShim.SolidColorBrush(color: (r, g, b, a))
-    case .texture(let texture, let fillMode, let crop, let nineSlices):
+    case .texture(let index, let fillMode, let crop, let nineSlices):
       data.borderBrushKind = .texture
       let fillModeRaw: UInt32
       let tileScaleX: Float
@@ -103,13 +107,17 @@ extension RenderNode {
         fillModeRaw = 1
         tileScaleX = s.x
         tileScaleY = s.y
+      case .absolute:
+        fillModeRaw = 2
+        tileScaleX = 1
+        tileScaleY = 1
       }
 
       data.borderBrushData.texture = CShim.TextureBrush(
-        textureIndex: UInt32(texture.index),
+        textureIndex: UInt32(index),
         fillMode: fillModeRaw,
-        tileScaleX: tileScaleX / Float(texture.size.x),
-        tileScaleY: tileScaleY / Float(texture.size.y),
+        tileScaleX: tileScaleX,
+        tileScaleY: tileScaleY,
         cropLeft: crop.left,
         cropTop: crop.top,
         cropWidth: crop.width,

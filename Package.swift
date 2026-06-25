@@ -29,7 +29,6 @@ let package = Package(
         // bruh, how do i do this on windows
         // .systemLibrary(name: "CPango", pkgConfig: "pangoft2"),
         .target(name: "Reactivity"),
-        .target(name: "Pointer"),
 
         .target(
             name: "CShim",
@@ -39,7 +38,7 @@ let package = Package(
             cSettings: vulkanIncludePath
         ),
 
-        .target(name: "CEmaPlatforms"),
+        // .target(name: "CEmaPlatforms"),
         .target(name: "CSTBImage"),
 
         // .target(
@@ -86,13 +85,12 @@ let package = Package(
             ]
         ),
 
-        // .testTarget(
-        //     name: "EmaTests",
-        //     dependencies: [
-        //         "Ema",
-        //         "EmaCore",
-        //     ]
-        // ),
+        .testTarget(
+            name: "AbeliaGraphicsTests",
+            dependencies: [
+                "AbeliaGraphics",
+            ]
+        ),
 
         .target(
             name: "AbeliaGraphics",
@@ -100,7 +98,7 @@ let package = Package(
                 "CShim",
                 "CSTBImage",
                 .product(name: "Vulkan", package: "swift-vulkan"),
-                .product(name: "Swinit", package: "swinit"),
+                // .product(name: "Swinit", package: "swinit"),
             ],
             exclude: [
                 "Resources/"

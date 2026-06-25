@@ -41,7 +41,7 @@ public struct Affine: Sendable {
     // MARK: - Core Multiplication
 
     @inline(__always)
-    private func multiplyVector(_ v: SIMD4<Float>) -> SIMD4<Float> {
+    func multiplyVector(_ v: SIMD4<Float>) -> SIMD4<Float> {
         return (v.x * col0) + (v.y * col1) + (v.z * col2) + (v.w * col3)
     }
 
@@ -85,13 +85,15 @@ public struct Affine: Sendable {
         let s = sin(r)
         let t = 1.0 - c
 
-        let x = n.x, y = n.y, z = n.z
+        let x = n.x
+        let y = n.y
+        let z = n.z
 
         let rotationMatrix = Affine(
-            col0: SIMD4<Float>(t*x*x + c,   t*x*y + s*z, t*x*z - s*y, 0),
-            col1: SIMD4<Float>(t*x*y - s*z, t*y*y + c,   t*y*z + s*x, 0),
-            col2: SIMD4<Float>(t*x*z + s*y, t*y*z - s*x, t*z*z + c,   0),
-            col3: SIMD4<Float>(0,           0,           0,           1)
+            col0: SIMD4<Float>(t * x * x + c, t * x * y + s * z, t * x * z - s * y, 0),
+            col1: SIMD4<Float>(t * x * y - s * z, t * y * y + c, t * y * z + s * x, 0),
+            col2: SIMD4<Float>(t * x * z + s * y, t * y * z - s * x, t * z * z + c, 0),
+            col3: SIMD4<Float>(0, 0, 0, 1)
         )
         return self.multiplied(by: rotationMatrix)
     }
@@ -108,5 +110,17 @@ public struct Affine: Sendable {
 
     public mutating func rotate(_ angle: Angle, axis: SIMD3<Float> = SIMD3<Float>(0, 0, 1)) {
         self = self.rotated(angle, axis: axis)
+    }
+}
+
+extension Affine: Equatable {}
+
+extension Affine: CustomStringConvertible {
+    public var description: String {
+        let cols = [col0, col1, col2, col3]
+        return (0..<4).map { row in
+            let vals = cols.map { String(format: "%8.3f", $0[row]) }
+            return "[ \(vals.joined(separator: "  ")) ]"
+        }.joined(separator: "\n")
     }
 }

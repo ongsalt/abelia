@@ -2,10 +2,10 @@ import Testing
 @testable @_spi(EmaInternal) import Reactivity
 
 @Test func computedSmth() {
-    let a = Signal(1)
-    let b = Signal(2)
+    var a = Signal(1)
+    var b = Signal(2)
 
-    let c = Computed {
+    var c = Computed {
         a.value + b.value
     }
 

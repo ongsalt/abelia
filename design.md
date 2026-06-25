@@ -22,6 +22,49 @@ control composition + render ordering, merging multiple layer into 1 draw call. 
 
 Clipping is at `Layer` level. allowing sdf shape clip OR alpha mask form another layer (later)
 
+## RenderPass and Layer Grouping 
+
+Walk the layer tree to update each `RenderNode` accumulated affine.
+    - reset when the node force an offscreen pass
+    - also add some texture local offset (push constants: viewMatrix?)
+
+Walk the tree again to produce `RenderPass`es.
+
+Each pass must not be able to batch with each other (so it must already be most optimal grouping)
+
+### EffectPass 
+- must not contains an overlapping rect
+- require 1 fullsize intermediate texture (may dup, to reduce pipeline deps/block)
+- skippable when each region deps are not not dirty???, so we need dirty rect
+
+### BlurPass
+- Same as effect pass
+- require n intermediate texture per pass (pre allocate 10, at 1/4^i size so ~1/3 maxSize)
+
+### CompositePass 
+- must not contains inner node with opacity in (0, 1)
+- may require intermediate texture
+- may contains deps (its children that require an offscreen pass)
+- skippable when
+- have 2 variant, one with normal rop, other with fragment_shader_interlock for custom blending
+    - VK_EXT_fragment_shader_interlock 
+        - guarantee fragment shader invocation order
+        - good enough on desktop (80% ish)
+    - VK_EXT_shader_tile_image
+        - better android support (30%). NO QUALCOMM, fuck
+    - VK_EXT_rasterization_order_attachment_access
+        - 25%
+    - VK_KHR_dynamic_rendering_local_read
+
+    - https://developer.arm.com/community/arm-community-blogs/b/mobile-graphics-and-gaming-blog/posts/framebuffer-fetch-in-vulkan
+
+every offscreen holder must aggressively cache its content
+
+This would yield a rendergraph (but this one is certainly a tree)
+
+CompositeGroup can have children (its deps). we can represent this with just list not tree, cuz its children always render to seperate texture. just prepend it children. and at barrier before parent.
+
+
 ## Flow
 - layer was mutated OR requestAnimationFrame 
 - tell the renderer we need flush request\
@@ -43,8 +86,35 @@ in order to do gradient we must generate an intermediate 1d texture to sample fr
 - blur/effect texture: 2 per rasterizationRoot (pingponging)
     - refraction require sdf function to return a vector back instead?
 
+
+# Composition
+- expose layer tree
+    - Layer (with blendMode)
+    - EffectLayer
+    - ShapeLayer
+
+- scheduling is per root, layer with dependency will force a barrier
+    - effect layer force an effect pass, which can be batched
+
+## Flow
+- layer is dirty
+- start draw loop
+- wait until fif is available (it will call us back)
+- we compute accumulated transform (linearly)
+    - only for dirty node
+- record draw command
+    - sorting layer
+    - no optimization for now
+    - only dirty node + root
+- renderthread will pull next frame too, will stop pulling once
+    - there is no animation frame
+    - not dirty
+
+
 # UI Layer
 basically solidjs with macro generaing an overload to allow reactive binding
+
+ui node is just a layer + `YGNode`
 
 ```swift
 @Component
@@ -68,7 +138,8 @@ func Text(_ text: @autoclosure @escaping () -> some StringProtocol) -> View {
 component boundary do not exist as we cant really transform function content. So every lifecycle stuff need to be tied to parent element scope.
 
 # TODO
-- basic sdf shadow/border
+- optimize `arc` bounding box
+- bring back blend2d for now
 - Path Renderer
 - image ninepatch
 - color blend, like backdrop effect, require layer ordering
@@ -83,7 +154,6 @@ component boundary do not exist as we cant really transform function content. So
 - `GradientRegistry` - 1d for now
 - `Compositor` schedule multiple `CompositionNode` rendering with `Renderer` 
 - DXGI swapchain
-- basic compositing + effect layer scheduling
 - clip: seem like this require a rasterize into a mask layer for best perf
     - sdf shape
     - CALayer-like mask

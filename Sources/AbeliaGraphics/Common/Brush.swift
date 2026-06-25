@@ -2,7 +2,7 @@ public enum Brush {
   case solid(Color)
   /// nineSlices and crop are normalized
   case texture(
-    _ texture: any RenderTextureProtocol, 
+    index: UInt32, 
     fillMode: TextureFillMode = .stretch, 
     crop: Rect = .unit,
     nineSlices: Rect = .unit
@@ -13,4 +13,5 @@ public enum Brush {
 public enum TextureFillMode {
   case stretch
   case tile(scale: SIMD2<Float> = .one, offset: SIMD2<Float> = .zero)
+  case absolute
 }

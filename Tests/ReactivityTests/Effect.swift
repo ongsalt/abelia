@@ -2,7 +2,9 @@ import Testing
 
 @testable import Reactivity
 
-@Test func effect() async {
+@MainActor
+@Test 
+func effect() async {
     @Signal var a = 1
     @Signal var b = 2
     @Computed var c = a + b
@@ -20,7 +22,9 @@ import Testing
     b += 1
 }
 
-@Test func signalEqTest() async {
+@MainActor
+@Test 
+func signalEqTest() async {
     // property wrapper fuck this up
     var a = Signal(1)
     var b = Signal(2)

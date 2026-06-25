@@ -66,6 +66,7 @@ enum __attribute__((enum_extensibility(closed))) BrushKind : uint32_t {
 enum __attribute__((enum_extensibility(closed))) TextureFillMode : uint32_t {
   tex_stretch = 0,
   tex_tile = 1,
+  tex_absolute = 2,
 };
 
 struct SolidColorBrush {

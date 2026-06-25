@@ -46,6 +46,7 @@ public enum BrushKind : uint {
 public enum TextureFillMode : uint {
   stretch = 0,
   tile = 1,
+  absolute = 2,
 };
 
 public struct SolidColorBrush {

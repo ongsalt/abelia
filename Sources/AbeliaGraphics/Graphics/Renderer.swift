@@ -2,6 +2,7 @@
 
 import Vulkan
 
+// or i make like 2 renderer
 public final class Renderer {
     let context: DeviceContext
     let pipelines: Pipelines
@@ -32,59 +33,66 @@ public final class Renderer {
         globalDescriptorSet = try pipelines.createSamplerDescriptorSet(context)
     }
 
-    // temporary api
-    public func createDrawTask(
-        to image: Image,
-        view: ImageView,
-        frameIndex: Int,
-        size: SIMD2<UInt32>,
-        nodes: [RenderNode],
-    ) throws -> GPUTask<()> {
-        releaseQueue.flushWithFences(self.context)
+    typealias FrameContext = AnyObject
+    typealias SceneData = AnyObject
+    // need to pass in size
+    func render(scene: SceneData, to texture: RenderTexture, frameContext: FrameContext) {
 
-        let currentFrameResource = frameResources[frameIndex]
-        for node in nodes {
-            currentFrameResource.renderNodeStorage.update(
-                node: node,
-                shapeGroupStorage: currentFrameResource.shapeGroupStorage
-            )
-        }
-
-        let drawItemCount = currentFrameResource.drawListStorage.write(
-            nodes.filter({ !$0.hidden }),
-            renderNodeStorage: currentFrameResource.renderNodeStorage
-        )
-
-        let renderFinishedBarrier = ImageMemoryBarrier2(
-            srcStageMask: .colorAttachmentOutput,
-            srcAccessMask: [.colorAttachmentWrite, .colorAttachmentRead],
-            dstStageMask: .fragmentShader,
-            dstAccessMask: .shaderSampledRead,
-            oldLayout: .colorAttachmentOptimal,
-            newLayout: .shaderReadOnlyOptimal,
-            srcQueueFamilyIndex: 0,
-            dstQueueFamilyIndex: 0,
-            image: image,
-            subresourceRange: .init(
-                aspectMask: .color,
-                baseMipLevel: 0,
-                levelCount: 1,
-                baseArrayLayer: 0,
-                layerCount: 1
-            ),
-        )
-
-        return GPUTask(yielding: (), barriers: [renderFinishedBarrier]) {
-            self.recordCommands(
-                into: $0,
-                image: image,
-                imageView: view,
-                renderNodeCount: UInt32(drawItemCount),
-                frameResource: currentFrameResource,
-                size: size,
-            )
-        }
     }
+
+    // temporary api
+    // public func createDrawTask(
+    //     to image: Image,
+    //     view: ImageView,
+    //     frameIndex: Int,
+    //     size: SIMD2<UInt32>,
+    //     nodes: [RenderNode],
+    // ) throws -> GPUTask<()> {
+    //     releaseQueue.flushWithFences(self.context)
+
+    //     let currentFrameResource = frameResources[frameIndex]
+    //     for node in nodes {
+    //         currentFrameResource.renderNodeStorage.update(
+    //             node: node,
+    //             shapeGroupStorage: currentFrameResource.shapeGroupStorage
+    //         )
+    //     }
+
+    //     let drawItemCount = currentFrameResource.drawListStorage.write(
+    //         nodes.filter({ !$0.hidden }),
+    //         renderNodeStorage: currentFrameResource.renderNodeStorage
+    //     )
+
+    //     let renderFinishedBarrier = ImageMemoryBarrier2(
+    //         srcStageMask: .colorAttachmentOutput,
+    //         srcAccessMask: [.colorAttachmentWrite, .colorAttachmentRead],
+    //         dstStageMask: .fragmentShader,
+    //         dstAccessMask: .shaderSampledRead,
+    //         oldLayout: .colorAttachmentOptimal,
+    //         newLayout: .shaderReadOnlyOptimal,
+    //         srcQueueFamilyIndex: 0,
+    //         dstQueueFamilyIndex: 0,
+    //         image: image,
+    //         subresourceRange: .init(
+    //             aspectMask: .color,
+    //             baseMipLevel: 0,
+    //             levelCount: 1,
+    //             baseArrayLayer: 0,
+    //             layerCount: 1
+    //         ),
+    //     )
+
+    //     return GPUTask(yielding: (), barriers: [renderFinishedBarrier]) {
+    //         self.recordCommands(
+    //             into: $0,
+    //             image: image,
+    //             imageView: view,
+    //             renderNodeCount: UInt32(drawItemCount),
+    //             frameResource: currentFrameResource,
+    //             size: size,
+    //         )
+    //     }
+    // }
 
     private func recordCommands(
         into cmd: CommandBuffer,
@@ -320,15 +328,15 @@ final class Pipelines {
                 alphaToOneEnable: false
             ),
             // depthStencilState: PipelineDepthStencilStateCreateInfo?,
-            colorBlendState: .init(
+            colorBlendState: PipelineColorBlendStateCreateInfo(
                 logicOpEnable: false,
                 logicOp: .copy,
                 attachments: [
-                    .init(
+                    PipelineColorBlendAttachmentState(
                         blendEnable: true, srcColorBlendFactor: .one,
                         dstColorBlendFactor: .oneMinusSrcAlpha, colorBlendOp: .add,
                         srcAlphaBlendFactor: .one, dstAlphaBlendFactor: .oneMinusSrcAlpha,
-                        alphaBlendOp: .add, colorWriteMask: [.a, .r, .g, .b])
+                        alphaBlendOp: .add, colorWriteMask: [.a, .r, .g, .b], )
                 ],
                 blendConstants: (0, 0, 0, 0)
             ),
@@ -422,6 +430,7 @@ final class Pipelines {
     }
 }
 
+// this should be per frame context
 struct RendererFrameResource {
     let mainDescriptorSet: DescriptorSet
     let renderNodeStorage: RenderNodeStorage
