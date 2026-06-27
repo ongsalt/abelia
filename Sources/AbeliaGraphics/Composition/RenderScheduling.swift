@@ -52,6 +52,7 @@ struct TransformResolver {
 }
 
 // for group opacity/clip (like LayerVisual)
+// should compute content offset: in case that this is larger than parent 
 struct CompositionPlanner {
     func plan(root: _BaseLayer) -> CompositionGroup {
         var current = CompositionGroup(root: root)
