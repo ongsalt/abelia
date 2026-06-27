@@ -29,6 +29,7 @@ let package = Package(
         // bruh, how do i do this on windows
         // .systemLibrary(name: "CPango", pkgConfig: "pangoft2"),
         .target(name: "Reactivity"),
+        .target(name: "ReactivityGraph"),
 
         .target(
             name: "CShim",
