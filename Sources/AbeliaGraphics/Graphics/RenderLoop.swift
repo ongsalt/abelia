@@ -7,9 +7,9 @@ public final class RenderLoop {
 
   static let maxFrameInFlightCount = 2
   private var currentFrameInFlightIndex: Int = 0
-  var frameResources: [_FrameResource]
+  var frameResources: [FrameResource]
 
-  var currentFrameResource: _FrameResource {
+  var currentFrameResource: FrameResource {
     frameResources[currentFrameInFlightIndex]
   }
 
@@ -17,11 +17,11 @@ public final class RenderLoop {
     self.context = context
 
     self.frameResources = try (0..<Self.maxFrameInFlightCount).map { i throws(Vulkan.Result) in
-      try _FrameResource(index: i, context: context)
+      try FrameResource(index: i, context: context)
     }
   }
 
-  public func waitForAvailableFrameInFlight(reset: Bool = true) throws -> _FrameResource {
+  public func waitForAvailableFrameInFlight(reset: Bool = true) throws -> FrameResource {
     try context.device.waitForFences(
       fences: [currentFrameResource.everythingCompletedFence], waitAll: true,
       timeout: UInt64.max)
@@ -76,7 +76,7 @@ public final class RenderLoop {
   }
 }
 
-public class _FrameResource {
+public class FrameResource {
   public let index: Int
   let commandPool: CommandPool
   let commandBuffer: CommandBuffer

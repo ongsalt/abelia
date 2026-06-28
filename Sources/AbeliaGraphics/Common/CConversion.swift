@@ -1,45 +1,16 @@
 import CShim
 
-extension RenderNode {
-  func write(
-    to data: inout CShim.RenderNode, identity: ObjectIdentifier,
-    shapeGroupStorage: borrowing ShapeGroupStorage
-  ) {
-    // zero it
-    data = CShim.RenderNode()
-
-    data.affine = self.affine.c
-    let instructions = Array(shape.drawInstructions)
-    if instructions.count <= 1 {
-      guard case .push(let metadata) = instructions[0] else {
-        fatalError("Invalid shape merging instruction: \(instructions)")
-      }
-
-      let (kind, shapeData) = metadata.shape.c
-      data.oneOrManyKind = .one_shape
-      data.shapeKind = kind
-      data.shapeData.one = shapeData
-    } else {
-      data.oneOrManyKind = .many_shapes
-      // let startIndex = shapeGroupStorage.update(ownerIdentity: identity, data: instructions)
-      // data.shapeData.many = CShim.ManyShapeRef(
-      //   startIndex: UInt32(startIndex!), count: UInt32(instructions.count))
-    }
-
-    // this can be cache
-    let bounds = shape.bounds
-    data.boundMinX = bounds.left - (borderWidth + 2)
-    data.boundMinY = bounds.top - (borderWidth + 2)
-    data.boundMaxX = bounds.right + borderWidth + 2
-    data.boundMaxY = bounds.bottom + borderWidth + 2
-
-    switch brush {
+extension Brush {
+  var c: (CShim.BrushKind, CShim.Brush) {
+    var data = CShim.Brush()
+    var kind = CShim.BrushKind.solid
+    switch self {
     case .solid(let color):
-      data.brushKind = .solid
+      kind = .solid
       let (r, g, b, a) = color.linearized.premultiplied.values
-      data.brushData.solid = CShim.SolidColorBrush(color: (r, g, b, a))
+      data.solid = CShim.SolidColorBrush(color: (r, g, b, a))
     case .texture(let index, let fillMode, let crop, let nineSlices):
-      data.brushKind = .texture
+      kind = .texture
       let fillModeRaw: UInt32
       let tileScaleX: Float
       let tileScaleY: Float
@@ -58,62 +29,7 @@ extension RenderNode {
         tileScaleY = 1
       }
 
-      data.brushData.texture = CShim.TextureBrush(
-        textureIndex: UInt32(index),  // resolved externally when binding textures
-        fillMode: fillModeRaw,
-        tileScaleX: tileScaleX,
-        tileScaleY: tileScaleY,
-        cropLeft: crop.left,
-        cropTop: crop.top,
-        cropWidth: crop.width,
-        cropHeight: crop.height,
-        sliceLeft: nineSlices.left,
-        sliceTop: nineSlices.top,
-        sliceWidth: nineSlices.width,
-        sliceHeight: nineSlices.height,
-        sizeX: 0,
-        sizeY: 0
-      )
-    }
-
-    data.borderWidth = self.borderWidth
-    data.shadowOffsetX = self.shadowOffset.x
-    data.shadowOffsetY = self.shadowOffset.y
-    data.shadowBlur = self.shadowBlur
-    data.shadowSpread = self.shadowSpread
-    data.shadowOpacity = self.shadowOpacity
-    let (sr, sg, sb, sa) = shadowColor.linearized.premultiplied.values
-    data.shadowColorR = sr
-    data.shadowColorG = sg
-    data.shadowColorB = sb
-    data.shadowColorA = sa
-
-    switch borderBrush {
-    case .solid(let color):
-      data.borderBrushKind = .solid
-      let (r, g, b, a) = color.linearized.premultiplied.values
-      data.borderBrushData.solid = CShim.SolidColorBrush(color: (r, g, b, a))
-    case .texture(let index, let fillMode, let crop, let nineSlices):
-      data.borderBrushKind = .texture
-      let fillModeRaw: UInt32
-      let tileScaleX: Float
-      let tileScaleY: Float
-      switch fillMode {
-      case .stretch:
-        fillModeRaw = 0
-        tileScaleX = 1
-        tileScaleY = 1
-      case .tile(let s, _):
-        fillModeRaw = 1
-        tileScaleX = s.x
-        tileScaleY = s.y
-      case .absolute:
-        fillModeRaw = 2
-        tileScaleX = 1
-        tileScaleY = 1
-      }
-
-      data.borderBrushData.texture = CShim.TextureBrush(
+      data.texture = CShim.TextureBrush(
         textureIndex: UInt32(index),
         fillMode: fillModeRaw,
         tileScaleX: tileScaleX,
@@ -129,9 +45,14 @@ extension RenderNode {
         sizeX: 0,
         sizeY: 0
       )
+    case .backdrop(_, _):
+      kind = .texture
+      fatalError(".backdrop must be resolve before converting to c")
     }
 
+    return (kind, data)
   }
+
 }
 
 extension Shape {

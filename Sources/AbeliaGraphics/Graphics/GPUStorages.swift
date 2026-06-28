@@ -22,6 +22,25 @@ class GPUStorage<T> {
             raw.copyBytes(to: self.bufferPointer.extracting(offset...))
         }
     }
+
+    private(set) var offset: Int = 0
+    func append(_ data: consuming T) {
+        self.bufferPointer[offset] = data
+        offset += 1
+    }
+
+    func append(_ span: borrowing Span<T>) {
+        span.withUnsafeBufferPointer { span in
+            let raw = UnsafeRawBufferPointer(span)
+            raw.copyBytes(to: self.bufferPointer.extracting(offset...))
+        }
+        offset += span.count
+    }
+
+    func resetOffset() {
+        offset = 0
+    }
+
 }
 
 // TODO: buffer resizing

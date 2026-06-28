@@ -7,7 +7,12 @@ public enum Brush {
     crop: Rect = .unit,
     nineSlices: Rect = .unit
   )
-  // case effect
+
+  // do not exist in c
+  case backdrop(
+    key: Int, 
+    crop: Rect = .unit,
+  )
 }
 
 public enum TextureFillMode {

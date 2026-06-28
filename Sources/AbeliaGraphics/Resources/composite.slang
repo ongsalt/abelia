@@ -44,6 +44,7 @@ struct VertexOutput {
   nointerpolation uint32_t renderNodeDataIndex;
   float4 sv_position : SV_Position;
   float2 localPosition;
+  float2 uv;
   DrawMode drawMode;
 };
 
@@ -54,6 +55,15 @@ static const float2 g_Positions[6] = {
   float2(1.0, 1.0),
   float2(-1.0, 1.0),
   float2(-1.0, -1.0),
+};
+
+static const float2 uv_positions[6] = {
+  float2(0, 0),
+  float2(1.0, 0),
+  float2(1.0, 1.0),
+  float2(1.0, 1.0),
+  float2(0, 1.0),
+  float2(0, 0),
 };
 
 [shader("vertex")]
@@ -88,6 +98,7 @@ VertexOutput vsMain(VertexInput input) {
 
   output.localPosition = pos;
   output.sv_position = mul(viewMatrix, mul(renderNode.affine, float4(pos, 0.0, 1.0)));
+  output.uv = uv_positions[input.vertexIndex];
   return output;
 }
 

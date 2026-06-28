@@ -6,21 +6,32 @@ class Compositor {
     let surface: Surface
     let context: DeviceContext
 
+    var rendererFrameResources: [RendererFrameResource]
+
     public init(surface: Surface, device: DeviceContext) throws {
         self.surface = surface
         self.context = device
 
-        self.renderer = try Renderer(context: device, maxFrameInFlightCount: 2)
         self.renderLoop = try RenderLoop(context: device)
+        self.renderer = try Renderer(context: device)
+        self.rendererFrameResources = try renderer.createFrameResources(amount: RenderLoop.maxFrameInFlightCount)
     }
 
     func flushFrame() throws {
         let res = try renderLoop.waitForAvailableFrameInFlight()
+        let frameResource = rendererFrameResources[res.index]
+        // let frameContext
 
-        // flush animation frame         
+        // flush animation frame
         let backBuffer = try! surface.acquireCurrentTexture(signalling: res.imageAvailableSemaphore)
         let commands = GPUCommands { [self] commandBuffer in
             backBuffer.prepareRender().apply(to: commandBuffer)
+
+            var scheduler = RenderScheduler()
+            backBuffer.texture
+            let plan = scheduler.schedule(root: root)
+            // plan.apply(borrowing: Renderer, resource: frameResource)
+
             // let task = try! renderer.createDrawTask(
             //     to: backBuffer.texture.image,
             //     view: backBuffer.texture.view,
@@ -41,7 +52,6 @@ class Compositor {
         try! backBuffer.present()
 
     }
-    
 
     // var dirtyLayers: [_BaseLayer] = []
     // var dirtyLayerIds: Set<ObjectIdentifier> = []

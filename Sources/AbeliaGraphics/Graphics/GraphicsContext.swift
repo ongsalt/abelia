@@ -87,14 +87,6 @@ public class GraphicsContext: @unchecked Sendable {
     {
         return try DeviceContext(compatibleWith: surface, context: self)
     }
-
-    // temporary api
-    public func createRenderer(for surface: any SurfaceProtocol, device: DeviceContext) throws
-        -> Renderer
-    {
-        try Renderer(context: device, maxFrameInFlightCount: 2)
-    }
-
 }
 public enum DeviceInitializationError: Error {
     case noUsableDevice

@@ -3,21 +3,12 @@ struct RenderScheduler {
     var compositionPlanner = CompositionPlanner()
     var passScheduler = PassScheduler()
 
-    mutating func schedule(root: _BaseLayer) -> RenderSchedule {
+    mutating func schedule(root: _BaseLayer) -> Pass {
         transformResolver.resolve(root: root)
         let group = compositionPlanner.plan(root: root)
-        // print(group)
         let pass = passScheduler.schedule(root: group, transformResolver)
 
-        return RenderSchedule(pass: pass)
-    }
-}
-
-struct RenderSchedule {
-    let pass: Pass
-
-    func commands() {
-
+        return pass
     }
 }
 
@@ -52,7 +43,7 @@ struct TransformResolver {
 }
 
 // for group opacity/clip (like LayerVisual)
-// should compute content offset: in case that this is larger than parent 
+// should compute content offset: in case that this is larger than parent
 struct CompositionPlanner {
     func plan(root: _BaseLayer) -> CompositionGroup {
         var current = CompositionGroup(root: root)
@@ -88,6 +79,9 @@ struct CompositionGroup {
 
     typealias LayerID = _BaseLayer.ID
     var dependencies: [LayerID: CompositionGroup] = [:]
+
+    // TODO: handle skipping composition group, might just emit 1 RenderNode
+    var skippable: Bool = false
 }
 
 struct PassScheduler {
@@ -126,6 +120,7 @@ struct PassScheduler {
                 let affine = transformResolver.get(layer)!
                 let bounds = layer.bounds.transformBounds(affine)
 
+                // TODO: implicit group texture size
                 return Pass(target: .new(size: SIMD2(bounds.size), key: key))
             }()
 
@@ -187,7 +182,6 @@ struct PassScheduler {
                 }
 
                 // not found
-                print("batch not found")
                 let new = makeNewPass(basedOn: layer, affine: affine, key: key)
                 new.dependencies.append(localPasses.last!)
                 localPasses.append(new)
@@ -294,9 +288,19 @@ extension _BaseLayer {
 }
 
 enum PassRenderTarget {
-    case sameAsPrevious(key: Int)
-    case alternate(key: Int)
+    // per CompositionGruop, cache
     case new(size: SIMD2<UInt32>, key: Int)
+    // for one pass effect
+    case alternate(key: Int)
+    case sameAsPrevious(key: Int)
+
+    var key: Int {
+        switch self {
+        case .new(_, let key): key
+        case .alternate(let key): key
+        case .sameAsPrevious(let key): key
+        }
+    }
 }
 
 // write shit to gpu storage
@@ -304,15 +308,16 @@ enum PassRenderTarget {
 extension Layer {
     func compositeRenderNode(_ affine: Affine) -> RenderNode {
         var node = RenderNode()
-        node.brush = brush.brush
+        node.brush = brush?.brush ?? .solid(.transparent)
         node.shape = shape
-        node.borderWidth = borderWidth
-        node.borderBrush = borderBrush.brush
-        node.shadowOffset = shadowOffset
-        node.shadowBlur = shadowBlur
-        node.shadowSpread = shadowSpread
-        node.shadowColor = shadowColor
-        node.shadowOpacity = shadowOpacity
+        if let border {
+            node.border = NodeBorder(width: border.width, brush: border.brush.brush)
+        }
+        if let shadow {
+            node.shadow = NodeShadow(
+                offset: shadow.offset, blur: shadow.blur, spread: shadow.spread,
+                color: shadow.color, opacity: shadow.opacity)
+        }
         node.affine = affine
         return node
     }
@@ -321,18 +326,19 @@ extension Layer {
 
     // textureIndex will be key before we resolve that to actual texture id
     // it will need to be resove again in writing pass
-    func renderNode(sampling textureIndex: Int, _ affine: Affine) -> RenderNode {
+    func renderNode(sampling key: Int, _ affine: Affine) -> RenderNode {
         var node = RenderNode()
-        node.brush = .texture(index: textureIndex, fillMode: .absolute)
+        node.brush = .backdrop(key: key)
         node.shape = Shape.rect(
             width: size.x, height: size.y, cornerRadius: cornerRadius, cornerDegree: cornerDegree)
-        node.borderWidth = borderWidth
-        node.borderBrush = borderBrush.brush
-        node.shadowOffset = shadowOffset
-        node.shadowBlur = shadowBlur
-        node.shadowSpread = shadowSpread
-        node.shadowColor = shadowColor
-        node.shadowOpacity = shadowOpacity
+        if let border {
+            node.border = NodeBorder(width: border.width, brush: border.brush.brush)
+        }
+        if let shadow {
+            node.shadow = NodeShadow(
+                offset: shadow.offset, blur: shadow.blur, spread: shadow.spread,
+                color: shadow.color, opacity: shadow.opacity)
+        }
         node.affine = affine
         return node
     }

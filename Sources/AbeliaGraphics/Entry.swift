@@ -23,9 +23,9 @@ public func devEntry() {
     }
 
     var scheduler = RenderScheduler()
-    let a = scheduler.schedule(root: layer)
+    let pass = scheduler.schedule(root: layer)
 
-    print(a.pass.dumpTree())
+    print(pass.dumpTree())
 }
 
 extension Pass {

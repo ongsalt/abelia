@@ -27,16 +27,11 @@ extension Layer {
         offset: SIMD3<Float> = .zero,
         size: SIMD2<Float> = .zero,
         opacity: Float = 1,
-        brush: CompositionBrush = .solid(.transparent),
+        brush: CompositionBrush? = nil,
         cornerRadius: Float = 0,
         cornerDegree: Float = 4,
-        borderWidth: Float = 0,
-        borderBrush: CompositionBrush = .solid(.transparent),
-        shadowOffset: SIMD2<Float> = .zero,
-        shadowBlur: Float = 0,
-        shadowSpread: Float = 0,
-        shadowColor: Color = .black,
-        shadowOpacity: Float = 0,
+        border: Border? = nil,
+        shadow: Shadow? = nil,
         @LayerBuilder children: () -> [_BaseLayer] = { [] }
     ) {
         self.init()
@@ -46,13 +41,8 @@ extension Layer {
         self.brush = brush
         self.cornerRadius = cornerRadius
         self.cornerDegree = cornerDegree
-        self.borderWidth = borderWidth
-        self.borderBrush = borderBrush
-        self.shadowOffset = shadowOffset
-        self.shadowBlur = shadowBlur
-        self.shadowSpread = shadowSpread
-        self.shadowColor = shadowColor
-        self.shadowOpacity = shadowOpacity
+        self.border = border
+        self.shadow = shadow
         for child in children() {
             insert(child)
         }

@@ -76,7 +76,8 @@ extension TextureRegistry {
                     srcQueueFamilyIndex: qf, dstQueueFamilyIndex: qf,
                     image: texture.image, subresourceRange: sub)
             ]))
-
+        texture.currentLayout = .shaderReadOnlyOptimal
+        
         try cmd.end()
 
         // --- Submit immediately ---

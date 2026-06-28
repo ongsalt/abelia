@@ -8,7 +8,7 @@ public class Layer: _BaseLayer {
         didSet { dirtyFlags.insert(.grouping) }
     }
 
-    public var brush: CompositionBrush = .solid(.transparent) {
+    public var brush: CompositionBrush? {
         didSet { dirtyFlags.insert(.contents) }
     }
     public var cornerRadius: Float = 0 {
@@ -18,30 +18,28 @@ public class Layer: _BaseLayer {
         didSet { dirtyFlags.insert(.contents) }
     }
 
-    public var borderWidth: Float = 0 {
-        didSet { dirtyFlags.insert(.contents) }
-    }
-    public var borderBrush: CompositionBrush = .solid(.transparent) {
+    public var border: Border? {
         didSet { dirtyFlags.insert(.contents) }
     }
 
-    public var shadowOffset: SIMD2<Float> = .zero {
-        didSet { dirtyFlags.insert(.contents) }
-    }
-    public var shadowBlur: Float = 0 {
-        didSet { dirtyFlags.insert(.contents) }
-    }
-    public var shadowSpread: Float = 0 {
-        didSet { dirtyFlags.insert(.contents) }
-    }
-    public var shadowColor: Color = .black {
-        didSet { dirtyFlags.insert(.contents) }
-    }
-    public var shadowOpacity: Float = 0 {
+    public var shadow: Shadow? {
         didSet { dirtyFlags.insert(.contents) }
     }
 
     override var isRasterizationRoot: Bool {
         shouldRasterize || (opacity != 0 && opacity != 1)
     }
+}
+
+public struct Border {
+    public var width: Float = 1
+    public var brush: CompositionBrush = .solid(.black)
+}
+
+public struct Shadow {
+    public var offset: SIMD2<Float> = .zero
+    public var blur: Float = 15
+    public var spread: Float = 0
+    public var color: Color = .black
+    public var opacity: Float = 75
 }

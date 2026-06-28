@@ -9,18 +9,25 @@ public struct RenderNode {
     public var brush: Brush = .solid(.transparent)
     public var shape: any ShapeProtocol = Shape.rect(width: 0, height: 0)
 
-    public var borderWidth: Float = 0
-    public var borderBrush: Brush = .solid(.transparent)
-
-    public var shadowOffset: SIMD2<Float> = .zero
-    public var shadowBlur: Float = 0
-    public var shadowSpread: Float = 0
-    public var shadowColor: Color = .black
-    public var shadowOpacity: Float = 0
+    public var border: NodeBorder?
+    public var shadow: NodeShadow?
 
     // TODO: backfaceVisibility
     public var affine: Affine = .identity
 
     // TODO: write this
     public var bounds: Rect = .unit
+}
+
+public struct NodeShadow {
+    public var offset: SIMD2<Float> = .zero
+    public var blur: Float = 15
+    public var spread: Float = 0
+    public var color: Color = .black
+    public var opacity: Float = 65
+}
+
+public struct NodeBorder {
+    public var width: Float = 1
+    public var brush: Brush = .solid(Color.black.with(alpha: 0.3))
 }
