@@ -146,10 +146,12 @@ component boundary do not exist as we cant really transform function content. So
 - animation frame
 - clipping
 - shapes layer (retained)
-
+- better image filing api
+    - fill/stretch
+    - crop
+    - ninepatch
 - optimize `arc` bounding box
-- bring back blend2d for now
-- image ninepatch
+- bring back blend2d
 
 - hidpi - screen space and framebuffer size wont match
     - `wp_fractional_scale_v1`

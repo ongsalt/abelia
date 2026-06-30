@@ -36,6 +36,7 @@ class Delegate: Swinit.EventLoopDelegate {
         // layer.insert(grid)
 
         self.compositor.root = buildLayersWithCompositionGroup(compositor)
+        // self.compositor.root = buildHealthRings()
 
         window.requestRedraw()
     }
@@ -76,7 +77,7 @@ class Delegate: Swinit.EventLoopDelegate {
 EventLoop().run(Delegate())
 
 func buildLayersWithCompositionGroup(_ compositor: Compositor) -> Layer {
-    let layer = Layer(size: [500, 500], brush: .solid(.mint))
+    let layer = Layer(brush: .solid(.white))
 
     let image = try! compositor.createImage(filename: "Resources/riko.png")
     let riko = Layer(offset: [100, 120, 0], size: [320, 180])
@@ -94,6 +95,8 @@ func buildLayersWithCompositionGroup(_ compositor: Compositor) -> Layer {
     child2.opacity = 0.5
     child2.offset = [100, 100, 0]
     layer.insert(child2)
+
+    layer.insert(buildHealthRings())
 
     return layer
 }
@@ -136,6 +139,66 @@ public func buildLayers() -> Layer {
     }
     
     return layer
+}
+
+func buildHealthRings() -> Layer {
+    let root = Layer(size: [800, 600])
+
+    let center: SIMD3<Float> = [400, 300, 0]
+
+    let moveProgress: Float = 0.75
+    let moveBg = ShapeItem(
+        shape: Shape.arc(radius: 140, angle: .pi(2), thickness: 26),
+        brush: .solid(Color.red.with(alpha: 0.3)),
+        offset: center
+    )
+    let moveFg = ShapeItem(
+        shape: Shape.arc(radius: 140, angle: .radians(.pi * 2 * moveProgress), thickness: 26),
+        brush: .solid(.red),
+        offset: center,
+        rotation: .degrees(180)
+    )
+
+    let exerciseProgress: Float = 0.60
+    let exerciseBg = ShapeItem(
+        shape: Shape.arc(radius: 104, angle: .pi(2), thickness: 26),
+        brush: .solid(.green.with(alpha: 0.3)),
+        offset: center
+    )
+    let exerciseFg = ShapeItem(
+        shape: Shape.arc(radius: 104, angle: .radians(.pi * 2 * exerciseProgress), thickness: 26),
+        brush: .solid(.green),
+        offset: center,
+        rotation: .degrees(180)
+    )
+
+    let standProgress: Float = 0.90
+    let standBg = ShapeItem(
+        shape: Shape.arc(radius: 68, angle: .pi(2), thickness: 26),
+        brush: .solid(.cyan.with(alpha: 0.3)),
+        offset: center
+    )
+    let standFg = ShapeItem(
+        shape: Shape.arc(radius: 68, angle: .radians(.pi * 2 * standProgress), thickness: 26),
+        brush: .solid(.cyan),
+        offset: center,
+        rotation: .degrees(180)
+    )
+
+    let blob = ShapeItem(
+        shape: Shape.rect(width: 240, height: 240, cornerRadius: 80)
+            .union(Shape.circle(100), offset: [100, 100], smoothing: 60),
+        brush: .solid(.blue.with(alpha: 0.75)),
+        border: Border(width: 12, brush: .solid(.mint)),
+        offset: [600, 400, 0],
+        rotation: .degrees(10),
+        rotationAxis: [0.1, 1, 0]
+    )
+
+    // backgrounds first so foreground arcs composite on top
+    let rings = ShapeLayer(shapes: [moveBg, exerciseBg, standBg, moveFg, exerciseFg, standFg, blob])
+    root.insert(rings)
+    return root
 }
 
 func nonOverlapBlurGrid(w: Int, h: Int, size: Float = 10) -> Layer {

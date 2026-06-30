@@ -128,7 +128,7 @@ float4 fsMain(VertexOutput input): SV_Target {
 }
 
 float4 computeBorder(RenderNode renderNode, float2 position) {
-  var d = sdfDistance(renderNode, position);
+  var d = sdfDistance(renderNode, position) + 0.33;
   var color = float4(0.0, 0.0, 0.0, 0.0);
 
   // TODO: correction term when merging
@@ -142,7 +142,7 @@ float4 computeBorder(RenderNode renderNode, float2 position) {
     color.xyz *= color.w;
   }
   
-  if (d < -renderNode.borderWidth) {
+  if (d < -renderNode.borderWidth / 2) {
     d = -d - renderNode.borderWidth;
   }
   
@@ -159,7 +159,7 @@ float4 computeShadow(RenderNode renderNode, float2 position) {
 
 
 float4 computeFill(RenderNode renderNode, float2 position, float2 uv) {
-  let d = sdfDistance(renderNode, position);
+  let d = sdfDistance(renderNode, position) + renderNode.borderWidth;
   var color = float4(0.0, 0.0, 0.0, 0.0);
 
   if (renderNode.brushKind == BrushKind.solid) {

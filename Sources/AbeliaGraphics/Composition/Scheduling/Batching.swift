@@ -96,9 +96,12 @@ struct PassScheduler {
         func makeNewPass(basedOn layer: _BaseLayer, affine: Affine, key: Int) -> Pass {
             switch layer.kind {
             case .composite:
-                let node = (layer as! Layer).compositeRenderNode(affine)
                 let new = Pass(target: .sameAsPrevious(key: key))
-                new.addRenderNode(node)
+                if let shapeLayer = layer as? ShapeLayer {
+                    for node in shapeLayer.shapeItemRenderNodes(affine) { new.addRenderNode(node) }
+                } else {
+                    new.addRenderNode((layer as! Layer).compositeRenderNode(affine))
+                }
                 return new
 
             case .blur:
@@ -156,6 +159,10 @@ struct PassScheduler {
                                     let node = (layer as! Layer).renderNode(sampling: new.target.key, affine)
                                     p.addRenderNode(node)
                                     p.dependencies.append(new)
+                                }
+                            } else if let shapeLayer = layer as? ShapeLayer {
+                                for node in shapeLayer.shapeItemRenderNodes(affine) {
+                                    p.addRenderNode(node)
                                 }
                             } else {
                                 p.addRenderNode((layer as! Layer).compositeRenderNode(affine))
@@ -309,7 +316,7 @@ enum LayerKind {
 
 extension _BaseLayer {
     fileprivate var kind: LayerKind {
-        if self is Layer {
+        if self is Layer || self is ShapeLayer {
             return .composite
         } else if let s = self as? EffectLayer {
             if case .blur(_) = s.effect {
@@ -355,10 +362,6 @@ extension Layer {
         }
         node.affine = affine
         return node
-    }
-
-    func compositionShapeRenderNodes(_ affine: Affine) -> [RenderNode] {
-        []
     }
 
     // mark - CompositionGroup root
@@ -447,4 +450,34 @@ extension EffectLayer {
         )
     }
 
+}
+
+extension ShapeItem {
+    func renderNode(baseAffine: Affine) -> RenderNode {
+        let localAffine = Affine.identity
+            .translated(x: offset.x, y: offset.y, z: offset.z)
+            .rotated(rotation, axis: rotationAxis)
+            .scaled(x: scale.x, y: scale.y)
+
+        var node = RenderNode()
+        node.shape = shape
+        node.brush = brush.brush
+        node.opacity = opacity
+        if let border {
+            node.border = NodeBorder(width: border.width, brush: border.brush.brush)
+        }
+        if let shadow {
+            node.shadow = NodeShadow(
+                offset: shadow.offset, blur: shadow.blur, spread: shadow.spread,
+                color: shadow.color, opacity: shadow.opacity)
+        }
+        node.affine = baseAffine.multiplied(by: localAffine)
+        return node
+    }
+}
+
+extension ShapeLayer {
+    func shapeItemRenderNodes(_ affine: Affine) -> [RenderNode] {
+        shapes.map { $0.renderNode(baseAffine: affine) }
+    }
 }

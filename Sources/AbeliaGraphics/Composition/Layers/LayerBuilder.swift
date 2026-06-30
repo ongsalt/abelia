@@ -48,3 +48,36 @@ extension Layer {
         }
     }
 }
+
+extension ShapeLayer {
+    public convenience init(
+        offset: SIMD3<Float> = .zero,
+        size: SIMD2<Float> = .zero,
+        shapes: [ShapeItem] = []
+    ) {
+        self.init()
+        self.offset = offset
+        self.size = size
+        self.shapes = shapes
+    }
+
+    public convenience init(
+        offset: SIMD3<Float> = .zero,
+        size: SIMD2<Float> = .zero,
+        @ShapeItemBuilder _ shapes: () -> [ShapeItem]
+    ) {
+        self.init()
+        self.offset = offset
+        self.size = size
+        self.shapes = shapes()
+    }
+}
+
+@resultBuilder
+public struct ShapeItemBuilder {
+    public static func buildBlock(_ items: ShapeItem...) -> [ShapeItem] { items }
+    public static func buildArray(_ items: [[ShapeItem]]) -> [ShapeItem] { items.flatMap { $0 } }
+    public static func buildOptional(_ items: [ShapeItem]?) -> [ShapeItem] { items ?? [] }
+    public static func buildEither(first items: [ShapeItem]) -> [ShapeItem] { items }
+    public static func buildEither(second items: [ShapeItem]) -> [ShapeItem] { items }
+}
