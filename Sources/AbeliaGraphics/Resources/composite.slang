@@ -36,7 +36,7 @@ uniform SamplerState sampler;
 
 
 struct VertexInput {
-  uint32_t instanceIndex : SV_InstanceID;
+  uint32_t instanceIndex : SV_VulkanInstanceID;
   uint32_t vertexIndex : SV_VertexID;
 };
 
