@@ -19,8 +19,8 @@ public class _BaseLayer: Identifiable {
     var dirtyFlags: LayerDirtyFlags = [.transform, .contents]
 
     public var shouldRasterize: Bool = false
-    var isRasterizationRoot: Bool {
-        shouldRasterize
+    var isCompositionGroupRoot: Bool {
+        shouldRasterize || shuoldClipStartCompositionGroup
     }
 
     private(set) var parent: _BaseLayer!
@@ -61,6 +61,20 @@ public class _BaseLayer: Identifiable {
 
     // TODO: backfaceVisibility
     public var affine: Affine = .identity
+
+    // TODO: clip
+    public var clipped: Bool = false {
+        didSet { dirtyFlags.insert(.grouping) }
+    }
+
+    internal var shuoldClipStartCompositionGroup: Bool {
+        if clipped,
+            let shape = shape as? Shape// case .rect(_, _, let cornerRadius, _) = shape
+        {
+            return true
+        }
+        return false
+    }
 
     // public var anchor: Anchor = .topLeft {
     //     didSet { dirtyFlags.insert(.transform) }

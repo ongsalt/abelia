@@ -398,7 +398,6 @@ extension Renderer {
                 width: c.width * mul.x,
                 height: c.height * mul.y
             )
-            print(crop)
             // we need to crop again cuz actual texture can be larger than logical size
             node.brush = .texture(index: index, crop: crop)
             Log.debug(.renderer, "Resolved backdrop brush index:\(index) for key:\(key)")

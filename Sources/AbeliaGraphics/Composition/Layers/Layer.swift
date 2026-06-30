@@ -26,8 +26,8 @@ public class Layer: _BaseLayer {
         didSet { dirtyFlags.insert(.contents) }
     }
 
-    override var isRasterizationRoot: Bool {
-        shouldRasterize || (opacity != 0 && opacity != 1)
+    override var isCompositionGroupRoot: Bool {
+        shouldRasterize || (opacity != 0 && opacity != 1) || shuoldClipStartCompositionGroup
     }
 }
 

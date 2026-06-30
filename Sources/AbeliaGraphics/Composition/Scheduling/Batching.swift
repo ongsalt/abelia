@@ -28,7 +28,7 @@ struct TransformResolver {
             accumulatableAffineCache[layer.id] = current
             localAffineCache[layer.id] = layer.localTotalAffine(current)
 
-            if layer.isRasterizationRoot {
+            if layer.isCompositionGroupRoot {
                 for l in layer.children {
                     walk(l, nil)
                 }
@@ -54,7 +54,7 @@ struct CompositionPlanner {
         func walk(_ layer: _BaseLayer, in group: inout CompositionGroup) {
             group.layers.append(layer)
 
-            if layer.isRasterizationRoot {
+            if layer.isCompositionGroupRoot {
                 var new = CompositionGroup(root: layer, layers: [])
                 for l in layer.children {
                     walk(l, in: &new)
@@ -135,7 +135,6 @@ struct PassScheduler {
             if let r = group.root as? Layer,
                 let node = r.compositionGroupRootRenderNode()
             {
-                Log.debug(.scheduler, "has compositionGroupRootRenderNode (\(r.id))")
                 pass.addRenderNode(node)
             }
 
@@ -151,7 +150,7 @@ struct PassScheduler {
                     switch p.kind {
                     case .composite:
                         if layer.kind == .composite {
-                            if layer.isRasterizationRoot {
+                            if layer.isCompositionGroupRoot {
                                 // add sampling mode
                                 if let new = walk(group.dependencies[layer.id]!) {
                                     p.addRenderNode(

@@ -138,6 +138,7 @@ func Text(_ text: @autoclosure @escaping () -> some StringProtocol) -> View {
 component boundary do not exist as we cant really transform function content. So every lifecycle stuff need to be tied to parent element scope.
 
 # TODO
+- animation frame
 - optimize `arc` bounding box
 - bring back blend2d for now
 - Path Renderer
@@ -150,14 +151,10 @@ component boundary do not exist as we cant really transform function content. So
 - wayland expect a premultiplied gamma-encoded srgb not gamma-encoded srgb premultiplied.
 - customizable scaling (down/up) mode
 - mipmap?
-- `RenderNodeRenderer` render to an any image
 - `GradientRegistry` - 1d for now
-- `Compositor` schedule multiple `CompositionNode` rendering with `Renderer` 
 - DXGI swapchain
-- clip: seem like this require a rasterize into a mask layer for best perf
-    - sdf shape
-    - CALayer-like mask
-    - rect clip is easily computable tho
+- CALayer-like mask
+- fastpath for rect mask
 
 - query hdr support
     - fuckkkkkkkkkkkkk, out chain
