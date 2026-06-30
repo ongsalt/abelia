@@ -34,6 +34,14 @@ public class Layer: _BaseLayer {
 public struct Border {
     public var width: Float = 1
     public var brush: CompositionBrush = .solid(.black)
+
+    public init(
+        width: Float = 1,
+        brush: CompositionBrush = .solid(.black)
+    ) {
+        self.width = width
+        self.brush = brush
+    }
 }
 
 public struct Shadow {
@@ -41,5 +49,16 @@ public struct Shadow {
     public var blur: Float = 15
     public var spread: Float = 0
     public var color: Color = .black
-    public var opacity: Float = 75
+    public var opacity: Float = 0.75
+
+    public init(
+        offset: SIMD2<Float> = .zero, blur: Float = 15, spread: Float = 0, color: Color = .black,
+        opacity: Float = 0.75
+    ) {
+        self.offset = offset
+        self.blur = blur
+        self.spread = spread
+        self.color = color
+        self.opacity = opacity
+    }
 }

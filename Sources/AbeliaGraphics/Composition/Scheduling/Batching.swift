@@ -124,7 +124,8 @@ struct PassScheduler {
             }
 
             // TODO: implicit group texture size
-            let pass = Pass(target: .new(size: SIMD2(bounds.size), key: key, canTransfer: group.isRoot))
+            let pass = Pass(
+                target: .new(size: SIMD2(bounds.size), key: key, canTransfer: group.isRoot))
 
             // all use the same texture size
             var localPasses = [pass]
@@ -260,6 +261,26 @@ extension Pass {
         }
         regions.append(region)
         self.kind = .effect(regions: regions)
+    }
+
+    public func dumpTree(indent: Int = 0) -> String {
+        let prefix = String(repeating: "  ", count: indent)
+        var info = "\(type(of: self)) "
+
+        let k =
+            switch kind {
+            case .blur(let regions): "blur (\(regions.count))"
+            case .composite(let nodes, _): "composite (\(nodes.count))"
+            case .effect(let regions): "effect (\(regions.count))"
+            }
+
+        info += "kind=\(k) target=\(target)"
+        var result = "\(prefix)- \(info)\n"
+
+        for child in self.dependencies {
+            result += child.dumpTree(indent: indent + 1)
+        }
+        return result
     }
 }
 

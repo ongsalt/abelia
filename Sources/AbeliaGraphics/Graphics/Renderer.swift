@@ -227,7 +227,7 @@ extension Renderer {
                             resolveImageLayout: .undefined,
                             loadOp: .clear,
                             storeOp: .store,
-                            clearValue: .init(color: .init(float32: (0.0, 0.0, 0.0, 0.3)))
+                            clearValue: .init(color: .init(float32: (1.0, 1.0, 1.0, 1.0)))
                         )
                     ],
                 )

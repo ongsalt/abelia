@@ -75,7 +75,7 @@ VertexOutput vsMain(VertexInput input) {
 
   let renderNode = renderNodeData[item.index];
   
-  let expand: float = item.drawMode == DrawMode.Shadow ? (renderNode.shadowSpread + renderNode.shadowBlur * 2) : 0;
+  let expand: float = item.drawMode == DrawMode.Shadow ? (renderNode.shadowSpread + renderNode.shadowBlur) : 0;
 
   float2 pos;
   switch (input.vertexIndex) {
@@ -134,7 +134,7 @@ float4 computeBorder(RenderNode renderNode, float2 position) {
     color.xyz *= color.w;
   }
   
-  if (d < -(renderNode.borderWidth / 2)) {
+  if (d < -renderNode.borderWidth) {
     d = -d - renderNode.borderWidth;
   }
   
@@ -151,7 +151,7 @@ float4 computeShadow(RenderNode renderNode, float2 position) {
 
 
 float4 computeFill(RenderNode renderNode, float2 position) {
-  let d = sdfDistance(renderNode, position) + renderNode.borderWidth / 2;
+  let d = sdfDistance(renderNode, position);
   var color = float4(0.0, 0.0, 0.0, 0.0);
 
   if (renderNode.brushKind == BrushKind.solid) {
