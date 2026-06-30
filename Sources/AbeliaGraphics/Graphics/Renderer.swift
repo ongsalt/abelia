@@ -76,9 +76,9 @@ extension Renderer {
 
         let texture = try walk(pass, commandBuffer, overridedImageView: outputView)
 
-        resource.renderNodeStorage.dump()
-        resource.shapeGroupStorage.dump()
-        resource.drawListStorage.dump()
+        // resource.renderNodeStorage.dump()
+        // resource.shapeGroupStorage.dump()
+        // resource.drawListStorage.dump()
 
         if incrementFrameCounter {
             self.incrementFrameCounter()
@@ -297,7 +297,9 @@ extension Renderer {
         // resolve .backdrop brush
         if case .backdrop(let key, let crop) = node.brush {
             let texture = textureCache[key]!
-            node.brush = .texture(index: texture.main.index, crop: crop)
+            let index = texture.main.index
+            node.brush = .texture(index: index, crop: crop)
+            Log.debug(.renderer, "Resolved backdrop brush index:\(index) for key:\(key)")
         }
 
         var data = CShim.RenderNode()
@@ -368,14 +370,18 @@ extension Renderer {
         case .new(let size, let key, let canTransfer):
             let cachedTexture = textureCache[key]
             // if size also usable
-            if let cachedTexture, cachedTexture.main.canResize(to: size) {
-                // cachedTexture.main.canResize(to: SIMD2<UInt32>)
-                return cachedTexture.main
-            } else {
-                let tex = try textureRegistry.getRenderTexture(size: size, canTransfer: canTransfer)
-                textureCache[key] = CompositeGroupTextures(main: tex)
-                return tex
+            if let cachedTexture {
+                if cachedTexture.main.canResize(to: size) {
+                    return cachedTexture.main
+                } else {
+                    cachedTexture.main.recycle()
+                    cachedTexture.alternate?.recycle()
+                }
             }
+
+            let tex = try textureRegistry.getRenderTexture(size: size, canTransfer: canTransfer)
+            textureCache[key] = CompositeGroupTextures(main: tex)
+            return tex
 
         case .alternate(let key):
             // must exist in the cache

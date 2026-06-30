@@ -83,7 +83,7 @@ class TextureRegistry {
     }
 
     // TODO: recreate in case flag doesnt match
-    func getRenderTexture(size: SIMD2<UInt32>, canTransfer: Bool = false)
+    func getRenderTexture(size: SIMD2<UInt32>, canTransfer: Bool = false, willResize: Bool = true)
         throws(Vulkan.Result) -> RenderTexture
     {
         var texture = availableTextures.first { t in
@@ -94,22 +94,42 @@ class TextureRegistry {
             texture.size = size
         } else {
             var usages: ImageUsageFlags = [.sampled, .colorAttachment, .transferSrc]
-            texture = try createRenderTexture(size: size, usages: usages)
+            texture = try createRenderTexture(size: size, usages: usages, willResize: willResize)
         }
 
         return texture!
     }
 
     func createRenderTexture(
-        size: SIMD2<UInt32>, format: Format? = nil,
-        usages: ImageUsageFlags = [.sampled, .colorAttachment]
+        size: SIMD2<UInt32>,
+        format: Format? = nil,
+        usages: ImageUsageFlags = [.sampled, .colorAttachment],
+        willResize: Bool = false,
     ) throws(Vulkan.Result) -> RenderTexture {
-        
-        let image = try VmaImage(size: size, format: format ?? self.format, usages: usages, context: self.context)
-        print("[TextureRegistry] creating texture with size=\(size), usages: \(usages) image=\(image.image.handle)")
+        let capacity: SIMD2<UInt32> =
+            if willResize {
+                SIMD2(SIMD2<Float>(size) * 1.2)
+            } else {
+                size
+            }
 
+        let image = try VmaImage(
+            size: capacity, format: format ?? self.format, usages: usages, context: self.context)
         let index = textures.count
+        Log.debug(
+            .textureRegistry,
+            "creating texture index:\(index) with size=\(size), usages:\(usages) image:\(image.image.handle)"
+        )
+
+        Log.debug(
+            .textureRegistry,
+            "available: \(self.availableTextures.count)"
+        )
+
+        // TODO: remove size hardcode
+
         let texture = RenderTexture(self, vmaImage: image, index: index)
+        texture.size = size
         textures.append(texture)
 
         context.device.updateDescriptorSets(descriptorWrites: [
