@@ -29,7 +29,7 @@ public class Compositor {
 
             var scheduler = RenderScheduler()
             if let pass = scheduler.schedule(root: root) {
-                print(pass.dumpTree())
+                Log.debug(.scheduler, pass.dumpTree())
                 do {
                     let texture = try renderer.render(
                         pass,

@@ -346,6 +346,9 @@ extension Layer {
         return node
     }
 
+    func compositionShapeRenderNodes(_ affine: Affine) -> [RenderNode] {
+        []
+    }
     // layer visual
 
     // textureIndex will be key before we resolve that to actual texture id

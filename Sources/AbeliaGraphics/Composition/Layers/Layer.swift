@@ -33,11 +33,11 @@ public class Layer: _BaseLayer {
 
 public struct Border {
     public var width: Float = 1
-    public var brush: CompositionBrush = .solid(.black)
+    public var brush: CompositionBrush = .solid(Color.black.with(alpha: 0.3))
 
     public init(
         width: Float = 1,
-        brush: CompositionBrush = .solid(.black)
+        brush: CompositionBrush = .solid(Color.black.with(alpha: 0.3))
     ) {
         self.width = width
         self.brush = brush

@@ -47,9 +47,9 @@ class GPUStorage<T> {
     func dump(range: Range<Int>? = nil) {
         let range = range ?? (0..<offset)
 
-        print("Dumping \(Self.self) in \(range):")
+        Log.debug(.gpuStorage, "Dumping \(Self.self) in \(range):")
         for i in range {
-            print(" - ", bufferPointer[i])
+            Log.debug(.gpuStorage, " - \(bufferPointer[i])")
         }
     }
 }

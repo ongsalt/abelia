@@ -81,9 +81,9 @@ extension Renderer {
         // render(
         //     nodes: [
         //         RenderNode(brush: .solid(.red), shape: shape, affine: affine)
-        //     ], 
-        //     to: texture, 
-        //     useCustomBlend: false, 
+        //     ],
+        //     to: texture,
+        //     useCustomBlend: false,
         //     in: commandBuffer
         // )
 
@@ -206,10 +206,11 @@ extension Renderer {
 
         let cmd = commandBuffer
         let size = texture.size
-        print(
+        Log.debug(
+            .renderer,
             "drawing: size=\(texture.size), nodes.count=\(nodes.count), useCustomBlend=\(useCustomBlend), into=\(overridedImageView)"
         )
-        print("firstInstance=\(firstInstance), renderNodeCount=\(renderNodeCount)")
+        Log.debug(.renderer, "firstInstance=\(firstInstance), renderNodeCount=\(renderNodeCount)")
 
         if beginRendering {
             cmd.beginRendering(
@@ -267,7 +268,8 @@ extension Renderer {
                 )
             )
         let viewMatrix = projection
-        print("\(w)x\(h) viewMatrix", viewMatrix)
+        Log.debug(.renderer, "\(w)x\(h)")
+        Log.debug(.renderer, "\(viewMatrix)")
         // let viewport = (size.x, size.y)
         withUnsafeBytes(of: viewMatrix) { viewMatrix in
             cmd.pushConstants(
