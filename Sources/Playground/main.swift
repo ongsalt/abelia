@@ -76,19 +76,18 @@ class Delegate: Swinit.EventLoopDelegate {
 EventLoop().run(Delegate())
 
 func buildLayersWithCompositionGroup(_ compositor: Compositor) -> Layer {
-    let layer = Layer(size: [500, 500])
+    let layer = Layer(size: [500, 500], brush: .solid(.mint))
 
     let image = try! compositor.createImage(filename: "Resources/riko.png")
-    let riko = Layer(offset: [150, 100, 0], size: [320, 180])
+    let riko = Layer(offset: [100, 300, 0], size: [320, 180])
     riko.brush = .texture(image)
     layer.insert(riko)
 
-    let image2 = try! compositor.createImage(filename: "Resources/wi.jpg")
-    let wi = Layer(offset: [150, 300, 0], size: [320, 180])
-    wi.brush = .texture(image2)
-    layer.insert(wi)
-
     layer.insert(buildLayers())
+
+    let r2 = buildLayers()
+    r2.offset = [100, 100, 0]
+    layer.insert(r2)
 
     let child2 = buildLayers()
     // child2.border = Border(
@@ -97,7 +96,7 @@ func buildLayersWithCompositionGroup(_ compositor: Compositor) -> Layer {
     // )
     // child2.shadow = Shadow()
     child2.opacity = 0.75
-    child2.offset = [220, 0, 0]
+    child2.offset = [100, 100, 0]
     layer.insert(child2)
 
     return layer
@@ -105,7 +104,7 @@ func buildLayersWithCompositionGroup(_ compositor: Compositor) -> Layer {
 
 public func buildLayers() -> Layer {
     // EventLoop().run(Delegate())
-    let layer = Layer(size: [200, 200], brush: .solid(.purple), )
+    let layer = Layer(size: [100, 100], brush: .solid(.purple), )
     layer.insert {
         Layer(
             offset: [0, 0, 0],
@@ -128,7 +127,7 @@ public func buildLayers() -> Layer {
             size: [50, 50],
             brush: .solid(.teal),
             cornerRadius: 12,
-            shadow: Shadow(),
+            // shadow: Shadow(),
         )
 
         Layer(
@@ -139,27 +138,8 @@ public func buildLayers() -> Layer {
             // shadow: Shadow(),
         )
     }
-    // let layer = nonOverlapBlurGrid(w: 2, h: 2)
-    // layer.label = "RootFr"
-    // layer.insert(Layer(offset: [5, 5, 0], size: [10, 10]))
-    // // transparent subtree
-    // let subtree = Layer(offset: [5, 5, 0], size: [10, 10], opacity: 0.5, brush: .solid(.red)) {
-    //     Layer(offset: [1, 1, 1], size: [10, 10], brush: .solid(.green))
-    //     Layer(offset: [2, 2, 2], size: [100, 100], brush: .solid(.blue))
-    // }
-    // subtree.label = "subtree"
-    // layer.insert(subtree)
-
-    // layer.insert {
-    //     EffectLayer(
-    //         offset: [12, 12, 0],
-    //         shape: Shape.rect(width: 3, height: 3),
-    //         effect: .refraction(amount: 10, height: 10)
-    //     )
-    // }
-
+    
     return layer
-
 }
 
 func nonOverlapBlurGrid(w: Int, h: Int, size: Float = 10) -> Layer {

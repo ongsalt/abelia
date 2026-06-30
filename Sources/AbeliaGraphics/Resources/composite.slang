@@ -75,30 +75,38 @@ VertexOutput vsMain(VertexInput input) {
 
   let renderNode = renderNodeData[item.index];
   
-  let expand: float = item.drawMode == DrawMode.Shadow ? (renderNode.shadowSpread + renderNode.shadowBlur) : 0;
+  let antialiasingExpand: float = 2;
+  let expand: float = item.drawMode == DrawMode.Shadow ? (renderNode.shadowSpread + renderNode.shadowBlur) : 0 + antialiasingExpand;
+
+  let boundSize = float2(renderNode.boundMaxX, renderNode.boundMaxY) - float2(renderNode.boundMinX, renderNode.boundMinY);
+  let uvExpand = float2(expand) / boundSize ;
+  let uv = uv_positions[input.vertexIndex];
 
   float2 pos;
   switch (input.vertexIndex) {
   case 0:
   case 5:
     pos = float2(renderNode.boundMinX, renderNode.boundMinY) - expand;
+    output.uv = uv - uvExpand;
     break;
   case 1:
     pos = float2(renderNode.boundMaxX + expand, renderNode.boundMinY - expand);
+    output.uv = float2(uv.x + uvExpand.x, uv.y - uvExpand.y);
     break;
   case 2:
   case 3:
     pos = float2(renderNode.boundMaxX, renderNode.boundMaxY) + expand;
+    output.uv = uv + uvExpand;
     break;
   default: // case 4
     pos = float2(renderNode.boundMinX - expand, renderNode.boundMaxY + expand);
+    output.uv = float2(uv.x - uvExpand.x, uv.y + uvExpand.y);
     break;
   }
 
 
   output.localPosition = pos;
   output.sv_position = mul(viewMatrix, mul(renderNode.affine, float4(pos, 0.0, 1.0)));
-  output.uv = uv_positions[input.vertexIndex];
   return output;
 }
 

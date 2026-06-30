@@ -14,16 +14,19 @@ struct RenderScheduler {
 
 struct TransformResolver {
     typealias LayerID = _BaseLayer.ID
-    var affineCache: [LayerID: Affine] = [:]
+    var accumulatableAffineCache: [LayerID: Affine] = [:]
+    var localAffineCache: [LayerID: Affine] = [:]
 
     func get(_ layer: borrowing _BaseLayer) -> Affine? {
-        affineCache[layer.id]
+        localAffineCache[layer.id]
     }
 
     mutating func resolve(root: _BaseLayer) {
         func walk(_ layer: _BaseLayer, _ affine: Affine?) {
-            affineCache[layer.id] =
-                affine?.multiplied(by: layer.localTotalAffine) ?? layer.localTotalAffine
+            let current =
+                affine?.multiplied(by: layer.accumulatableAffine) ?? layer.accumulatableAffine
+            accumulatableAffineCache[layer.id] = current
+            localAffineCache[layer.id] = layer.localTotalAffine(current)
 
             if layer.isRasterizationRoot {
                 for l in layer.children {
@@ -32,7 +35,7 @@ struct TransformResolver {
             } else {
                 for l in layer.children {
                     // accumulate it
-                    walk(l, affine)
+                    walk(l, current)
                 }
             }
         }
@@ -151,7 +154,9 @@ struct PassScheduler {
                             if layer.isRasterizationRoot {
                                 // add sampling mode
                                 if let new = walk(group.dependencies[layer.id]!) {
-                                    p.addRenderNode((layer as! Layer).renderNode(sampling: new.target.key, affine))
+                                    p.addRenderNode(
+                                        (layer as! Layer).renderNode(
+                                            sampling: new.target.key, affine))
 
                                     p.dependencies.append(new)
                                 }

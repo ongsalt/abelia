@@ -62,18 +62,16 @@ public class _BaseLayer: Identifiable {
     // TODO: backfaceVisibility
     public var affine: Affine = .identity
 
-    public var anchor: Anchor = .topLeft {
-        didSet { dirtyFlags.insert(.transform) }
-    }
+    // public var anchor: Anchor = .topLeft {
+    //     didSet { dirtyFlags.insert(.transform) }
+    // }
 
     /// pivot point for scale and rotation, in local space — behaves like CSS transform-origin
     // will be computed outside on, wont include self
-    var localTotalAffine: Affine {
+
+    var accumulatableAffine: Affine {
         let ox = transformOrigin.x
         let oy = transformOrigin.y
-        let (ax, ay) = anchor.unitCoordinates
-        let anchorDx = (0.5 - ax) * size.x
-        let anchorDy = (0.5 - ay) * size.y
         return Affine.identity
             .translated(x: offset.x, y: offset.y, z: offset.z)
             .translated(x: ox, y: oy)
@@ -81,6 +79,14 @@ public class _BaseLayer: Identifiable {
             .rotated(rotation, axis: rotationAxis)
             .scaled(x: scale.x, y: scale.y)
             .translated(x: -ox, y: -oy)
+    }
+
+    func localTotalAffine(_ accumulatableAffine: Affine) -> Affine {
+        let (ax, ay) = Anchor.topLeft.unitCoordinates
+        let anchorDx = (0.5 - ax) * size.x
+        let anchorDy = (0.5 - ay) * size.y
+        return
+            accumulatableAffine
             .translated(x: anchorDx, y: anchorDy)
     }
 
@@ -118,15 +124,15 @@ public enum Anchor {
 
     var unitCoordinates: (x: Float, y: Float) {
         switch self {
-        case .topLeft:          (0.0, 0.0)
-        case .topCenter:        (0.5, 0.0)
-        case .topRight:         (1.0, 0.0)
-        case .centerLeft:       (0.0, 0.5)
-        case .center:           (0.5, 0.5)
-        case .centerRight:      (1.0, 0.5)
-        case .bottomLeft:       (0.0, 1.0)
-        case .bottomCenter:     (0.5, 1.0)
-        case .bottomRight:      (1.0, 1.0)
+        case .topLeft: (0.0, 0.0)
+        case .topCenter: (0.5, 0.0)
+        case .topRight: (1.0, 0.0)
+        case .centerLeft: (0.0, 0.5)
+        case .center: (0.5, 0.5)
+        case .centerRight: (1.0, 0.5)
+        case .bottomLeft: (0.0, 1.0)
+        case .bottomCenter: (0.5, 1.0)
+        case .bottomRight: (1.0, 1.0)
         case .custom(let x, let y): (x, y)
         }
     }

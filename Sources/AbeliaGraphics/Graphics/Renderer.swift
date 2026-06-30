@@ -79,8 +79,7 @@ extension Renderer {
         // resource.renderNodeStorage.dump()
         // resource.shapeGroupStorage.dump()
         // resource.drawListStorage.dump()
-
-        textureRegistry.dump()
+        // textureRegistry.dump()
 
         if incrementFrameCounter {
             self.incrementFrameCounter()
@@ -118,9 +117,9 @@ extension Renderer {
                 src = .undefined
             }
             let dst = RenderTextureState.sampling
-            Log.debug(
-                .renderer,
-                "barriers: add [\(texture.index)](\(texture.currentLayout)) \(src) -> \(dst)")
+            // Log.debug(
+            //     .renderer,
+            //     "barriers: add [\(texture.index)](\(texture.currentLayout)) \(src) -> \(dst)")
             barriers.append(
                 ImageMemoryBarrier2(
                     srcStageMask: src.stageMask, srcAccessMask: src.accessMask,
@@ -153,10 +152,10 @@ extension Renderer {
             src = RenderTextureState.sampling
         }
 
-        Log.debug(
-            .renderer,
-            "barriers: add (root) [\(targetTexture.index)](\(targetTexture.currentLayout)) \(src) -> \(dst)"
-        )
+        // Log.debug(
+        //     .renderer,
+        //     "barriers: add (root) [\(targetTexture.index)](\(targetTexture.currentLayout)) \(src) -> \(dst)"
+        // )
 
         barriers.append(
             ImageMemoryBarrier2(
@@ -172,7 +171,7 @@ extension Renderer {
         commandBuffer.pipelineBarrier2(
             DependencyInfo(imageMemoryBarriers: barriers)
         )
-        Log.debug(.renderer, "barriers: wait \(barriers.count) barriers")
+        // Log.debug(.renderer, "barriers: wait \(barriers.count) barriers")
 
         // MARK - renderNode io and command recording
         // TODO: effect, blur pipelines
@@ -324,21 +323,7 @@ extension Renderer {
     }
 
     private func writeRenderNode(_ node: consuming RenderNode) {
-        // resolve .backdrop brush
-        if case .backdrop(let key, let c) = node.brush {
-            let texture = textureCache[key]!
-            let index = texture.main.index
-            let mul = texture.main.croppedSizeMultiplier
-            let crop = Rect(
-                top: c.top * mul.y,
-                left: c.left * mul.x,
-                width: c.width * mul.x,
-                height: c.height * mul.y
-            )
-            // we need to crop again cuz actual texture can be larger than logical size
-            node.brush = .texture(index: index, crop: crop)
-            Log.debug(.renderer, "Resolved backdrop brush index:\(index) for key:\(key)")
-        }
+        resolveBackdropBrush(for: &node)
 
         var data = CShim.RenderNode()
 
@@ -364,7 +349,7 @@ extension Renderer {
         }
 
         let bounds = node.shape.bounds
-        let padding = (node.border?.width ?? 0) + 2
+        let padding = node.border?.width ?? 0
         data.boundMinX = bounds.left - padding
         data.boundMinY = bounds.top - padding
         data.boundMaxX = bounds.right + padding
@@ -400,6 +385,24 @@ extension Renderer {
             resource.drawListStorage.append(DrawListItem(index: UInt32(index), drawMode: .stroke))
         }
 
+    }
+
+    private func resolveBackdropBrush(for node: inout RenderNode) {
+        if case .backdrop(let key, let c) = node.brush {
+            let texture = textureCache[key]!
+            let index = texture.main.index
+            let mul = texture.main.croppedSizeMultiplier
+            let crop = Rect(
+                top: c.top * mul.y,
+                left: c.left * mul.x,
+                width: c.width * mul.x,
+                height: c.height * mul.y
+            )
+            print(crop)
+            // we need to crop again cuz actual texture can be larger than logical size
+            node.brush = .texture(index: index, crop: crop)
+            Log.debug(.renderer, "Resolved backdrop brush index:\(index) for key:\(key)")
+        }
     }
 
     private func renderTarget(of pass: borrowing Pass) throws(Vulkan.Result) -> RenderTexture {
