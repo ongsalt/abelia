@@ -98,7 +98,39 @@ func buildLayersWithCompositionGroup(_ compositor: Compositor) -> Layer {
 
     layer.insert(buildHealthRings())
 
+    let g = gammaTest()
+    g.offset = [0, 200, 0]
+    layer.insert(g)
+
     return layer
+}
+
+func gammaTest() -> Layer {
+    let container = Layer()
+
+    func makeBar(_ color: Color, y: Float) {
+        container.insert {
+            Layer(offset: [0, y, 0], size: [600, 25], brush: .solid(color))
+            Layer(offset: [0, y + 25, 0], size: [600, 25], brush: .solid(color.with(alpha: 0.5)))
+        }
+    }
+
+    func makeBg(_ color: Color, x: Float) {
+        container.insert {
+            Layer(offset: [x, 80, 0], size: [80, 400], brush: .solid(color))
+        }
+    }
+
+    makeBg(.green, x: 100)
+    makeBg(.yellow, x: 200)
+    makeBg(.cyan, x: 300)
+    makeBg(.pink, x: 400)
+
+    makeBar(Color(red: 1.0, green: 0.0, blue: 0.0), y: 100)
+    makeBar(Color(red: 0.0, green: 1.0, blue: 0.0), y: 200)
+    makeBar(Color(red: 0.0, green: 0.0, blue: 1.0), y: 300)
+
+    return container
 }
 
 public func buildLayers() -> Layer {
@@ -137,7 +169,7 @@ public func buildLayers() -> Layer {
             // shadow: Shadow(),
         )
     }
-    
+
     return layer
 }
 
