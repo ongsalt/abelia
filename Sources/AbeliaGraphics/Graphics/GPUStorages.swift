@@ -83,9 +83,4 @@ extension ShapeKind: @retroactive CustomStringConvertible {
     }
 }
 
-extension OneOrManyShapeKind: @retroactive CustomStringConvertible {
-    public var description: String {
-        "OneOrManyShapeKind(\(self.rawValue))"
-    }
-}
 

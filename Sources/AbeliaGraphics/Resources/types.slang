@@ -32,10 +32,6 @@ public struct Ellipse {
   public float radiusY;
 };
 
-public enum OneOrManyShapeKind : uint {
-  one_shape = 0,
-  many_shapes = 1,
-};
 
 public enum BrushKind : uint {
   solid = 0,
@@ -140,16 +136,18 @@ public TextureBrush unpackTextureBrush(uint4 d0, uint4 d1, uint4 d2, uint4 d3) {
 }
 
 // Matches C struct RenderNode exactly.
-// Layout: affine(64) + shapeData(16) + brushData(64) + oneOrManyKind(4) + shapeKind(4) + brushKind(4) + borderWidth(4)
+// Layout: affine(64) + shapeStartIndex(4) + shapeCount(4) + _pad_shape(8)
+//       + brushData(64) + brushKind(4) + borderBrushKind(4) + borderWidth(4) + opacity(4)
 //       + shadowOffsetX(4) + shadowOffsetY(4) + shadowBlur(4) + shadowSpread(4)
-//       + shadowColor(16) + shadowOpacity(4) + borderBrushKind(4) + _pad(8) + borderBrushData(64)
+//       + shadowColor(16) + shadowOpacity(4) + _pad(12) + borderBrushData(64)
 //       + boundMin(8) + boundMax(8) = 288 bytes
 public struct RenderNode {
   public float4x4 affine;
 
-  // one_shape:   raw Shape union bits (bit_cast to Rect/Arc/Pie/Ellipse)
-  // many_shapes: .x = startIndex, .y = count into ShapeMergingInstruction buffer
-  public uint4 shapeData;
+  public uint shapeStartIndex;
+  public uint shapeCount;
+  public uint _pad_shape0;
+  public uint _pad_shape1;
 
   // raw Brush union (64 bytes) split into four uint4 chunks.
   // solid:   bit_cast<SolidColorBrush>(brushData0)
@@ -159,10 +157,10 @@ public struct RenderNode {
   public uint4 brushData2;
   public uint4 brushData3;
 
-  public OneOrManyShapeKind oneOrManyKind;
-  public ShapeKind shapeKind;   // valid when one_shape
   public BrushKind brushKind;
+  public BrushKind borderBrushKind;
   public float borderWidth;
+  public float opacity;
 
   public float shadowOffsetX;
   public float shadowOffsetY;
@@ -172,9 +170,9 @@ public struct RenderNode {
   public float4 shadowColor;
 
   public float shadowOpacity;
-  public BrushKind borderBrushKind;
   public uint _pad0;
   public uint _pad1;
+  public uint _pad2;
 
   // raw border Brush union (64 bytes) split into four uint4 chunks.
   // solid:   bit_cast<SolidColorBrush>(borderBrushData0)
@@ -191,10 +189,9 @@ public struct RenderNode {
 };
 
 // Example of how to extract data from a RenderNode:
-// Rect myRect = bit_cast<Rect>(node.shapeData);
 // SolidColorBrush myBrush = bit_cast<SolidColorBrush>(node.brushData0);
-// uint startIndex = node.shapeData.x; // many_shapes only
-// uint count      = node.shapeData.y; // many_shapes only
+// uint startIndex = node.shapeStartIndex;
+// uint count      = node.shapeCount;
 // SolidColorBrush border = bit_cast<SolidColorBrush>(node.borderBrushData0);
 // float2 shadowOffset = float2(node.shadowOffsetX, node.shadowOffsetY);
 // float2 boundMin = float2(node.boundMinX, node.boundMinY);

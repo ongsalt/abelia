@@ -329,24 +329,12 @@ extension Renderer {
 
         data.affine = node.affine.c
         let instructions = Array(node.shape.drawInstructions)
-        if instructions.count <= 1 {
-            guard case .push(let metadata) = instructions[0] else {
-                fatalError("Invalid shape merging instruction: \(instructions)")
-            }
-
-            let (kind, shapeData) = metadata.shape.c
-            data.oneOrManyKind = .one_shape
-            data.shapeKind = kind
-            data.shapeData.one = shapeData
-        } else {
-            data.oneOrManyKind = .many_shapes
-            let startIndex = resource.shapeGroupStorage.offset
-            for i in instructions {
-                resource.shapeGroupStorage.append(i.c)
-            }
-            data.shapeData.many = CShim.ManyShapeRef(
-                startIndex: UInt32(startIndex), count: UInt32(instructions.count))
+        let startIndex = resource.shapeGroupStorage.offset
+        for i in instructions {
+            resource.shapeGroupStorage.append(i.c)
         }
+        data.shapeStartIndex = UInt32(startIndex)
+        data.shapeCount = UInt32(instructions.count)
 
         let bounds = node.shape.bounds
         let padding = node.border?.width ?? 0
@@ -356,6 +344,7 @@ extension Renderer {
         data.boundMaxY = bounds.bottom + padding
 
         (data.brushKind, data.brushData) = node.brush.c
+        data.opacity = node.opacity
 
         if let shadow = node.shadow {
             data.shadowOffsetX = shadow.offset.x

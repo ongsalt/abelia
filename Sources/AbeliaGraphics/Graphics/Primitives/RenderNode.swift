@@ -13,6 +13,7 @@ public struct RenderNode {
     public var border: NodeBorder?
     public var shadow: NodeShadow?
 
+    public var opacity: Float = 1
     // TODO: backfaceVisibility
     public var affine: Affine = .identity
 }

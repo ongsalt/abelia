@@ -189,17 +189,7 @@ float2 textureLocalPositionOf(float2 uv, TextureBrush brush) {
 }
 
 float sdfDistance(RenderNode renderNode, float2 position) {
-  switch (renderNode.oneOrManyKind) {
-  case OneOrManyShapeKind.one_shape:
-    return sdf(position, renderNode.shapeKind, renderNode.shapeData);
-  case OneOrManyShapeKind.many_shapes:
-    let shapeGroup = renderNode.shapeData;
-    uint startIndex = shapeGroup.x;
-    uint count = shapeGroup.y;
-
-    return sdfMerge(position, startIndex, count);
-  }
-  return 0;
+  return sdfMerge(position, renderNode.shapeStartIndex, renderNode.shapeCount);
 }
 
 float sdfMerge(float2 position, uint startIndex, uint count) {

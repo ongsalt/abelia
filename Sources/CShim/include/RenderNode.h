@@ -39,23 +39,6 @@ union Shape {
   struct Ellipse ellipse;
 };
 
-enum __attribute__((enum_extensibility(closed))) OneOrManyShapeKind : uint32_t {
-  one_shape = 0,
-  many_shapes = 1,
-};
-
-struct ManyShapeRef {
-  uint32_t startIndex;
-  uint32_t count;
-};
-
-// Discriminated by OneOrManyShapeKind.
-// one_shape:  .one holds the shape's geometric data
-// many_shapes: .many holds startIndex + count into the ShapeMergingInstruction buffer
-union OneOrManyShapeData {
-  union Shape one;
-  struct ManyShapeRef many;
-};
 
 enum __attribute__((enum_extensibility(closed))) BrushKind : uint32_t {
   solid = 0,
@@ -101,20 +84,24 @@ union Brush {
 };
 
 // Matches RenderNode in types.slang exactly.
-// Layout: affine(64) + shapeData(16) + brushData(64) + oneOrManyKind(4) + shapeKind(4) + brushKind(4) + borderWidth(4)
+// Layout: affine(64) + shapeStartIndex(4) + shapeCount(4) + _pad_shape(8)
+//       + brushData(64) + brushKind(4) + borderBrushKind(4) + borderWidth(4) + opacity(4)
 //       + shadowOffsetX(4) + shadowOffsetY(4) + shadowBlur(4) + shadowSpread(4)
-//       + shadowColor(16) + shadowOpacity(4) + borderBrushKind(4) + _pad(8) + borderBrushData(64)
+//       + shadowColor(16) + shadowOpacity(4) + _pad(12) + borderBrushData(64)
 //       + boundMin(8) + boundMax(8) = 288 bytes
 struct RenderNode {
   float affine[16];
 
-  union OneOrManyShapeData shapeData;
+  uint32_t shapeStartIndex;
+  uint32_t shapeCount;
+  uint32_t _pad_shape[2];
+
   union Brush brushData;
 
-  enum OneOrManyShapeKind oneOrManyKind;
-  enum ShapeKind shapeKind;    // valid when oneOrManyKind == one_shape
   enum BrushKind brushKind;
+  enum BrushKind borderBrushKind;
   float borderWidth;
+  float opacity;
 
   float shadowOffsetX;
   float shadowOffsetY;
@@ -127,8 +114,7 @@ struct RenderNode {
   float shadowColorA;
 
   float shadowOpacity;
-  enum BrushKind borderBrushKind;
-  uint32_t _pad[2];
+  uint32_t _pad[3];
   union Brush borderBrushData;
 
   // in local space
