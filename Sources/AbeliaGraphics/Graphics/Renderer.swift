@@ -80,6 +80,8 @@ extension Renderer {
         // resource.shapeGroupStorage.dump()
         // resource.drawListStorage.dump()
 
+        textureRegistry.dump()
+
         if incrementFrameCounter {
             self.incrementFrameCounter()
         }
@@ -111,8 +113,14 @@ extension Renderer {
             }
 
             // for sampling children
-            let src = RenderTextureState.renderTarget
+            var src = RenderTextureState.renderTarget
+            if texture.currentLayout == .undefined {
+                src = .undefined
+            }
             let dst = RenderTextureState.sampling
+            Log.debug(
+                .renderer,
+                "barriers: add [\(texture.index)](\(texture.currentLayout)) \(src) -> \(dst)")
             barriers.append(
                 ImageMemoryBarrier2(
                     srcStageMask: src.stageMask, srcAccessMask: src.accessMask,
@@ -136,12 +144,19 @@ extension Renderer {
             || targetTexture.currentLayout == .presentSrcKHR
         {
             src = .transferSource
-        } else if case .sameAsPrevious(_) = pass.target {
+        } else if case .sameAsPrevious = pass.target {
             // rendering to the same texture.
+            src = .renderTarget
+        } else if targetTexture.currentLayout == .attachmentOptimal {
             src = .renderTarget
         } else {
             src = RenderTextureState.sampling
         }
+
+        Log.debug(
+            .renderer,
+            "barriers: add (root) [\(targetTexture.index)](\(targetTexture.currentLayout)) \(src) -> \(dst)"
+        )
 
         barriers.append(
             ImageMemoryBarrier2(
@@ -153,6 +168,11 @@ extension Renderer {
             )
         )
         targetTexture.currentLayout = dst.layout
+
+        commandBuffer.pipelineBarrier2(
+            DependencyInfo(imageMemoryBarriers: barriers)
+        )
+        Log.debug(.renderer, "barriers: wait \(barriers.count) barriers")
 
         // MARK - renderNode io and command recording
         // TODO: effect, blur pipelines
@@ -194,10 +214,11 @@ extension Renderer {
         let renderNodeCount = resource.drawListStorage.offset - firstInstance
 
         let cmd = commandBuffer
-        let size = texture.size
+        let size = texture.size  // TODO: get overridedImageView size
+        let view = overridedImageView ?? texture.view
         Log.debug(
             .renderer,
-            "drawing: size=\(texture.size), nodes.count=\(nodes.count), useCustomBlend=\(useCustomBlend), into=\(overridedImageView)"
+            "drawing: size=\(size), nodes.count=\(nodes.count), useCustomBlend=\(useCustomBlend), into=\(view.handle!)"
         )
         Log.debug(.renderer, "firstInstance=\(firstInstance), renderNodeCount=\(renderNodeCount)")
 
@@ -210,14 +231,14 @@ extension Renderer {
                     viewMask: 0,
                     colorAttachments: [
                         .init(
-                            imageView: overridedImageView ?? texture.view,
+                            imageView: view,
                             imageLayout: .colorAttachmentOptimal,
                             resolveMode: .none,
                             resolveImageView: nil,
                             resolveImageLayout: .undefined,
                             loadOp: .clear,
                             storeOp: .store,
-                            clearValue: .init(color: .init(float32: (1.0, 1.0, 1.0, 1.0)))
+                            clearValue: .init(color: .init(float32: (0.0, 0.0, 0.0, 0.0)))
                         )
                     ],
                 )
@@ -257,8 +278,8 @@ extension Renderer {
                 )
             )
         let viewMatrix = projection
-        Log.debug(.renderer, "\(w)x\(h)")
-        Log.debug(.renderer, "\(viewMatrix)")
+        // Log.debug(.renderer, "\(w)x\(h)")
+        // Log.debug(.renderer, "\(viewMatrix)")
         // let viewport = (size.x, size.y)
         withUnsafeBytes(of: viewMatrix) { viewMatrix in
             cmd.pushConstants(
@@ -295,9 +316,17 @@ extension Renderer {
 
     private func writeRenderNode(_ node: consuming RenderNode) {
         // resolve .backdrop brush
-        if case .backdrop(let key, let crop) = node.brush {
+        if case .backdrop(let key, let c) = node.brush {
             let texture = textureCache[key]!
             let index = texture.main.index
+            let mul = texture.main.croppedSizeMultiplier
+            let crop = Rect(
+                top: c.top * mul.y,
+                left: c.left * mul.x,
+                width: c.width * mul.x,
+                height: c.height * mul.y
+            )
+            // we need to crop again cuz actual texture can be larger than logical size
             node.brush = .texture(index: index, crop: crop)
             Log.debug(.renderer, "Resolved backdrop brush index:\(index) for key:\(key)")
         }

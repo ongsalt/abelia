@@ -64,3 +64,28 @@ class ShapeGroupStorage: GPUStorage<CShim.ShapeMergingEntry> {
 
 class DrawListStorage: GPUStorage<DrawListItem> {
 }
+
+extension DrawListItem: @retroactive CustomStringConvertible {
+    public var description: String {
+        "DrawListItem(index: \(index), mode: \(drawMode.rawValue))"
+    }
+}
+
+extension BrushKind: @retroactive CustomStringConvertible {
+    public var description: String {
+        "BrushKind(\(self.rawValue))"
+    }
+}
+
+extension ShapeKind: @retroactive CustomStringConvertible {
+    public var description: String {
+        "ShapeKind(\(self.rawValue))"
+    }
+}
+
+extension OneOrManyShapeKind: @retroactive CustomStringConvertible {
+    public var description: String {
+        "OneOrManyShapeKind(\(self.rawValue))"
+    }
+}
+

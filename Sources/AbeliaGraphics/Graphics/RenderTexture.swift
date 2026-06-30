@@ -55,6 +55,12 @@ public class RenderTexture: RenderTextureProtocol {
     }
 }
 
+extension RenderTexture {
+    var croppedSizeMultiplier: SIMD2<Float> {
+        SIMD2(size) / SIMD2(capacity) 
+    }
+}
+
 // we also need to handle masking texture
 class TextureRegistry {
     let context: DeviceContext
@@ -152,6 +158,15 @@ class TextureRegistry {
 
     func recycle(_ texture: consuming RenderTexture) {
         availableTextures.append(texture)
+    }
+
+    func dump() {
+        Log.debug(.textureRegistry, "All textures")
+        for texture in textures {
+            let available = availableTextures.contains(where: { $0.index == texture.index })
+            Log.debug(.textureRegistry, "[\(texture.index)] image:\(texture.image.handle!) view:\(texture.view.handle!)")
+            Log.debug(.textureRegistry, "    size:\(texture.size)/\(texture.capacity) available=\(available)")
+        }
     }
 }
 

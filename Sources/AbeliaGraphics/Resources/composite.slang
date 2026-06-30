@@ -45,7 +45,7 @@ struct VertexOutput {
   float4 sv_position : SV_Position;
   float2 localPosition;
   float2 uv;
-  DrawMode drawMode;
+  nointerpolation DrawMode drawMode;
 };
 
 static const float2 g_Positions[6] = {
@@ -109,7 +109,7 @@ float4 fsMain(VertexOutput input): SV_Target {
 
   switch (input.drawMode) {
     case DrawMode.Fill:
-      return computeFill(renderNode, position);
+      return computeFill(renderNode, position, input.uv);
     case DrawMode.Stroke:
       return computeBorder(renderNode, position);
     case DrawMode.Shadow:
@@ -150,7 +150,7 @@ float4 computeShadow(RenderNode renderNode, float2 position) {
 }
 
 
-float4 computeFill(RenderNode renderNode, float2 position) {
+float4 computeFill(RenderNode renderNode, float2 position, float2 uv) {
   let d = sdfDistance(renderNode, position);
   var color = float4(0.0, 0.0, 0.0, 0.0);
 
@@ -159,23 +159,25 @@ float4 computeFill(RenderNode renderNode, float2 position) {
     color = brush.color;
   } else if (renderNode.brushKind == BrushKind.texture) {
     var brush = unpackTextureBrush(renderNode.brushData0, renderNode.brushData1, renderNode.brushData2, renderNode.brushData3);
-    color = textures[brush.textureIndex].Sample(sampler, textureLocalPositionOf(position, brush));
-    // premultiply
+    color = textures[brush.textureIndex].Sample(sampler, textureLocalPositionOf(uv, brush));
+    // color = float4(brush.cropWidth, brush.cropHeight, brush.cropLeft, 1.0);
+    // color = float4(textureLocalPositionOf(position, brush), 0.0, 1.0);
     color.xyz *= color.w;
   }
   
   return color * smoothCoverageOf(d);
 }
 
-float2 textureLocalPositionOf(float2 position, TextureBrush brush) {
-  let scaled = position * float2(brush.tileScaleX, brush.tileScaleY) + float2(0.5, 0.5);
+float2 textureLocalPositionOf(float2 uv, TextureBrush brush) {
+  
+  // let scaled = position * float2(brush.tileScaleX, brush.tileScaleY) + float2(0.5, 0.5);
 
-  // TODO: repeat stuff, and
+  // TODO: repeat stuff, and nineslices
 
   // its clamped to edge
-  let cropped = clamp(scaled, float2(brush.cropLeft, brush.cropTop), float2(brush.cropLeft + brush.cropWidth, brush.cropTop + brush.cropHeight));
+  // let cropped = clamp(scaled, float2(brush.cropLeft, brush.cropTop), float2(brush.cropLeft + brush.cropWidth, brush.cropTop + brush.cropHeight));
 
-  return cropped;
+  return uv * float2(brush.cropWidth, brush.cropHeight) + float2(brush.cropLeft, brush.cropTop);
 }
 
 float sdfDistance(RenderNode renderNode, float2 position) {

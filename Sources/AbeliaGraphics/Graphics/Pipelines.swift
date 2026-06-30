@@ -301,7 +301,7 @@ final class Pipelines {
                 addressModeV: .clampToEdge, addressModeW: .clampToEdge,
                 mipLodBias: 0, anisotropyEnable: false, maxAnisotropy: 0,
                 compareEnable: false, compareOp: .never, minLod: 0, maxLod: 0,
-                borderColor: .floatTransparentBlack, unnormalizedCoordinates: false
+                borderColor: .floatOpaqueBlack, unnormalizedCoordinates: false
             ))
         // leak btw
 

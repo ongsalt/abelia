@@ -7,6 +7,7 @@ struct Log {
         case compositor
         case gpuStorage
         case scheduler
+        case textureRegistry
 
         var colored: String {
             switch self {
@@ -14,7 +15,8 @@ struct Log {
             case .renderer:   return "\u{001B}[35m\(self)\u{001B}[0m"
             case .compositor: return "\u{001B}[36m\(self)\u{001B}[0m"
             case .gpuStorage: return "\u{001B}[33m\(self)\u{001B}[0m"
-            case .scheduler:  return "\u{001B}[34m\(self)\u{001B}[0m"
+            case .scheduler:      return "\u{001B}[34m\(self)\u{001B}[0m"
+            case .textureRegistry: return "\u{001B}[32m\(self)\u{001B}[0m"
             }
         }
     }

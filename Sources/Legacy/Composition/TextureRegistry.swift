@@ -96,6 +96,7 @@ class TextureRegistry {
   }
 
   // destroy?
+
 }
 
 private func createImagesDescriptorSet(

@@ -31,7 +31,11 @@ class Delegate: Swinit.EventLoopDelegate {
         try! surface.configure(surfaceConfig)
 
         self.compositor = try! Compositor(surface: surface, device: device)
-        self.compositor.root = buildLayers()
+        // let layer = buildLayers()
+        // let grid = nonOverlapBlurGrid(w: 10, h: 10)
+        // layer.insert(grid)
+
+        self.compositor.root = buildLayersWithCompositionGroup(compositor)
 
         window.requestRedraw()
     }
@@ -46,7 +50,7 @@ class Delegate: Swinit.EventLoopDelegate {
             try! surface.configure(surfaceConfig)
             do {
                 compositor.root.size = SIMD2(Float(size.width), Float(size.height))
-                try compositor.flushFrame()
+                try! compositor.flushFrame()
             } catch {
                 print(error)
             }
@@ -71,13 +75,32 @@ class Delegate: Swinit.EventLoopDelegate {
 
 EventLoop().run(Delegate())
 
+func buildLayersWithCompositionGroup(_ compositor: Compositor) -> Layer {
+    let layer = Layer(size: [500, 500])
 
-@MainActor
+    let image = try! compositor.createImage(filename: "Resources/riko.png")
+    let riko = Layer(offset: [150, 150, 0], size: [320, 180])
+    riko.brush = .texture(image)
+    layer.insert(riko)
+
+    layer.insert(buildLayers())
+
+    let child2 = buildLayers()
+    // child2.border = Border(
+    //     width: 1,
+    //     brush: .solid(.red)
+    // )
+    // child2.shadow = Shadow()
+    child2.opacity = 0.75
+    child2.offset = [220, 0, 0]
+    layer.insert(child2)
+
+    return layer
+}
+
 public func buildLayers() -> Layer {
     // EventLoop().run(Delegate())
-    let layer = Layer(
-        size: [100, 100], brush: .solid(.purple.with(alpha: 0.3)),
-    )
+    let layer = Layer(size: [200, 200], brush: .solid(.purple), )
     layer.insert {
         Layer(
             offset: [0, 0, 0],

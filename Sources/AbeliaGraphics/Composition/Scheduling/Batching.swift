@@ -129,9 +129,10 @@ struct PassScheduler {
 
             // inlinable contents from root layer
             // shadow will be render by parent instead
-            if let r = root.root as? Layer,
+            if let r = group.root as? Layer,
                 let node = r.compositionGroupRootRenderNode()
             {
+                Log.debug(.scheduler, "has compositionGroupRootRenderNode (\(r.id))")
                 pass.addRenderNode(node)
             }
 
@@ -149,9 +150,9 @@ struct PassScheduler {
                         if layer.kind == .composite {
                             if layer.isRasterizationRoot {
                                 // add sampling mode
-                                p.addRenderNode(
-                                    (layer as! Layer).renderNode(sampling: key, affine))
                                 if let new = walk(group.dependencies[layer.id]!) {
+                                    p.addRenderNode((layer as! Layer).renderNode(sampling: new.target.key, affine))
+
                                     p.dependencies.append(new)
                                 }
                             } else {
@@ -361,6 +362,7 @@ extension Layer {
     // mark - CompositionGroup root
     // for inlining self content into the texture
     func compositionGroupRootRenderNode() -> RenderNode? {
+        print(self.id, self.isRasterizationRoot)
         if let brush = brush?.brush {
             var node = RenderNode()
             node.brush = brush

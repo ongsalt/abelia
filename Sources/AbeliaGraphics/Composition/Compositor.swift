@@ -18,6 +18,11 @@ public class Compositor {
             context: device, frameInFlightCount: RenderLoop.maxFrameInFlightCount)
     }
 
+    public func createImage(filename: String) throws -> CompositionImage {
+        let future = try renderer.textureRegistry.loadImage(filename: filename)
+        return CompositionImage(future.value)
+    }
+
     public func flushFrame() throws {
         let res = try renderLoop.waitForAvailableFrameInFlight()
         // let frameContext
