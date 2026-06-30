@@ -117,11 +117,11 @@ float4 fsMain(VertexOutput input): SV_Target {
 
   switch (input.drawMode) {
     case DrawMode.Fill:
-      return computeFill(renderNode, position, input.uv);
+      return computeFill(renderNode, position, input.uv) * renderNode.opacity;
     case DrawMode.Stroke:
-      return computeBorder(renderNode, position);
+      return computeBorder(renderNode, position) * renderNode.opacity;
     case DrawMode.Shadow:
-      return computeShadow(renderNode, position);
+      return computeShadow(renderNode, position) * renderNode.opacity;
   }
 
   return float4(0.0);
@@ -170,7 +170,7 @@ float4 computeFill(RenderNode renderNode, float2 position, float2 uv) {
     color = textures[NonUniformResourceIndex(brush.textureIndex)].SampleLevel(sampler, textureLocalPositionOf(uv, brush), 0.0);
     // color = float4(brush.cropWidth, brush.cropHeight, brush.cropLeft, 1.0);
     // color = float4(textureLocalPositionOf(position, brush), 0.0, 1.0);
-    color.xyz *= color.w;
+    color.xyz *= color.w * renderNode.opacity;
   }
   
   return color * smoothCoverageOf(d);

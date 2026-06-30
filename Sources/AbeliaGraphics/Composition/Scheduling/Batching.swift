@@ -153,10 +153,8 @@ struct PassScheduler {
                             if layer.isCompositionGroupRoot {
                                 // add sampling mode
                                 if let new = walk(group.dependencies[layer.id]!) {
-                                    p.addRenderNode(
-                                        (layer as! Layer).renderNode(
-                                            sampling: new.target.key, affine))
-
+                                    let node = (layer as! Layer).renderNode(sampling: new.target.key, affine)
+                                    p.addRenderNode(node)
                                     p.dependencies.append(new)
                                 }
                             } else {
@@ -397,6 +395,7 @@ extension Layer {
                 offset: shadow.offset, blur: shadow.blur, spread: shadow.spread,
                 color: shadow.color, opacity: shadow.opacity)
         }
+        node.opacity = self.opacity
         node.affine = affine
         return node
     }

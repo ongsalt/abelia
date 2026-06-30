@@ -138,19 +138,23 @@ func Text(_ text: @autoclosure @escaping () -> some StringProtocol) -> View {
 component boundary do not exist as we cant really transform function content. So every lifecycle stuff need to be tied to parent element scope.
 
 # TODO
+
+## Fix
+- COMPUTE SHADOW IN LOCAL COMPOSITION GROUP
+
+## the rest
 - animation frame
+- clipping
+- shapes layer (retained)
+
 - optimize `arc` bounding box
 - bring back blend2d for now
-- Path Renderer
 - image ninepatch
-- color blend, like backdrop effect, require layer ordering
+
 - hidpi - screen space and framebuffer size wont match
     - `wp_fractional_scale_v1`
-    - sdf must be in screenspace
-    - so we have viewport space(logical size * dpi), world space(logical size), object space (transform)
+    - sdf must be in world space
 - wayland expect a premultiplied gamma-encoded srgb not gamma-encoded srgb premultiplied.
-- customizable scaling (down/up) mode
-- mipmap?
 - `GradientRegistry` - 1d for now
 - DXGI swapchain
 - CALayer-like mask
@@ -159,4 +163,6 @@ component boundary do not exist as we cant really transform function content. So
 - query hdr support
     - fuckkkkkkkkkkkkk, out chain
 - use `VK_FORMAT_R16G16B16A16_SFLOAT` color texture
+
+- Path Rendering
 

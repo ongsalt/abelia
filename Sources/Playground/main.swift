@@ -79,15 +79,11 @@ func buildLayersWithCompositionGroup(_ compositor: Compositor) -> Layer {
     let layer = Layer(size: [500, 500], brush: .solid(.mint))
 
     let image = try! compositor.createImage(filename: "Resources/riko.png")
-    let riko = Layer(offset: [100, 300, 0], size: [320, 180])
+    let riko = Layer(offset: [100, 120, 0], size: [320, 180])
     riko.brush = .texture(image)
     layer.insert(riko)
 
     layer.insert(buildLayers())
-
-    let r2 = buildLayers()
-    r2.offset = [100, 100, 0]
-    layer.insert(r2)
 
     let child2 = buildLayers()
     // child2.border = Border(
@@ -95,7 +91,7 @@ func buildLayersWithCompositionGroup(_ compositor: Compositor) -> Layer {
     //     brush: .solid(.red)
     // )
     // child2.shadow = Shadow()
-    child2.opacity = 0.75
+    child2.opacity = 0.5
     child2.offset = [100, 100, 0]
     layer.insert(child2)
 
@@ -104,7 +100,7 @@ func buildLayersWithCompositionGroup(_ compositor: Compositor) -> Layer {
 
 public func buildLayers() -> Layer {
     // EventLoop().run(Delegate())
-    let layer = Layer(size: [100, 100], brush: .solid(.purple), )
+    let layer = Layer(size: [100, 100], brush: .solid(.purple))
     layer.insert {
         Layer(
             offset: [0, 0, 0],
