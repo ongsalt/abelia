@@ -76,7 +76,7 @@ EventLoop().run(Delegate())
 public func buildLayers() -> Layer {
     // EventLoop().run(Delegate())
     let layer = Layer(
-        size: [100, 100], brush: .solid(.red),
+        size: [100, 100], brush: .solid(.purple.with(alpha: 0.3)),
     )
     layer.insert {
         Layer(
@@ -84,7 +84,6 @@ public func buildLayers() -> Layer {
             size: [50, 50],
             brush: .solid(.blue),
             cornerRadius: 12,
-            border: Border(),
             // shadow: Shadow(),
         )
 
@@ -93,7 +92,6 @@ public func buildLayers() -> Layer {
             size: [50, 50],
             brush: .solid(.cyan),
             cornerRadius: 12,
-            border: Border(),
             // shadow: Shadow(),
         )
 
@@ -102,7 +100,6 @@ public func buildLayers() -> Layer {
             size: [50, 50],
             brush: .solid(.teal),
             cornerRadius: 12,
-            border: Border(),
             shadow: Shadow(),
         )
 
@@ -111,7 +108,6 @@ public func buildLayers() -> Layer {
             size: [50, 50],
             brush: .solid(.green),
             cornerRadius: 12,
-            border: Border(),
             // shadow: Shadow(),
         )
     }

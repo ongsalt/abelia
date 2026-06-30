@@ -127,6 +127,14 @@ struct PassScheduler {
             let pass = Pass(
                 target: .new(size: SIMD2(bounds.size), key: key, canTransfer: group.isRoot))
 
+            // inlinable contents from root layer
+            // shadow will be render by parent instead
+            if let r = root.root as? Layer,
+                let node = r.compositionGroupRootRenderNode()
+            {
+                pass.addRenderNode(node)
+            }
+
             // all use the same texture size
             var localPasses = [pass]
             outer: for layer in group.layers {
@@ -349,10 +357,28 @@ extension Layer {
     func compositionShapeRenderNodes(_ affine: Affine) -> [RenderNode] {
         []
     }
-    // layer visual
+
+    // mark - CompositionGroup root
+    // for inlining self content into the texture
+    func compositionGroupRootRenderNode() -> RenderNode? {
+        if let brush = brush?.brush {
+            var node = RenderNode()
+            node.brush = brush
+            node.shape = shape
+            // no shadow/border
+            // actually border can be in both this texture and parent
+            let translated = shape.bounds.topLeft
+            node.affine = Affine.identity.translated(x: -translated.x, y: -translated.y)
+            return node
+        }
+
+        return nil
+    }
 
     // textureIndex will be key before we resolve that to actual texture id
     // it will need to be resove again in writing pass
+    //
+    // this need to render content that can not be included in the subgroup such as shadow
     func renderNode(sampling key: Int, _ affine: Affine) -> RenderNode {
         var node = RenderNode()
         node.brush = .backdrop(key: key)

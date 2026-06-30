@@ -76,17 +76,6 @@ extension Renderer {
 
         let texture = try walk(pass, commandBuffer, overridedImageView: outputView)
 
-        // let shape = Shape.rect(width: 100, height: 100, cornerRadius: 24)
-        // let affine = Affine.identity.translated(x: 1, y: 1)
-        // render(
-        //     nodes: [
-        //         RenderNode(brush: .solid(.red), shape: shape, affine: affine)
-        //     ],
-        //     to: texture,
-        //     useCustomBlend: false,
-        //     in: commandBuffer
-        // )
-
         resource.renderNodeStorage.dump()
         resource.shapeGroupStorage.dump()
         resource.drawListStorage.dump()
