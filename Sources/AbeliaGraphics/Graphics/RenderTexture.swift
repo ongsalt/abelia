@@ -46,6 +46,10 @@ public class RenderTexture: RenderTextureProtocol {
         return size.x <= self.size.x && size.y <= self.size.y
     }
 
+    func resize(to size: SIMD2<UInt32>) {
+        self.size = size
+    }
+
     func recycle() {
         registry.recycle(self)
     }
@@ -57,7 +61,7 @@ public class RenderTexture: RenderTextureProtocol {
 
 extension RenderTexture {
     var croppedSizeMultiplier: SIMD2<Float> {
-        SIMD2(size) / SIMD2(capacity) 
+        SIMD2(size) / SIMD2(capacity)
     }
 }
 
@@ -164,8 +168,12 @@ class TextureRegistry {
         Log.debug(.textureRegistry, "All textures")
         for texture in textures {
             let available = availableTextures.contains(where: { $0.index == texture.index })
-            Log.debug(.textureRegistry, "[\(texture.index)] image:\(texture.image.handle!) view:\(texture.view.handle!)")
-            Log.debug(.textureRegistry, "    size:\(texture.size)/\(texture.capacity) available=\(available)")
+            Log.debug(
+                .textureRegistry,
+                "[\(texture.index)] image:\(texture.image.handle!) view:\(texture.view.handle!)")
+            Log.debug(
+                .textureRegistry,
+                "    size:\(texture.size)/\(texture.capacity) available=\(available)")
         }
     }
 }

@@ -79,9 +79,14 @@ func buildLayersWithCompositionGroup(_ compositor: Compositor) -> Layer {
     let layer = Layer(size: [500, 500])
 
     let image = try! compositor.createImage(filename: "Resources/riko.png")
-    let riko = Layer(offset: [150, 150, 0], size: [320, 180])
+    let riko = Layer(offset: [150, 100, 0], size: [320, 180])
     riko.brush = .texture(image)
     layer.insert(riko)
+
+    let image2 = try! compositor.createImage(filename: "Resources/wi.jpg")
+    let wi = Layer(offset: [150, 300, 0], size: [320, 180])
+    wi.brush = .texture(image2)
+    layer.insert(wi)
 
     layer.insert(buildLayers())
 

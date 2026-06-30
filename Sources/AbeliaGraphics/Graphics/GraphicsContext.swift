@@ -125,7 +125,7 @@ public class DeviceContext: @unchecked Sendable {
                 )
                 .push(PhysicalDeviceVulkan12Features(
                     shaderSampledImageArrayNonUniformIndexing: true,
-                    // shaderStorageBufferArrayNonUniformIndexing: true,
+                    shaderStorageBufferArrayNonUniformIndexing: true,
                     descriptorBindingSampledImageUpdateAfterBind: true,
                     descriptorBindingPartiallyBound: true,
                     descriptorBindingVariableDescriptorCount: true,

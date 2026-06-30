@@ -129,7 +129,7 @@ float4 computeBorder(RenderNode renderNode, float2 position) {
     color = brush.color;
   } else if (renderNode.borderBrushKind == BrushKind.texture) {
     var brush = unpackTextureBrush(renderNode.borderBrushData0, renderNode.borderBrushData1, renderNode.borderBrushData2, renderNode.borderBrushData3);
-    color = textures[brush.textureIndex].Sample(sampler, textureLocalPositionOf(position, brush));
+    color = textures[NonUniformResourceIndex(brush.textureIndex)].SampleLevel(sampler, textureLocalPositionOf(position, brush), 0.0);
     // premultiply
     color.xyz *= color.w;
   }
@@ -159,7 +159,7 @@ float4 computeFill(RenderNode renderNode, float2 position, float2 uv) {
     color = brush.color;
   } else if (renderNode.brushKind == BrushKind.texture) {
     var brush = unpackTextureBrush(renderNode.brushData0, renderNode.brushData1, renderNode.brushData2, renderNode.brushData3);
-    color = textures[brush.textureIndex].Sample(sampler, textureLocalPositionOf(uv, brush));
+    color = textures[NonUniformResourceIndex(brush.textureIndex)].SampleLevel(sampler, textureLocalPositionOf(uv, brush), 0.0);
     // color = float4(brush.cropWidth, brush.cropHeight, brush.cropLeft, 1.0);
     // color = float4(textureLocalPositionOf(position, brush), 0.0, 1.0);
     color.xyz *= color.w;

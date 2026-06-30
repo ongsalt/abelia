@@ -362,7 +362,6 @@ extension Layer {
     // mark - CompositionGroup root
     // for inlining self content into the texture
     func compositionGroupRootRenderNode() -> RenderNode? {
-        print(self.id, self.isRasterizationRoot)
         if let brush = brush?.brush {
             var node = RenderNode()
             node.brush = brush

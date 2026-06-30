@@ -302,6 +302,15 @@ extension Renderer {
             ]
         )
 
+        // for i in 0..<renderNodeCount {
+        //     cmd.draw(
+        //         vertexCount: 6,
+        //         instanceCount: 1,
+        //         firstVertex: 0,
+        //         firstInstance: UInt32(firstInstance + i)
+        //     )
+        // }
+
         cmd.draw(
             vertexCount: 6,
             instanceCount: UInt32(renderNodeCount),
@@ -401,6 +410,7 @@ extension Renderer {
             // if size also usable
             if let cachedTexture {
                 if cachedTexture.main.canResize(to: size) {
+                    cachedTexture.main.resize(to: size)
                     return cachedTexture.main
                 } else {
                     cachedTexture.main.recycle()
