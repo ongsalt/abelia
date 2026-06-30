@@ -18,7 +18,7 @@ let package = Package(
     name: "graphics-101",
     dependencies: [
         .package(url: "https://github.com/swiftlang/swift-syntax", from: "602.0.0"),
-        .package(url: "https://github.com/ongsalt/swinit", branch: "main"),
+        .package(url: "https://github.com/ongsalt/swinit", branch: "main", traits: ["WaylandCSD"]),
         .package(
             url: "https://github.com/ongsalt/swift-vulkan",
             revision: "ad4cffdd4e159479b1ebcbd06a8c68a122bf9520"),

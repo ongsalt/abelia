@@ -3,6 +3,7 @@ import Vulkan
 final class Pipelines {
     let compositionPipeline: Pipeline
     let compositionPipelineLayout: PipelineLayout
+    // let blurPipelineLayout: PipelineLayout
     // Device writable
     let mainDescriptorSetLayout: DescriptorSetLayout
     let descriptorPool: DescriptorPool
@@ -20,7 +21,8 @@ final class Pipelines {
         throws(Vulkan.Result)
     {
         let device = context.device
-        let shaderModule = device.createShaderModule(filename: "composite")
+        let mainShaderModule = device.createShaderModule(filename: "composite")
+        // let blurShaderModule = device.createShaderModule(filename: "blur")
 
         self.mainDescriptorSetLayout = try context.device.createDescriptorSetLayout(
             DescriptorSetLayoutCreateInfo(
@@ -46,6 +48,18 @@ final class Pipelines {
                         descriptorCount: 1,
                         stageFlags: [.vertex]
                     ),
+                    // Blur region storage
+                    .init(
+                        binding: 3,
+                        descriptorType: .storageBuffer,
+                        stageFlags: [.vertex, .fragment]
+                    ),
+                    // Effect region storage
+                    .init(
+                        binding: 4,
+                        descriptorType: .storageBuffer,
+                        stageFlags: [.vertex, .fragment]
+                    ),
                 ]
             )
         )
@@ -70,6 +84,7 @@ final class Pipelines {
             )
         )
 
+        // TODO: merge this with main set layout
         self.globalDescriptorSetLayout = try context.device.createDescriptorSetLayout(
             DescriptorSetLayoutCreateInfo(
                 bindings: [
@@ -88,11 +103,16 @@ final class Pipelines {
                 flags: .updateAfterBind,
                 maxSets: 4,
                 poolSizes: [
-                    .init(type: .storageBuffer, descriptorCount: 2 * 3),
+                    .init(type: .storageBuffer, descriptorCount: 2 * 5),
                     .init(type: .sampledImage, descriptorCount: 512 * 1024),
                     .init(type: .sampler, descriptorCount: 4),
                 ]
             )
+        )
+
+        let viewMatrixPushConstant = PushConstantRange(
+            stageFlags: [.vertex, .fragment], offset: 0,
+            size: UInt32(MemoryLayout<[16 of Float]>.size)
         )
 
         self.compositionPipelineLayout = try device.createPipelineLayout(
@@ -102,51 +122,58 @@ final class Pipelines {
                     textureDescriptorSetLayout,
                     globalDescriptorSetLayout,
                 ],
-                pushConstantRanges: [
-                    // view matrix?
-                    .init(
-                        stageFlags: [.vertex, .fragment], offset: 0,
-                        size: UInt32(MemoryLayout<[16 of Float]>.size))
-                ]
+                pushConstantRanges: [viewMatrixPushConstant]
             )
         )
 
+        // self.blurPipelineLayout = try device.createPipelineLayout(
+        //     PipelineLayoutCreateInfo(
+        //         setLayouts: [
+        //             mainDescriptorSetLayout,
+        //             textureDescriptorSetLayout,
+        //             globalDescriptorSetLayout,
+        //         ],
+        //         pushConstantRanges: [viewMatrixPushConstant]
+        //     )
+        // )
+
         let compositionPipelineCi = GraphicsPipelineCreateInfo(
             stages: [
-                .init(stage: .vertex, module: shaderModule, name: "vsMain"),
-                .init(stage: .fragment, module: shaderModule, name: "fsMain"),
+                .init(stage: .vertex, module: mainShaderModule, name: "vsMain"),
+                .init(stage: .fragment, module: mainShaderModule, name: "fsMain"),
             ],
-            vertexInputState: .init(),
-            inputAssemblyState: .init(topology: .triangleList, primitiveRestartEnable: false),
-            viewportState: .init(
-                viewports: [
-                    .init(
-                        x: 0, y: 0, width: 1000,
-                        height: 1000, minDepth: 1, maxDepth: 1)
-                ],
-                scissors: [
-                    .init(
-                        offset: Offset2D(x: 0, y: 0),
-                        extent: Extent2D(width: 1000, height: 1000)
-                    )
-                ]
-            ),
-            rasterizationState: .init(
+            vertexInputState: PipelineVertexInputStateCreateInfo(),
+            inputAssemblyState: PipelineInputAssemblyStateCreateInfo(
+                topology: .triangleList, primitiveRestartEnable: false),
+            viewportState:
+                .init(
+                    viewports: [
+                        .init(
+                            x: 0, y: 0, width: 1000,
+                            height: 1000, minDepth: 1, maxDepth: 1)
+                    ],
+                    scissors: [
+                        .init(
+                            offset: Offset2D(x: 0, y: 0),
+                            extent: Extent2D(width: 1000, height: 1000)
+                        )
+                    ]
+                ),
+            rasterizationState: PipelineRasterizationStateCreateInfo(
                 depthClampEnable: false, rasterizerDiscardEnable: false, polygonMode: .fill,
                 frontFace: .clockwise, depthBiasEnable: false, depthBiasConstantFactor: 0,
                 depthBiasClamp: 0, depthBiasSlopeFactor: 0, lineWidth: 1
             ),
-            multisampleState: .init(
+            multisampleState: PipelineMultisampleStateCreateInfo(
                 rasterizationSamples: .type1,
                 sampleShadingEnable: false,
                 minSampleShading: 1.0,
                 alphaToCoverageEnable: false,
                 alphaToOneEnable: false
             ),
-            // depthStencilState: PipelineDepthStencilStateCreateInfo?,
             colorBlendState: PipelineColorBlendStateCreateInfo(
                 logicOpEnable: false,
-                logicOp: .copy,
+                logicOp: .noOp,
                 attachments: [
                     PipelineColorBlendAttachmentState(
                         blendEnable: true, srcColorBlendFactor: .one,
@@ -156,7 +183,7 @@ final class Pipelines {
                 ],
                 blendConstants: (0, 0, 0, 0)
             ),
-            dynamicState: .init(dynamicStates: [.scissor, .viewport]),
+            dynamicState: PipelineDynamicStateCreateInfo(dynamicStates: [.scissor, .viewport]),
             layout: compositionPipelineLayout,
             subpass: 0,
             basePipelineIndex: 0
@@ -169,6 +196,55 @@ final class Pipelines {
                 stencilAttachmentFormat: .undefined
             )
         )
+
+        // let effectPipelineCi = GraphicsPipelineCreateInfo(
+        //     stages: [
+        //         .init(stage: .vertex, module: blurShaderModule, name: "vsMain"),
+        //         .init(stage: .fragment, module: blurShaderModule, name: "fsMain"),
+        //     ],
+        //     vertexInputState: PipelineVertexInputStateCreateInfo(),
+        //     inputAssemblyState: PipelineInputAssemblyStateCreateInfo(
+        //         topology: .triangleList,
+        //         primitiveRestartEnable: false
+        //     ),
+        //     viewportState: PipelineViewportStateCreateInfo(),
+        //     rasterizationState: PipelineRasterizationStateCreateInfo(
+        //         depthClampEnable: false, rasterizerDiscardEnable: false, polygonMode: .fill,
+        //         frontFace: .clockwise, depthBiasEnable: false, depthBiasConstantFactor: 0,
+        //         depthBiasClamp: 0, depthBiasSlopeFactor: 0, lineWidth: 1
+        //     ),
+        //     multisampleState: PipelineMultisampleStateCreateInfo(
+        //         rasterizationSamples: .type1,
+        //         sampleShadingEnable: false,
+        //         minSampleShading: 1.0,
+        //         alphaToCoverageEnable: false,
+        //         alphaToOneEnable: false
+        //     ),
+        //     colorBlendState: PipelineColorBlendStateCreateInfo(
+        //         logicOpEnable: false,
+        //         logicOp: .noOp,
+        //         attachments: [
+        //             PipelineColorBlendAttachmentState(
+        //                 blendEnable: true, srcColorBlendFactor: .one,
+        //                 dstColorBlendFactor: .oneMinusSrcAlpha, colorBlendOp: .add,
+        //                 srcAlphaBlendFactor: .one, dstAlphaBlendFactor: .oneMinusSrcAlpha,
+        //                 alphaBlendOp: .add, colorWriteMask: [.a, .r, .g, .b])
+        //         ],
+        //         blendConstants: (0, 0, 0, 0)
+        //     ),
+        //     dynamicState: PipelineDynamicStateCreateInfo(dynamicStates: [.scissor, .viewport]),
+        //     layout: compositionPipelineLayout,
+        //     subpass: 0,
+        //     basePipelineIndex: 0
+        // )
+        // .push(
+        //     PipelineRenderingCreateInfo(
+        //         viewMask: 0,
+        //         colorAttachmentFormats: [format],
+        //         depthAttachmentFormat: .undefined,
+        //         stencilAttachmentFormat: .undefined
+        //     )
+        // )
 
         let pipelines = try device.createGraphicsPipelines([compositionPipelineCi])
         self.compositionPipeline = pipelines[0]

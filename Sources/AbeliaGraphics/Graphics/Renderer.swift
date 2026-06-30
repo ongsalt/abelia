@@ -1,32 +1,412 @@
 /// store node index
 
+import CShim
 import Vulkan
 
-struct SharedRendererResources {
+struct Renderer {
     let context: DeviceContext
-    fileprivate let pipelines: Pipelines
-    let releaseQueue: ReleaseQueue = ReleaseQueue()
-    let textureRegistry: TextureRegistry
+    let releaseQueue: ReleaseQueue
+
     let globalDescriptorSet: DescriptorSet
+    fileprivate let pipelines: Pipelines
+    let textureRegistry: TextureRegistry
+    let textureCache: TextureCache = TextureCache()
+
+    private var frameResources: [RendererFrameResource]
+    private var frameInFlightCount: Int
+    private var currentFrameInFlight = 0
 }
 
-extension SharedRendererResources {
-    init(context: DeviceContext) throws(Vulkan.Result) {
+extension Renderer {
+    var resource: RendererFrameResource {
+        frameResources[currentFrameInFlight]
+    }
+
+    init(context: DeviceContext, frameInFlightCount: Int) throws(Vulkan.Result) {
         let pipelines = try Pipelines(
             format: .b8g8r8a8Srgb,
             context: context
         )
-        self.context = context
-        self.pipelines = pipelines
+        let releaseQueue = ReleaseQueue()
         let textureDescriptorSet = try pipelines.createTextureDescriptorSet(context)
-        self.textureRegistry = TextureRegistry(
-            textureDescriptorSet, releaseQueue: self.releaseQueue, context: context)
-        globalDescriptorSet = try pipelines.createSamplerDescriptorSet(context)
+        let textureRegistry = TextureRegistry(
+            textureDescriptorSet, releaseQueue: releaseQueue, context: context)
+
+        let frameResources = try (0..<frameInFlightCount).map { i throws(Vulkan.Result) in
+            try RendererFrameResource(index: i, context: context, pipelines: pipelines)
+        }
+
+        self.init(
+            context: context,
+            releaseQueue: releaseQueue,
+            globalDescriptorSet: try pipelines.createSamplerDescriptorSet(context),
+            pipelines: pipelines,
+            textureRegistry: textureRegistry,
+            frameResources: frameResources,
+            frameInFlightCount: frameInFlightCount,
+        )
     }
 
-    func createFrameResources(amount: Int) throws(Vulkan.Result) -> [RendererFrameResource] {
-        try (0..<amount).map { i throws(Vulkan.Result) in
-            try RendererFrameResource(index: i, context: context, pipelines: pipelines)
+    // you need to wait it yourself
+    // TODO: stop resolving this, but do it in shader to map color back
+    mutating func render(
+        _ pass: Pass,
+        to outputImage: Image,
+        view outputView: ImageView? = nil,
+        in commandBuffer: CommandBuffer,
+        incrementFrameCounter: Bool = true
+    )
+        throws(Vulkan.Result) -> RenderTexture
+    {
+        resource.drawListStorage.resetOffset()
+        resource.renderNodeStorage.resetOffset()
+        resource.shapeGroupStorage.resetOffset()
+
+        let src = RenderTextureState.undefined
+        let dst = RenderTextureState.renderTarget
+        let barrier = ImageMemoryBarrier2(
+            srcStageMask: src.stageMask, srcAccessMask: src.accessMask,
+            dstStageMask: dst.stageMask, dstAccessMask: dst.accessMask,
+            oldLayout: src.layout, newLayout: dst.layout, srcQueueFamilyIndex: 0,
+            dstQueueFamilyIndex: 0, image: outputImage,
+            subresourceRange: subresourceRange
+        )
+
+        commandBuffer.pipelineBarrier2(.init(imageMemoryBarriers: [barrier]))
+
+        let texture = try walk(pass, commandBuffer, overridedImageView: outputView)
+
+        // let shape = Shape.rect(width: 100, height: 100, cornerRadius: 24)
+        // let affine = Affine.identity.translated(x: 1, y: 1)
+        // render(
+        //     nodes: [
+        //         RenderNode(brush: .solid(.red), shape: shape, affine: affine)
+        //     ], 
+        //     to: texture, 
+        //     useCustomBlend: false, 
+        //     in: commandBuffer
+        // )
+
+        resource.renderNodeStorage.dump()
+        resource.shapeGroupStorage.dump()
+        resource.drawListStorage.dump()
+
+        if incrementFrameCounter {
+            self.incrementFrameCounter()
+        }
+        return texture
+    }
+
+    mutating func incrementFrameCounter() {
+        currentFrameInFlight = (currentFrameInFlight + 1) % self.frameInFlightCount
+    }
+
+    private func walk(
+        _ pass: borrowing Pass,
+        _ commandBuffer: CommandBuffer,
+        overridedImageView: ImageView? = nil
+    ) throws(Vulkan.Result)
+        -> RenderTexture
+    {
+        // MARK - Barriers
+
+        var barriers: [ImageMemoryBarrier2] = []
+
+        // must walk children before self, cuz .new is leaf node. and we cant do shit without a RenderTexture
+        for p in pass.dependencies {
+            let texture = try walk(p, commandBuffer)
+            // if current mode is sameAsPrevious, then this will just be the same state
+            // so we are rendering to the same texture.
+            if case .sameAsPrevious(let key) = pass.target, key == p.target.key {
+                continue
+            }
+
+            // for sampling children
+            let src = RenderTextureState.renderTarget
+            let dst = RenderTextureState.sampling
+            barriers.append(
+                ImageMemoryBarrier2(
+                    srcStageMask: src.stageMask, srcAccessMask: src.accessMask,
+                    dstStageMask: dst.stageMask, dstAccessMask: dst.accessMask,
+                    oldLayout: src.layout, newLayout: dst.layout, srcQueueFamilyIndex: 0,
+                    dstQueueFamilyIndex: 0, image: texture.image,
+                    subresourceRange: subresourceRange
+                )
+            )
+            texture.currentLayout = dst.layout
+        }
+
+        let targetTexture = try renderTarget(of: pass)
+
+        var src: RenderTextureState
+        let dst = RenderTextureState.renderTarget
+
+        if targetTexture.currentLayout == .undefined {
+            src = .undefined
+        } else if targetTexture.currentLayout == .transferSrcOptimal
+            || targetTexture.currentLayout == .presentSrcKHR
+        {
+            src = .transferSource
+        } else if case .sameAsPrevious(_) = pass.target {
+            // rendering to the same texture.
+            src = .renderTarget
+        } else {
+            src = RenderTextureState.sampling
+        }
+
+        barriers.append(
+            ImageMemoryBarrier2(
+                srcStageMask: src.stageMask, srcAccessMask: src.accessMask,
+                dstStageMask: dst.stageMask, dstAccessMask: dst.accessMask,
+                oldLayout: src.layout, newLayout: dst.layout, srcQueueFamilyIndex: 0,
+                dstQueueFamilyIndex: 0, image: targetTexture.image,
+                subresourceRange: subresourceRange
+            )
+        )
+        targetTexture.currentLayout = dst.layout
+
+        // MARK - renderNode io and command recording
+        // TODO: effect, blur pipelines
+        switch pass.kind {
+
+        case .composite(let nodes, let useCustomBlend):
+            render(
+                nodes: nodes,
+                to: targetTexture,
+                overridedImageView: overridedImageView,
+                useCustomBlend: useCustomBlend,
+                in: commandBuffer
+            )
+
+        case .blur(let regions):
+            break
+        case .effect(let regions):
+            break
+        }
+
+        return targetTexture
+    }
+
+    private func render(
+        nodes: [RenderNode],
+        to texture: RenderTexture,
+        overridedImageView: ImageView? = nil,
+        useCustomBlend: Bool,
+        in commandBuffer: CommandBuffer,
+
+        // currently unused, might be used with dynamic rendering local read
+        beginRendering: Bool = true,
+        endRendering: Bool = true,
+    ) {
+        let firstInstance = resource.drawListStorage.offset
+        for node in nodes {
+            writeRenderNode(node)
+        }
+        let renderNodeCount = resource.drawListStorage.offset - firstInstance
+
+        let cmd = commandBuffer
+        let size = texture.size
+        print(
+            "drawing: size=\(texture.size), nodes.count=\(nodes.count), useCustomBlend=\(useCustomBlend), into=\(overridedImageView)"
+        )
+        print("firstInstance=\(firstInstance), renderNodeCount=\(renderNodeCount)")
+
+        if beginRendering {
+            cmd.beginRendering(
+                RenderingInfo(
+                    renderArea: .init(
+                        offset: .zero, extent: Extent2D(width: size.x, height: size.y)),
+                    layerCount: 1,
+                    viewMask: 0,
+                    colorAttachments: [
+                        .init(
+                            imageView: overridedImageView ?? texture.view,
+                            imageLayout: .colorAttachmentOptimal,
+                            resolveMode: .none,
+                            resolveImageView: nil,
+                            resolveImageLayout: .undefined,
+                            loadOp: .clear,
+                            storeOp: .store,
+                            clearValue: .init(color: .init(float32: (0.0, 0.0, 0.0, 0.3)))
+                        )
+                    ],
+                )
+            )
+        }
+
+        cmd.bindPipeline(pipelineBindPoint: .graphics, pipeline: pipelines.compositionPipeline)
+        cmd.setViewport(
+            firstViewport: 0,
+            viewports: [
+                .init(
+                    x: 0,
+                    y: 0,
+                    width: Float(size.x),
+                    height: Float(size.y),
+                    minDepth: 0,
+                    maxDepth: 1
+                )
+            ])
+        cmd.setScissor(
+            firstScissor: 0,
+            scissors: [
+                .init(offset: .zero, extent: Extent2D(width: size.x, height: size.y))
+            ]
+        )
+
+        let w = Float(size.x)
+        let h = Float(size.y)
+        let d: Float = 1000  // perspective depth in pixels; larger = weaker effect
+        let projection = Affine().translated(x: -1, y: -1)
+            .multiplied(
+                by: Affine(
+                    col0: SIMD4<Float>(2 / w, 0, 0, 0),
+                    col1: SIMD4<Float>(0, 2 / h, 0, 0),
+                    col2: SIMD4<Float>(0, 0, 0, 1 / d),  // z bleeds into w → perspective divide
+                    col3: SIMD4<Float>(0, 0, 0, 1)
+                )
+            )
+        let viewMatrix = projection
+        print("\(w)x\(h) viewMatrix", viewMatrix)
+        // let viewport = (size.x, size.y)
+        withUnsafeBytes(of: viewMatrix) { viewMatrix in
+            cmd.pushConstants(
+                layout: pipelines.compositionPipelineLayout,
+                stageFlags: [.vertex, .fragment],
+                offset: 0,
+                size: UInt32(viewMatrix.count),
+                values: viewMatrix.baseAddress!
+            )
+        }
+
+        cmd.bindDescriptorSets(
+            pipelineBindPoint: .graphics,
+            layout: pipelines.compositionPipelineLayout,
+            firstSet: 0,
+            descriptorSets: [
+                resource.mainDescriptorSet,
+                textureRegistry.textureDescriptorSet,
+                globalDescriptorSet,
+            ]
+        )
+
+        cmd.draw(
+            vertexCount: 6,
+            instanceCount: UInt32(renderNodeCount),
+            firstVertex: 0,
+            firstInstance: UInt32(firstInstance)
+        )
+
+        if endRendering {
+            cmd.endRendering()
+        }
+    }
+
+    private func writeRenderNode(_ node: consuming RenderNode) {
+        // resolve .backdrop brush
+        if case .backdrop(let key, let crop) = node.brush {
+            let texture = textureCache[key]!
+            node.brush = .texture(index: texture.main.index, crop: crop)
+        }
+
+        var data = CShim.RenderNode()
+
+        data.affine = node.affine.c
+        let instructions = Array(node.shape.drawInstructions)
+        if instructions.count <= 1 {
+            guard case .push(let metadata) = instructions[0] else {
+                fatalError("Invalid shape merging instruction: \(instructions)")
+            }
+
+            let (kind, shapeData) = metadata.shape.c
+            data.oneOrManyKind = .one_shape
+            data.shapeKind = kind
+            data.shapeData.one = shapeData
+        } else {
+            data.oneOrManyKind = .many_shapes
+            let startIndex = resource.shapeGroupStorage.offset
+            for i in instructions {
+                resource.shapeGroupStorage.append(i.c)
+            }
+            data.shapeData.many = CShim.ManyShapeRef(
+                startIndex: UInt32(startIndex), count: UInt32(instructions.count))
+        }
+
+        let bounds = node.shape.bounds.atOrigin
+        let padding = (node.border?.width ?? 0) + 2
+        data.boundMinX = bounds.left - padding
+        data.boundMinY = bounds.top - padding
+        data.boundMaxX = bounds.right + padding
+        data.boundMaxY = bounds.bottom + padding
+
+        (data.brushKind, data.brushData) = node.brush.c
+
+        if let shadow = node.shadow {
+            data.shadowOffsetX = shadow.offset.x
+            data.shadowOffsetY = shadow.offset.y
+            data.shadowBlur = shadow.blur
+            data.shadowSpread = shadow.spread
+            data.shadowOpacity = shadow.opacity
+            let (sr, sg, sb, sa) = shadow.color.linearized.premultiplied.values
+            data.shadowColorR = sr
+            data.shadowColorG = sg
+            data.shadowColorB = sb
+            data.shadowColorA = sa
+        }
+
+        if let border = node.border {
+            data.borderWidth = border.width
+            (data.borderBrushKind, data.borderBrushData) = border.brush.c
+        }
+
+        let index = resource.renderNodeStorage.append(data)
+
+        if node.shadow != nil {
+            resource.drawListStorage.append(DrawListItem(index: UInt32(index), drawMode: .shadow))
+        }
+        resource.drawListStorage.append(DrawListItem(index: UInt32(index), drawMode: .fill))
+        if node.border != nil {
+            resource.drawListStorage.append(DrawListItem(index: UInt32(index), drawMode: .stroke))
+        }
+
+    }
+
+    private func renderTarget(of pass: borrowing Pass) throws(Vulkan.Result) -> RenderTexture {
+        switch pass.target {
+        // always a leaf node
+        case .new(let size, let key, let canTransfer):
+            let cachedTexture = textureCache[key]
+            // if size also usable
+            if let cachedTexture, cachedTexture.main.canResize(to: size) {
+                // cachedTexture.main.canResize(to: SIMD2<UInt32>)
+                return cachedTexture.main
+            } else {
+                let tex = try textureRegistry.getRenderTexture(size: size, canTransfer: canTransfer)
+                textureCache[key] = CompositeGroupTextures(main: tex)
+                return tex
+            }
+
+        case .alternate(let key):
+            // must exist in the cache
+            if textureCache[key] == nil {
+                fatalError("Invalid pass tree")
+            }
+            if textureCache[key]!.alternate != nil {
+                textureCache[key]!.swap()
+                return textureCache[key]!.main
+            } else {
+                // allocate new if we dont have secondary texture
+                let tex = try textureRegistry.getRenderTexture(size: textureCache[key]!.main.size)
+                textureCache[key]!.swapWithNew(tex)
+                return tex
+            }
+
+        case .sameAsPrevious(let key):
+            guard let cached = textureCache[key] else {
+                fatalError("Invalid pass tree")
+            }
+
+            return cached.main
         }
     }
 }
@@ -90,5 +470,43 @@ struct RendererFrameResource {
         self.renderNodeStorage = renderNodeStorage
         self.shapeGroupStorage = shapeGroupStorage
         self.drawListStorage = drawListStorage
+    }
+}
+
+enum RenderTextureState {
+    case undefined
+    case renderTarget
+    case sampling
+    case transferTarget
+    case transferSource
+}
+
+extension RenderTextureState {
+    var layout: ImageLayout {
+        switch self {
+        case .undefined: .undefined
+        case .renderTarget: .attachmentOptimal
+        case .sampling: .shaderReadOnlyOptimal
+        case .transferTarget: .transferDstOptimal
+        case .transferSource: .transferSrcOptimal
+        }
+    }
+    var accessMask: AccessFlags2 {
+        switch self {
+        case .undefined: .none
+        case .renderTarget: [.colorAttachmentWrite, .colorAttachmentRead]
+        case .sampling: .shaderRead
+        case .transferTarget: .transferWrite
+        case .transferSource: .transferRead
+        }
+    }
+    var stageMask: PipelineStageFlags2 {
+        switch self {
+        case .undefined: .topOfPipe
+        case .renderTarget: .colorAttachmentOutput
+        case .sampling: .fragmentShader
+        case .transferTarget: .allTransfer
+        case .transferSource: .allTransfer
+        }
     }
 }

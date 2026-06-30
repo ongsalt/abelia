@@ -3,7 +3,7 @@ struct RenderScheduler {
     var compositionPlanner = CompositionPlanner()
     var passScheduler = PassScheduler()
 
-    mutating func schedule(root: _BaseLayer) -> Pass {
+    mutating func schedule(root: _BaseLayer) -> Pass? {
         transformResolver.resolve(root: root)
         let group = compositionPlanner.plan(root: root)
         let pass = passScheduler.schedule(root: group, transformResolver)
@@ -46,7 +46,7 @@ struct TransformResolver {
 // should compute content offset: in case that this is larger than parent
 struct CompositionPlanner {
     func plan(root: _BaseLayer) -> CompositionGroup {
-        var current = CompositionGroup(root: root)
+        var current = CompositionGroup(root: root, isRoot: true)
 
         func walk(_ layer: _BaseLayer, in group: inout CompositionGroup) {
             group.layers.append(layer)
@@ -82,13 +82,14 @@ struct CompositionGroup {
 
     // TODO: handle skipping composition group, might just emit 1 RenderNode
     var skippable: Bool = false
+    var isRoot: Bool = false
 }
 
 struct PassScheduler {
     func schedule(
         root: borrowing CompositionGroup,
         _ transformResolver: borrowing TransformResolver
-    ) -> Pass {
+    ) -> Pass? {
         func makeNewPass(basedOn layer: _BaseLayer, affine: Affine, key: Int) -> Pass {
             switch layer.kind {
             case .composite:
@@ -111,18 +112,19 @@ struct PassScheduler {
             }
         }
 
-        func walk(_ group: borrowing CompositionGroup) -> Pass {  // return last past
+        func walk(_ group: borrowing CompositionGroup) -> Pass? {  // return last past
             let key = group.root.id
 
             // initially composite, might not reuse texture, also need to calculate it size with child
-            let pass = {
-                let layer = group.root
-                let affine = transformResolver.get(layer)!
-                let bounds = layer.bounds.transformBounds(affine)
+            let layer = group.root
+            let affine = transformResolver.get(layer)!
+            let bounds = layer.bounds.transformBounds(affine)
+            if bounds.size == .zero {
+                return nil
+            }
 
-                // TODO: implicit group texture size
-                return Pass(target: .new(size: SIMD2(bounds.size), key: key))
-            }()
+            // TODO: implicit group texture size
+            let pass = Pass(target: .new(size: SIMD2(bounds.size), key: key, canTransfer: group.isRoot))
 
             // all use the same texture size
             var localPasses = [pass]
@@ -140,8 +142,9 @@ struct PassScheduler {
                                 // add sampling mode
                                 p.addRenderNode(
                                     (layer as! Layer).renderNode(sampling: key, affine))
-                                let new = walk(group.dependencies[layer.id]!)
-                                p.dependencies.append(new)
+                                if let new = walk(group.dependencies[layer.id]!) {
+                                    p.dependencies.append(new)
+                                }
                             } else {
                                 p.addRenderNode((layer as! Layer).compositeRenderNode(affine))
                             }
@@ -289,14 +292,14 @@ extension _BaseLayer {
 
 enum PassRenderTarget {
     // per CompositionGruop, cache
-    case new(size: SIMD2<UInt32>, key: Int)
+    case new(size: SIMD2<UInt32>, key: Int, canTransfer: Bool = false)
     // for one pass effect
     case alternate(key: Int)
     case sameAsPrevious(key: Int)
 
     var key: Int {
         switch self {
-        case .new(_, let key): key
+        case .new(_, let key, _): key
         case .alternate(let key): key
         case .sameAsPrevious(let key): key
         }

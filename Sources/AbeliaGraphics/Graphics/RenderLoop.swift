@@ -33,10 +33,10 @@ public final class RenderLoop {
   }
 
   // the semaphore returned will be signal when finished rendering
-  public func render(
+  public func submit(
+    commands: GPUCommands,
     waiting imageAvailableSemaphore: Semaphore,
     signalling renderFinishedSemaphore: Semaphore,
-    commands: GPUCommands
   ) throws {
     self.releaseQueue.flushWithFences(context)
 

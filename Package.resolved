@@ -1,5 +1,5 @@
 {
-  "originHash" : "d0c48f817f3dd048eab0994f93dc2a78843adb5aca7455742fc4ce8f10752af4",
+  "originHash" : "fb544cc1f2dab7d6b15e9541cab642ac6e9221ccca78bac80f9c33a418aadf9e",
   "pins" : [
     {
       "identity" : "swift-argument-parser",
@@ -33,7 +33,7 @@
       "location" : "https://github.com/ongsalt/SwiftWayland",
       "state" : {
         "branch" : "master",
-        "revision" : "2ea48ec780889f830b780cf9746a7821f2b4fbea"
+        "revision" : "05abc97747fc02e1f687b66b6c9868d008ee7823"
       }
     },
     {
@@ -42,7 +42,7 @@
       "location" : "https://github.com/ongsalt/swinit",
       "state" : {
         "branch" : "main",
-        "revision" : "3536d75679fb86456e1807ddd4b90b0330408a70"
+        "revision" : "209d9d24db44bd6a652b167bf053dc4afa07e76a"
       }
     },
     {

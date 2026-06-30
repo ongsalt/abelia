@@ -17,6 +17,11 @@ extension Vulkan.Offset2D {
   static let zero = Self(x: 0, y: 0)
 }
 
+extension Vulkan.Offset3D: @unchecked @retroactive Sendable {}
+extension Vulkan.Offset3D {
+  static let zero = Self(x: 0, y: 0, z: 0)
+}
+
 extension Vulkan.Device {
   func createShaderModule(filename: String) -> ShaderModule? {
     let url = Bundle.module.url(forResource: "Resources/\(filename)", withExtension: "spv")!

@@ -24,9 +24,12 @@ class GPUStorage<T> {
     }
 
     private(set) var offset: Int = 0
-    func append(_ data: consuming T) {
-        self.bufferPointer[offset] = data
+    @discardableResult
+    func append(_ data: consuming T) -> Int {
+        let index = offset
+        self.bufferPointer[index] = data
         offset += 1
+        return index
     }
 
     func append(_ span: borrowing Span<T>) {
@@ -41,6 +44,14 @@ class GPUStorage<T> {
         offset = 0
     }
 
+    func dump(range: Range<Int>? = nil) {
+        let range = range ?? (0..<offset)
+
+        print("Dumping \(Self.self) in \(range):")
+        for i in range {
+            print(" - ", bufferPointer[i])
+        }
+    }
 }
 
 // TODO: buffer resizing

@@ -1,5 +1,5 @@
 # Abelia
-2d Graphics Library + UI?
+ui library.
 
 ## Dependencies not included
 - Vulkan header (for vma, might expose this from `swift-vulkan` later)
@@ -8,5 +8,5 @@
 ### Fedora
 ```bash
 sudo dnf copr enable rustyclanker/slang
-sudo dnf install shader-slang shader-slang-libs shader-slang-devel
+sudo dnf install shader-slang shader-slang-libs shader-slang-devel vulkan-headers
 ```

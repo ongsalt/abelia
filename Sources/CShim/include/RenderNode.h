@@ -131,6 +131,7 @@ struct RenderNode {
   uint32_t _pad[2];
   union Brush borderBrushData;
 
+  // in local space
   float boundMinX;
   float boundMinY;
   float boundMaxX;

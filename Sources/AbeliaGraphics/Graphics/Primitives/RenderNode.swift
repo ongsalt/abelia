@@ -14,9 +14,6 @@ public struct RenderNode {
 
     // TODO: backfaceVisibility
     public var affine: Affine = .identity
-
-    // TODO: write this
-    public var bounds: Rect = .unit
 }
 
 public struct NodeShadow {

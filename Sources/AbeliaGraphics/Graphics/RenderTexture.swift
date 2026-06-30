@@ -82,7 +82,8 @@ class TextureRegistry {
         self.releaseQueue = releaseQueue
     }
 
-    func getRenderTexture(size: SIMD2<UInt32>)
+    // TODO: recreate in case flag doesnt match
+    func getRenderTexture(size: SIMD2<UInt32>, canTransfer: Bool = false)
         throws(Vulkan.Result) -> RenderTexture
     {
         var texture = availableTextures.first { t in
@@ -92,7 +93,8 @@ class TextureRegistry {
         if let texture {
             texture.size = size
         } else {
-            texture = try createRenderTexture(size: size)
+            var usages: ImageUsageFlags = [.sampled, .colorAttachment, .transferSrc]
+            texture = try createRenderTexture(size: size, usages: usages)
         }
 
         return texture!
@@ -102,8 +104,9 @@ class TextureRegistry {
         size: SIMD2<UInt32>, format: Format? = nil,
         usages: ImageUsageFlags = [.sampled, .colorAttachment]
     ) throws(Vulkan.Result) -> RenderTexture {
-        let image = try VmaImage(
-            size: size, format: format ?? self.format, usages: usages, context: self.context)
+        
+        let image = try VmaImage(size: size, format: format ?? self.format, usages: usages, context: self.context)
+        print("[TextureRegistry] creating texture with size=\(size), usages: \(usages) image=\(image.image.handle)")
 
         let index = textures.count
         let texture = RenderTexture(self, vmaImage: image, index: index)

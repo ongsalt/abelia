@@ -1,52 +1,65 @@
-class Compositor {
-    let root: Layer = Layer()
+import Vulkan
+
+// might need to seperate composition surface
+public class Compositor {
+    public var root: Layer = Layer()
 
     let renderLoop: RenderLoop
-    let renderer: Renderer
+    var renderer: Renderer
     let surface: Surface
     let context: DeviceContext
-
-    var rendererFrameResources: [RendererFrameResource]
 
     public init(surface: Surface, device: DeviceContext) throws {
         self.surface = surface
         self.context = device
 
         self.renderLoop = try RenderLoop(context: device)
-        self.renderer = try Renderer(context: device)
-        self.rendererFrameResources = try renderer.createFrameResources(amount: RenderLoop.maxFrameInFlightCount)
+        self.renderer = try Renderer(
+            context: device, frameInFlightCount: RenderLoop.maxFrameInFlightCount)
     }
 
-    func flushFrame() throws {
+    public func flushFrame() throws {
         let res = try renderLoop.waitForAvailableFrameInFlight()
-        let frameResource = rendererFrameResources[res.index]
         // let frameContext
 
         // flush animation frame
         let backBuffer = try! surface.acquireCurrentTexture(signalling: res.imageAvailableSemaphore)
-        let commands = GPUCommands { [self] commandBuffer in
+        let commands: GPUCommands = GPUCommands { [self] commandBuffer in
             backBuffer.prepareRender().apply(to: commandBuffer)
 
             var scheduler = RenderScheduler()
-            backBuffer.texture
-            let plan = scheduler.schedule(root: root)
-            // plan.apply(borrowing: Renderer, resource: frameResource)
+            if let pass = scheduler.schedule(root: root) {
+                print(pass.dumpTree())
+                do {
+                    let texture = try renderer.render(
+                        pass,
+                        to: backBuffer.texture.image,
+                        view: backBuffer.texture.view,
+                        in: commandBuffer
+                    )
 
-            // let task = try! renderer.createDrawTask(
-            //     to: backBuffer.texture.image,
-            //     view: backBuffer.texture.view,
-            //     frameIndex: res.index,
-            //     size: SIMD2(surfaceConfig.width, surfaceConfig.height),
-            //     nodes: nodes,
-            // )
-            // task.work.apply(to: commandBuffer)
-            backBuffer.preparePresent().apply(to: commandBuffer)
+                    let c = RenderTextureState.renderTarget
+                    let transitionToPresent = ImageMemoryBarrier2(
+                        srcStageMask: c.stageMask, srcAccessMask: c.accessMask,
+                        dstStageMask: .bottomOfPipe, dstAccessMask: .none,
+                        oldLayout: c.layout, newLayout: .presentSrcKHR, srcQueueFamilyIndex: 0,
+                        dstQueueFamilyIndex: 0, image: backBuffer.texture.image,
+                        subresourceRange: subresourceRange
+
+                    )
+                    commandBuffer.pipelineBarrier2(
+                        .init(imageMemoryBarriers: [transitionToPresent]))
+
+                } catch {
+                    print("[compositor] flushFrame: error: \(error)")
+                }
+            }
         }
 
-        try renderLoop.render(
+        try renderLoop.submit(
+            commands: commands,
             waiting: res.imageAvailableSemaphore,
             signalling: backBuffer.renderCompletedSemaphore,
-            commands: commands
         )
 
         try! backBuffer.present()

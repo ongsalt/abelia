@@ -185,6 +185,7 @@ public class Surface: SurfaceProtocol {
             )
         )
         let swapchainImages = try swapchain.getImagesKHR()
+        
         do {
             let swapchainImageViews = try swapchainImages.map { image in
                 try device.createImageView(

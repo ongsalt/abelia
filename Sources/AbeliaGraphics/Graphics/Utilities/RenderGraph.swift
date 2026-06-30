@@ -5,7 +5,7 @@ struct ApproximateCoverage {
 
 extension ApproximateCoverage {
   mutating func add(_ node: RenderNode) {
-    let bounds = node.shape.bounds
+    let bounds = node.shape.bounds.atOrigin
   }
 
   func overlaps(with node: RenderNode) {
