@@ -332,7 +332,7 @@ extension Renderer {
                 startIndex: UInt32(startIndex), count: UInt32(instructions.count))
         }
 
-        let bounds = node.shape.bounds.atOrigin
+        let bounds = node.shape.bounds
         let padding = (node.border?.width ?? 0) + 2
         data.boundMinX = bounds.left - padding
         data.boundMinY = bounds.top - padding

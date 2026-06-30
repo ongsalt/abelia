@@ -5,6 +5,7 @@ import Vulkan
 
 // 1 to 1 with shader data (in term of information not layout)
 // This should be swift struct
+// sdf is center-anchor
 public struct RenderNode {
     public var brush: Brush = .solid(.transparent)
     public var shape: any ShapeProtocol = Shape.rect(width: 0, height: 0)
