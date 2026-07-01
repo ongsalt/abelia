@@ -29,6 +29,13 @@ public struct SurfaceConfiguration {
     public var colorSpace: ColorSpaceKHR
 }
 
+extension SurfaceConfiguration {
+    func onlySizeChanged(comparedTo other: borrowing SurfaceConfiguration) -> Bool {
+        device === other.device && imageFormat == other.imageFormat
+            && colorSpace == other.colorSpace && (width != other.width || height != other.height)
+    }
+}
+
 extension DeviceContext {
     public func vulkanSurfaceConfig(width: UInt32, height: UInt32) -> SurfaceConfiguration {
         // TODO: query surface config
@@ -48,6 +55,9 @@ struct ConfiguredSurfaceInfo {
     var width: UInt32
     var height: UInt32
 
+    var availableWidth: UInt32
+    var availableHeight: UInt32
+
     let associatedDevice: DeviceContext
     var swapchain: SwapchainKHR
 
@@ -56,6 +66,8 @@ struct ConfiguredSurfaceInfo {
     var imageViews: [ImageView]
     // Per swapchain image (total texture we have)
     var renderFinishedSemaphores: [Semaphore]
+
+    var lastConfiguration: SurfaceConfiguration
 }
 
 /// pls keep the window alive
@@ -72,18 +84,34 @@ public class Surface: SurfaceProtocol {
         self.handle = handle
     }
 
-    public func configure(_ configuration: borrowing SurfaceConfiguration) throws {
+    public func configure(_ configuration: SurfaceConfiguration) throws {
+        if let c = self.configuredInfo,
+            c.lastConfiguration.onlySizeChanged(comparedTo: configuration),
+            c.availableWidth >= configuration.width,
+            c.availableHeight >= configuration.height
+        {
+            let prevSize = (c.lastConfiguration.width, c.lastConfiguration.height)
+            let currentSize = (configuration.width, configuration.height)
+            Log.debug(.general, "Reusing... swapchain \(prevSize) -> \(currentSize)")
+            return
+        }
+        Log.debug(.general, "Recreating swapchain \((configuration.width, configuration.height))")
+
         let caps = try configuration.device.physicalDevice.getSurfaceCapabilitiesKHR(
             surface: handle)
-        let clamped = Extent2D(width: configuration.width, height: configuration.height)
+        
+        let size = SIMD2(Float(configuration.width), Float(configuration.height)) * 1.2
+        let clamped = Extent2D(width: UInt32(size.x), height: UInt32(size.y))
             .clamped(from: caps.minImageExtent, to: caps.maxImageExtent)
         let width = clamped.width
         let height = clamped.height
 
         nonisolated(unsafe) let prev = configuredInfo?.swapchain
         let previousSwapchainImageViews = configuredInfo?.imageViews
-        let previousSemaphores = configuredInfo?.renderFinishedSemaphores // tf i do with this
+        let previousSemaphores = configuredInfo?.renderFinishedSemaphores  // tf i do with this
 
+        let clock = ContinuousClock()
+        let start = clock.now
         let (swapchain, swapchainImages, swapchainImageViews) = try Self.recreateSwapchain(
             device: configuration.device.device,
             surface: handle,
@@ -93,6 +121,8 @@ public class Surface: SurfaceProtocol {
             extent: clamped,
             previous: prev,
         )
+        let time = (clock.now - start) / .milliseconds(1)
+        Log.info(.compositor, "recreated swapchain in \(time)ms")
 
         var semaphores: [Semaphore] = []
         for _ in 0..<swapchainImages.count {
@@ -119,11 +149,14 @@ public class Surface: SurfaceProtocol {
         self.configuredInfo = ConfiguredSurfaceInfo(
             width: width,
             height: height,
+            availableWidth: width,
+            availableHeight: height,
             associatedDevice: configuration.device,
             swapchain: swapchain,
             images: swapchainImages,
             imageViews: swapchainImageViews,
-            renderFinishedSemaphores: semaphores
+            renderFinishedSemaphores: semaphores,
+            lastConfiguration: configuration
         )
     }
 
@@ -185,7 +218,7 @@ public class Surface: SurfaceProtocol {
             )
         )
         let swapchainImages = try swapchain.getImagesKHR()
-        
+
         do {
             let swapchainImageViews = try swapchainImages.map { image in
                 try device.createImageView(
