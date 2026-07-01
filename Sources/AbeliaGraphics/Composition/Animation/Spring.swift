@@ -3,6 +3,19 @@ public class SpringAnimator<T: VectorSpace> {
     var simulation: SpringSimulation<T>
     let controller: CompositorAnimationController
 
+    /// How long (in seconds) the spring takes to settle. Lower is snappier/stiffer,
+    /// higher is looser/softer. Mutates stiffness and damping under the hood.
+    public var response: T.Scalar {
+        get { simulation.response }
+        set { simulation.response = newValue }
+    }
+
+    /// 1 = critically damped (no overshoot), <1 = bouncy, >1 = sluggish.
+    public var dampingRatio: T.Scalar {
+        get { simulation.dampingRatio }
+        set { simulation.dampingRatio = newValue }
+    }
+
     public var value: T {
         get {
             simulation.current
@@ -12,25 +25,47 @@ public class SpringAnimator<T: VectorSpace> {
                 controller.add(simulation)
             }
             simulation.target = newValue
-            simulation.velocity = (simulation.target - simulation.current)
         }
     }
 
-    public init(value: T, controller: CompositorAnimationController) {
+    public init(
+        value: T,
+        response: T.Scalar = 0.5,
+        dampingRatio: T.Scalar = 1,
+        controller: CompositorAnimationController
+    ) {
         self.simulation = SpringSimulation()
         simulation.current = value
         simulation.target = value
         simulation.isFinished = true
+        simulation.response = response
+        simulation.dampingRatio = dampingRatio
 
         self.controller = controller
     }
 }
 
+/// A mass-spring-damper simulation: m * x'' + c * x' + k * (x - target) = 0
 public class SpringSimulation<T: VectorSpace>: AnimationFrameUpdatable {
-    var mass: Double = 1
-    var damping: Double = 1
-    var stiffness: Double = 1
-    var visibilityThreshold: T.Scalar = 1
+    var mass: T.Scalar = 1 {
+        didSet { updateCoefficients() }
+    }
+
+    /// 1 = critically damped (no overshoot), <1 = bouncy, >1 = sluggish.
+    var dampingRatio: T.Scalar = 1 {
+        didSet { updateCoefficients() }
+    }
+
+    /// Approximate settling time in seconds. Mutates `stiffness`/`damping`.
+    var response: T.Scalar = 0.5 {
+        didSet { updateCoefficients() }
+    }
+
+    private(set) var stiffness: T.Scalar = 1
+    private(set) var damping: T.Scalar = 1
+
+    var positionThreshold: T.Scalar = 0.01
+    var velocityThreshold: T.Scalar = 0.01
 
     var target: T = .zero {
         didSet {
@@ -44,90 +79,54 @@ public class SpringSimulation<T: VectorSpace>: AnimationFrameUpdatable {
 
     public var isFinished: Bool = true
 
+    // Integrating in fixed substeps keeps the simulation stable even when a
+    // frame takes unusually long (e.g. after a stall), instead of the spring
+    // blowing up or tunnelling past its target.
+    private let maxSubstep: T.Scalar = 1.0 / 120.0
+
+    public init() {
+        updateCoefficients()
+    }
+
+    private func updateCoefficients() {
+        let angularFrequency = 2 * T.Scalar.pi / response
+        stiffness = mass * angularFrequency * angularFrequency
+        damping = 2 * dampingRatio * (stiffness * mass).squareRoot()
+    }
+
     public func update(deltaTime: Duration) {
-        if abs(target - current).magnitude < 1 {
+        guard !isFinished else { return }
+
+        var remaining = T.Scalar(deltaTime / .seconds(1))
+        guard remaining > 0 else { return }
+
+        while remaining > 0 {
+            let step = min(remaining, maxSubstep)
+            integrate(dt: step)
+            remaining -= step
+        }
+
+        if isAtRest {
             current = target
-            isFinished = true
-            return
-        }
-
-        let dt = (deltaTime / .seconds(1))
-
-        current += velocity * T.Scalar(dt)
-        if current > target {
-            current = target
+            velocity = .zero
             isFinished = true
         }
     }
-}
-// compositor.createAnimation
-// it only gauranteed to be called
 
-public protocol AnimationFrameUpdatable {
-    var isFinished: Bool { get }
+    private func integrate(dt: T.Scalar) {
+        let displacement = current - target
+        let springForce = -stiffness * displacement
+        let dampingForce = -damping * velocity
+        let acceleration = (springForce + dampingForce) * (1 / mass)
 
-    // will be nil the first frame
-    mutating func update(deltaTime: Duration)
-}
-
-@MainActor
-public class CompositorAnimationController {
-    let compositor: Compositor
-    let clock = ContinuousClock()
-    var lastAnimationFrameTime: ContinuousClock.Instant
-    var listeners: [any AnimationFrameUpdatable] = []
-
-    public init(_ compositor: Compositor) {
-        self.compositor = compositor
-        lastAnimationFrameTime = clock.now
+        // Semi-implicit (symplectic) Euler: update velocity first, then use
+        // it to update position. More stable than explicit Euler for springs.
+        velocity += acceleration * dt
+        current += velocity * dt
     }
 
-    public func add(_ listener: any AnimationFrameUpdatable) {
-        if listeners.isEmpty {
-            self.lastAnimationFrameTime = clock.now
-            compositor.requestAnimationFrame {
-                self.runAnimationFrame()
-            }
-        }
-
-        listeners.append(listener)
+    private var isAtRest: Bool {
+        abs(current - target).magnitude < positionThreshold
+            && abs(velocity).magnitude < velocityThreshold
     }
-
-    private func runAnimationFrame() {
-        let now = clock.now
-        let dt = now - self.lastAnimationFrameTime
-
-        var finishedIndices: [Int] = []
-        for index in listeners.indices {
-            listeners[index].update(deltaTime: dt)
-            if listeners[index].isFinished {
-                finishedIndices.append(index)
-            }
-        }
-
-        for index in finishedIndices.lazy.reversed() {
-            listeners.remove(at: index)
-        }
-
-        if !listeners.isEmpty {
-            self.lastAnimationFrameTime = now
-            compositor.requestAnimationFrame {
-                self.runAnimationFrame()
-            }
-        }
-    }
-}
-
-public protocol VectorSpace: AdditiveArithmetic & Comparable & SignedNumeric {
-    associatedtype Scalar: BinaryFloatingPoint
-    static func * (lhs: Self, rhs: Scalar) -> Self
-    static func * (lhs: Scalar, rhs: Self) -> Self
-}
-
-extension Float: VectorSpace {
-    public typealias Scalar = Float
-}
-
-extension Double: VectorSpace {
-    public typealias Scalar = Double
 }
