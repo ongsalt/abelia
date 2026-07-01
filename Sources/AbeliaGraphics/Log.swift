@@ -23,6 +23,16 @@ struct Log {
         }
     }
 
+    nonisolated(unsafe) static var displayedTags: Set<Tag> = [
+        .general,
+        .renderer,
+        .compositor,
+        .gpuStorage,
+        .scheduler,
+        .textureRegistry,
+        .vulkan,
+    ]
+
     static func info(_ tag: Tag, _ message: String, align: Bool = true) {
         log("\u{001B}[32m   INFO\u{001B}[0m", tag, message, align: align)
     }
@@ -42,6 +52,9 @@ struct Log {
     }
 
     private static func log(_ levelColored: String, _ tag: Tag, _ message: String, align: Bool) {
+        if !displayedTags.contains(tag) {
+            return
+        }
         let timestamp = Date.now.formatFr()
         guard align, message.contains("\n") else {
             print("\(levelColored) \(timestamp) \(tag.colored) \(message)")
