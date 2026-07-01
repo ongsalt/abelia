@@ -55,6 +55,7 @@ public class GraphicsContext: @unchecked Sendable {
                         guard let pMessage = callbackData?.pointee.pMessage else {
                             return 0
                         }
+
                         let message = String(cString: pMessage)
 
                         let severity: DebugUtilsMessageSeverityFlagsEXT =

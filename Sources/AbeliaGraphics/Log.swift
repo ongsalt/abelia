@@ -8,15 +8,17 @@ struct Log {
         case gpuStorage
         case scheduler
         case textureRegistry
+        case vulkan
 
         var colored: String {
             switch self {
-            case .general:    return "\u{001B}[37m\(self)\u{001B}[0m"
-            case .renderer:   return "\u{001B}[35m\(self)\u{001B}[0m"
+            case .general: return "\u{001B}[37m\(self)\u{001B}[0m"
+            case .renderer: return "\u{001B}[35m\(self)\u{001B}[0m"
             case .compositor: return "\u{001B}[36m\(self)\u{001B}[0m"
             case .gpuStorage: return "\u{001B}[33m\(self)\u{001B}[0m"
-            case .scheduler:      return "\u{001B}[34m\(self)\u{001B}[0m"
+            case .scheduler: return "\u{001B}[34m\(self)\u{001B}[0m"
             case .textureRegistry: return "\u{001B}[32m\(self)\u{001B}[0m"
+            case .vulkan: return "\u{001B}[31m\(self)\u{001B}[0m"
             }
         }
     }
@@ -35,7 +37,7 @@ struct Log {
 
     static func debug(_ tag: Tag, _ message: String, align: Bool = true) {
         #if DEBUG
-        log("\u{001B}[34m  DEBUG\u{001B}[0m", tag, message, align: align)
+            log("\u{001B}[34m  DEBUG\u{001B}[0m", tag, message, align: align)
         #endif
     }
 

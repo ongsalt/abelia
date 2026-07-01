@@ -3,6 +3,11 @@
 import CShim
 import Vulkan
 
+nonisolated(unsafe) let subresourceRange = ImageSubresourceRange(
+    aspectMask: .color, baseMipLevel: 0, levelCount: 1,
+    baseArrayLayer: 0, layerCount: 1
+)
+
 struct Renderer {
     let context: DeviceContext
     let releaseQueue: ReleaseQueue
@@ -279,7 +284,6 @@ extension Renderer {
         let viewMatrix = projection
         // Log.debug(.renderer, "\(w)x\(h)")
         // Log.debug(.renderer, "\(viewMatrix)")
-        // let viewport = (size.x, size.y)
         withUnsafeBytes(of: viewMatrix) { viewMatrix in
             cmd.pushConstants(
                 layout: pipelines.compositionPipelineLayout,
@@ -300,15 +304,6 @@ extension Renderer {
                 globalDescriptorSet,
             ]
         )
-
-        // for i in 0..<renderNodeCount {
-        //     cmd.draw(
-        //         vertexCount: 6,
-        //         instanceCount: 1,
-        //         firstVertex: 0,
-        //         firstInstance: UInt32(firstInstance + i)
-        //     )
-        // }
 
         cmd.draw(
             vertexCount: 6,
