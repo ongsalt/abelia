@@ -47,7 +47,7 @@ struct Log {
 
     static func debug(_ tag: Tag, _ message: String, align: Bool = true) {
         #if DEBUG
-            log("\u{001B}[34m  DEBUG\u{001B}[0m", tag, message, align: align)
+            // log("\u{001B}[34m  DEBUG\u{001B}[0m", tag, message, align: align)
         #endif
     }
 
