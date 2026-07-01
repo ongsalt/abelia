@@ -68,3 +68,12 @@ extension Sequence {
         SequenceChain(self, other)
     }
 }
+
+func measure<T>(block: () -> T) -> (Duration, T) {
+    let clock = ContinuousClock()
+    var ret: T!
+    let time = clock.measure {
+        ret = block()
+    }
+    return (time, ret)
+}

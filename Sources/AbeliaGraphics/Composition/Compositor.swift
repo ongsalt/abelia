@@ -9,6 +9,8 @@ public class Compositor {
     let surface: Surface
     let context: DeviceContext
 
+    var scheduler = RenderScheduler()
+
     public init(surface: Surface, device: DeviceContext) throws {
         self.surface = surface
         self.context = device
@@ -23,17 +25,38 @@ public class Compositor {
         return CompositionImage(future.value)
     }
 
+    var animationFrameCallbacks: [() -> Void] = []
+    public func requestAnimationFrame(callback: @escaping () -> Void) {
+        animationFrameCallbacks.append(callback)
+    }
+
+    public func watch() {
+        // layer dirty tracking
+    }
+
     public func flushFrame() throws {
+        // this should be async -> so not block main thread
+
         let res = try renderLoop.waitForAvailableFrameInFlight()
+
         // let frameContext
+        // this should be async -> so not block main thread
+        let backBuffer = try! surface.acquireCurrentTexture(signalling: res.imageAvailableSemaphore)
 
         // flush animation frame
-        let backBuffer = try! surface.acquireCurrentTexture(signalling: res.imageAvailableSemaphore)
+        let cbs = animationFrameCallbacks
+        animationFrameCallbacks = []
+        for callback in cbs {
+            callback()
+        }
+
         let commands: GPUCommands = GPUCommands { [self] commandBuffer in
             backBuffer.prepareRender().apply(to: commandBuffer)
-
-            var scheduler = RenderScheduler()
-            if let pass = scheduler.schedule(root: root) {
+            let (time, pass) = measure {
+                scheduler.schedule(root: root)
+            }
+            Log.debug(.scheduler, "Completed batching in \((time / .milliseconds(1)))ms")
+            if let pass {
                 Log.debug(.scheduler, pass.dumpTree())
                 do {
                     let texture = try renderer.render(
@@ -66,6 +89,10 @@ public class Compositor {
             waiting: res.imageAvailableSemaphore,
             signalling: backBuffer.renderCompletedSemaphore,
         )
+
+        if let ms = try renderLoop.getLatestAvailableFrameTime() {
+            Log.info(.compositor, "Finished frame in \(ms)ms")
+        }
 
         try! backBuffer.present()
 
