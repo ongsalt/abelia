@@ -6,7 +6,7 @@ import Vulkan
 // 1 to 1 with shader data (in term of information not layout)
 // This should be swift struct
 // sdf is center-anchor
-public struct RenderNode {
+public struct RenderNode: Sendable {
     public var brush: Brush = .solid(.transparent)
     public var shape: any ShapeProtocol = Shape.rect(width: 0, height: 0)
 
@@ -18,7 +18,7 @@ public struct RenderNode {
     public var affine: Affine = .identity
 }
 
-public struct NodeShadow {
+public struct NodeShadow: Sendable {
     public var offset: SIMD2<Float> = .zero
     public var blur: Float = 15
     public var spread: Float = 0
@@ -26,7 +26,7 @@ public struct NodeShadow {
     public var opacity: Float = 65
 }
 
-public struct NodeBorder {
+public struct NodeBorder: Sendable {
     public var width: Float = 1
     public var brush: Brush = .solid(Color.black.with(alpha: 0.3))
 }

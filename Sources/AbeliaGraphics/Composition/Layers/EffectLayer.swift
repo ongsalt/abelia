@@ -21,7 +21,7 @@ public class EffectLayer: _BaseLayer {
     }
   }
 }
-public enum Effect {
+public enum Effect: Sendable {
   case blur(radius: Float)
   case refraction(amount: Float, height: Float, chromaticAberration: Float = 0)
   // case customShader

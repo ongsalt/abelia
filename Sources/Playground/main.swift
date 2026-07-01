@@ -1,4 +1,5 @@
 import AbeliaGraphics
+import Foundation
 import Swinit
 
 class Delegate: Swinit.EventLoopDelegate {
@@ -35,8 +36,9 @@ class Delegate: Swinit.EventLoopDelegate {
         // let grid = nonOverlapBlurGrid(w: 10, h: 10)
         // layer.insert(grid)
 
-        self.compositor.root = buildLayersWithCompositionGroup(compositor)
+        // self.compositor.root = buildLayersWithCompositionGroup(compositor)
         // self.compositor.root = buildHealthRings()
+        self.compositor.root = buildAnimationDemo(compositor, window: window)
 
         window.requestRedraw()
     }
@@ -49,16 +51,17 @@ class Delegate: Swinit.EventLoopDelegate {
             surfaceConfig.width = size.width
             surfaceConfig.height = size.height
             try! surface.configure(surfaceConfig)
-            do {
-                compositor.root.size = SIMD2(Float(size.width), Float(size.height))
-                try! compositor.flushFrame()
-            } catch {
-                print(error)
-            }
+            compositor.root.size = SIMD2(Float(size.width), Float(size.height))
+            window.requestRedraw()
+
         // if isFinal {
         // }
         case .redrawRequested:
-            try! compositor.flushFrame()
+            do {
+                try compositor.flushFrame()
+            } catch {
+                print(error)
+            }
 
         case .closeRequested:
             window.close()
@@ -69,7 +72,7 @@ class Delegate: Swinit.EventLoopDelegate {
     }
 
     func aboutToWait(_ eventLoop: EventLoop) {
-        // window.requestRedraw()
+        window.requestRedraw()
     }
 
 }
@@ -232,6 +235,39 @@ func buildHealthRings() -> Layer {
     // backgrounds first so foreground arcs composite on top
     let rings = ShapeLayer(shapes: [moveBg, exerciseBg, standBg, moveFg, exerciseFg, standFg, blob])
     root.insert(rings)
+    return root
+}
+
+func buildAnimationDemo(_ compositor: Compositor, window: Window) -> Layer {
+    let root = Layer(brush: .solid(.black))
+    let canvas = ShapeLayer()
+    root.insert(canvas)
+
+    let clock = ContinuousClock()
+    let start = clock.now
+
+    func tick() {
+        let t = Float((clock.now - start) / .seconds(1))
+        let progress = Float(sin(t) * 0.5 + 0.5)
+        canvas.shapes = [
+            ShapeItem(
+                shape: Shape.arc(radius: 120, angle: .radians(.pi * 2 * progress), thickness: 24),
+                brush: .solid(.cyan),
+                offset: [400, 300, 0],
+                rotation: .radians(t)
+            ),
+            ShapeItem(
+                shape: Shape.arc(
+                    radius: 72, angle: .radians(.pi * 2 * (1 - progress)), thickness: 24),
+                brush: .solid(.orange),
+                offset: [400, 300, 0],
+                rotation: .radians(-t * 1.3)
+            ),
+        ]
+        compositor.requestAnimationFrame(callback: tick)
+    }
+
+    compositor.requestAnimationFrame(callback: tick)
     return root
 }
 

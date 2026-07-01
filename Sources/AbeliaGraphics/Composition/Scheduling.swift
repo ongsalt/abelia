@@ -1,8 +1,10 @@
 struct RenderScheduler {
+    // TODO: cache this
     var transformResolver = TransformResolver()
     var compositionPlanner = CompositionPlanner()
     var passScheduler = PassScheduler()
 
+    // may mark layer as clean
     mutating func schedule(root: _BaseLayer) -> Pass? {
         transformResolver.resolve(root: root)
         let group = compositionPlanner.plan(root: root)
@@ -216,12 +218,13 @@ struct PassScheduler {
     }
 }
 
-class Pass {
+// safe becuase its immutable
+class Pass: @unchecked Sendable {
     // indices of other pass
-    var kind: PassKind
-    var dependencies: [Pass] = []
+    fileprivate(set) var kind: PassKind
+    fileprivate(set) var dependencies: [Pass] = []
     // some time this do not change
-    var target: PassRenderTarget
+    fileprivate(set) var target: PassRenderTarget
 
     init(target: PassRenderTarget) {
         kind = .composite(nodes: [])
@@ -302,13 +305,13 @@ extension Pass {
     }
 }
 
-enum PassKind {
+enum PassKind: Sendable {
     case composite(nodes: [RenderNode], useCustomBlend: Bool = false)
     case blur(regions: [BlurRegion])
     case effect(regions: [EffectRegion])
 }
 
-enum LayerKind {
+enum LayerKind: Sendable {
     case composite
     case blur
     case effect

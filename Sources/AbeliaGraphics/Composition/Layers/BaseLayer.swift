@@ -16,9 +16,11 @@ public class _BaseLayer: Identifiable {
     }
 
     public var label: String?
-    var dirtyFlags: LayerDirtyFlags = [.transform, .contents]
+    var dirtyFlags: LayerDirtyFlags = [.transform, .draw]
 
-    public var shouldRasterize: Bool = false
+    public var shouldRasterize: Bool = false {
+        didSet { dirtyFlags.insert(.compositionGroup) }
+    }
     var isCompositionGroupRoot: Bool {
         shouldRasterize || shuoldClipStartCompositionGroup
     }
@@ -60,16 +62,18 @@ public class _BaseLayer: Identifiable {
     }
 
     // TODO: backfaceVisibility
-    public var affine: Affine = .identity
+    public var affine: Affine = .identity {
+        didSet { dirtyFlags.insert(.transform) }
+    }
 
     // TODO: clip
     public var clipped: Bool = false {
-        didSet { dirtyFlags.insert(.grouping) }
+        didSet { dirtyFlags.insert(.compositionGroup) }
     }
 
     internal var shuoldClipStartCompositionGroup: Bool {
         if clipped,
-            let shape = shape as? Shape// case .rect(_, _, let cornerRadius, _) = shape
+            let shape = shape as? Shape  // case .rect(_, _, let cornerRadius, _) = shape
         {
             return true
         }
@@ -174,6 +178,6 @@ struct LayerDirtyFlags: OptionSet {
     let rawValue: UInt32
 
     static let transform = LayerDirtyFlags(rawValue: 1 << 0)
-    static let contents = LayerDirtyFlags(rawValue: 1 << 1)
-    static let grouping = LayerDirtyFlags(rawValue: 1 << 2)
+    static let draw = LayerDirtyFlags(rawValue: 1 << 1)
+    static let compositionGroup = LayerDirtyFlags(rawValue: 1 << 2)
 }

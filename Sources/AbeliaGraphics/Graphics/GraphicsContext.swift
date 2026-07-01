@@ -146,6 +146,7 @@ public class DeviceContext: @unchecked Sendable {
                         descriptorBindingPartiallyBound: true,
                         descriptorBindingVariableDescriptorCount: true,
                         runtimeDescriptorArray: true,
+                        hostQueryReset: true,
                         bufferDeviceAddress: true,
                     )
                 )

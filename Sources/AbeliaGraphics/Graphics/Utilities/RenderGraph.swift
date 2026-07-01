@@ -19,7 +19,7 @@ struct BlurRegion {
   let radius: Float
 }
 
-struct EffectRegion {
+struct EffectRegion: Sendable {
   let shape: any ShapeProtocol
   let affine: Affine
   let effect: Effect
