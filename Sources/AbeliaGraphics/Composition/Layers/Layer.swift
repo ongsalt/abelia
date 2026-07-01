@@ -1,27 +1,37 @@
+import ReactivityGraph
+
 public class Layer: _BaseLayer {
     public override var shape: any ShapeProtocol {
         Shape.rect(
             width: size.x, height: size.y, cornerRadius: cornerRadius, cornerDegree: cornerDegree)
     }
 
+    @Bindable
     public var opacity: Float = 1 {
         didSet { dirtyFlags.insert(.compositionGroup) }
     }
 
+    @Bindable
     public var brush: CompositionBrush? {
         didSet { dirtyFlags.insert(.draw) }
     }
+
+    @Bindable
     public var cornerRadius: Float = 0 {
         didSet { dirtyFlags.insert(.draw) }
     }
+
+    @Bindable
     public var cornerDegree: Float = 4 {
         didSet { dirtyFlags.insert(.draw) }
     }
 
+    @Bindable
     public var border: Border? {
         didSet { dirtyFlags.insert(.draw) }
     }
 
+    @Bindable
     public var shadow: Shadow? {
         didSet { dirtyFlags.insert(.draw) }
     }

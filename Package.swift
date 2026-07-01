@@ -22,7 +22,7 @@ let package = Package(
         .package(
             url: "https://github.com/ongsalt/swift-vulkan",
             revision: "ad4cffdd4e159479b1ebcbd06a8c68a122bf9520"),
-        .package(url: "https://github.com/LuizZak/swift-blend2d", branch: "master"),
+        // .package(url: "https://github.com/LuizZak/swift-blend2d", branch: "master"),
 
     ],
     targets: [
@@ -97,8 +97,9 @@ let package = Package(
             dependencies: [
                 "CShim",
                 "CSTBImage",
+                "ReactivityGraph",
                 .product(name: "Vulkan", package: "swift-vulkan"),
-                .product(name: "SwiftBlend2D", package: "swift-blend2d"),
+                // .product(name: "SwiftBlend2D", package: "swift-blend2d"),
                 .product(name: "Swinit", package: "swinit"),
             ],
             exclude: [

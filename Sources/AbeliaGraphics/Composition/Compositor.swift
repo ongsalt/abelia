@@ -144,7 +144,7 @@ public class Compositor {
     }
 }
 
-struct RenderNotifier: @unchecked Sendable {
+class RenderNotifier: @unchecked Sendable {
     let condition = NSCondition()
     let ignored: Bool
     var preRenderFrameCount: Int

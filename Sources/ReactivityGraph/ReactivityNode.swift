@@ -37,7 +37,7 @@ struct Edge {
     let source: any Source
 }
 
-protocol Source<T> {
+public protocol Source<T> {
     associatedtype T: Equatable
     var value: T { get }
 }

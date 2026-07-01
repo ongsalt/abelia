@@ -47,16 +47,16 @@ private enum BindableStorage<T> {
 }
 
 @propertyWrapper
-struct Bindable<T> {
+public struct Bindable<T> {
     private var storage: BindableStorage<T>
 
-    var projectedValue: Self {
+    public var projectedValue: Self {
         // might use borrow/mutate
         get { self }
         set { self = newValue }
     }
 
-    var wrappedValue: T {
+    public var wrappedValue: T {
         get {
             storage.value
         }
@@ -65,15 +65,15 @@ struct Bindable<T> {
         }
     }
 
-    init(wrappedValue: T) {
+    public init(wrappedValue: T) {
         storage = .const(wrappedValue)
     }
 
-    mutating func bind(to computation: @escaping () -> T) {
+    public mutating func bind(to computation: @escaping () -> T) {
         self.storage = .getter(computation)
     }
 
-    mutating func bind(to source: any Source<T>) {
+    public mutating func bind(to source: any Source<T>) {
         self.storage = .source(source)
     }
 }

@@ -12,11 +12,34 @@ class Delegate: Swinit.EventLoopDelegate {
     var surfaceConfig: SurfaceConfiguration!
     var context: GraphicsContext!
     var compositor: Compositor!
+    var animationController: CompositorAnimationController!
+
+    func setupLayer(root: Layer) {
+        let gammaTestLayer = gammaTest()
+        root.insert(gammaTestLayer)
+
+        // let shapeLayer = buildHealthRings()
+        // root.insert(shapeLayer)
+
+        let animationLayer = buildAnimationDemo(compositor)
+        animationLayer.offset = [0, 360, 0]
+        root.insert(animationLayer)
+
+        let s = SpringAnimator(value: 0, controller: animationController)
+        s.value = 200
+
+        let bindingLayer = Layer(size: [100, 100], brush: .solid(.pink))
+        bindingLayer.$offset.bind {
+            SIMD3(0, Float(s.value), 0)
+        }
+        
+        root.insert(bindingLayer)
+    }
 
     func canCreateSurfaces(_ eventLoop: Swinit.EventLoop) {
         self.context = try! GraphicsContext(applicationName: "yomum", version: 12)
         self.window = eventLoop.openWindow(
-            .init(title: "hihi", size: Size(width: 800, height: 600), opaqueRegion: true)
+            .init(title: "hihi", size: Size(width: 800, height: 600))
         )
 
         #if os(Linux)
@@ -36,9 +59,9 @@ class Delegate: Swinit.EventLoopDelegate {
         try! surface.configure(surfaceConfig)
 
         self.compositor = try! Compositor(surface: surface, device: device)
+        self.animationController = CompositorAnimationController(compositor)
 
-        // self.compositor.root = buildHealthRings()
-        self.compositor.root = buildAnimationDemo(compositor, window: window)
+        setupLayer(root: self.compositor.root)
     }
 
     func windowEvent(
@@ -57,11 +80,7 @@ class Delegate: Swinit.EventLoopDelegate {
                 window.close()
                 eventLoop.quit()
             }
-        case .keyboardInput(_, let keyEvent, _):
-            compositor.stop {
-                window.close()
-                eventLoop.quit()
-            }
+
         default:
             do {}
         }
@@ -235,8 +254,9 @@ func buildHealthRings() -> Layer {
 }
 
 @MainActor
-func buildAnimationDemo(_ compositor: Compositor, window: Window) -> Layer {
+func buildAnimationDemo(_ compositor: Compositor) -> Layer {
     let root = Layer(brush: .solid(.black))
+    root.size = [300, 300]
     let canvas = ShapeLayer()
     root.insert(canvas)
 
@@ -269,14 +289,14 @@ func buildAnimationDemo(_ compositor: Compositor, window: Window) -> Layer {
             ShapeItem(
                 shape: Shape.arc(radius: 120, angle: .radians(.pi * 2 * progress), thickness: 24),
                 brush: .solid(.cyan),
-                offset: [400, 300, 0],
+                offset: [150, 150, 0],
                 rotation: .radians(t)
             ),
             ShapeItem(
                 shape: Shape.arc(
                     radius: 72, angle: .radians(.pi * 2 * (1 - progress)), thickness: 24),
                 brush: .solid(.orange),
-                offset: [400, 300, 0],
+                offset: [150, 150, 0],
                 rotation: .radians(-t * 1.3)
             ),
         ]

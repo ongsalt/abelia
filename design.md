@@ -144,7 +144,6 @@ component boundary do not exist as we cant really transform function content. So
 - tell wayland that surface is cropped, setOpaqueRegion or something
 
 ## the rest
-- animation frame
 - clipping
 - shapes layer (retained)
 - better image filing api
@@ -160,8 +159,10 @@ component boundary do not exist as we cant really transform function content. So
 - wayland expect a premultiplied gamma-encoded srgb not gamma-encoded srgb premultiplied.
 - `GradientRegistry` - 1d for now
 - DXGI swapchain
-- CALayer-like mask
-- fastpath for rect mask
+- clip and mask
+    - sdf when sampling, 
+    - CALayer-like mask
+    - fastpath for rect mask
 
 - query hdr support
     - fuckkkkkkkkkkkkk, out chain

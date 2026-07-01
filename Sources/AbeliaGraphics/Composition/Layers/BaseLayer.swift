@@ -1,3 +1,5 @@
+import ReactivityGraph
+
 // TODO: move layer dimension calculating to render thread
 
 public class _BaseLayer: Identifiable {
@@ -36,37 +38,45 @@ public class _BaseLayer: Identifiable {
         return shape.bounds.atOrigin
     }
 
+    @Bindable
     public var offset: SIMD3<Float> = .zero {
         didSet { dirtyFlags.insert(.transform) }
     }
 
+    @Bindable
     public var size: SIMD2<Float> = .zero {
         didSet { dirtyFlags.insert(.transform) }
     }
 
+    @Bindable
     public var scale: SIMD2<Float> = .one {
         didSet { dirtyFlags.insert(.transform) }
     }
 
+    @Bindable
     public var rotation: Angle = .radians(0) {
         didSet { dirtyFlags.insert(.transform) }
     }
 
+    @Bindable
     public var rotationAxis: SIMD3<Float> = [0, 0, 1] {
         didSet { dirtyFlags.insert(.transform) }
     }
 
     /// pivot point for scale and rotation, in local space — behaves like CSS transform-origin
+    @Bindable
     public var transformOrigin: SIMD2<Float> = .zero {
         didSet { dirtyFlags.insert(.transform) }
     }
 
     // TODO: backfaceVisibility
+    @Bindable
     public var affine: Affine = .identity {
         didSet { dirtyFlags.insert(.transform) }
     }
 
     // TODO: clip
+    @Bindable
     public var clipped: Bool = false {
         didSet { dirtyFlags.insert(.compositionGroup) }
     }
