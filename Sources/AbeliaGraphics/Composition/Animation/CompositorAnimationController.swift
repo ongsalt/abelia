@@ -52,17 +52,3 @@ public class CompositorAnimationController {
         }
     }
 }
-
-public protocol VectorSpace: AdditiveArithmetic & Comparable & SignedNumeric where Magnitude == Scalar {
-    associatedtype Scalar: BinaryFloatingPoint
-    static func * (lhs: Self, rhs: Scalar) -> Self
-    static func * (lhs: Scalar, rhs: Self) -> Self
-}
-
-extension Float: VectorSpace {
-    public typealias Scalar = Float
-}
-
-extension Double: VectorSpace {
-    public typealias Scalar = Double
-}

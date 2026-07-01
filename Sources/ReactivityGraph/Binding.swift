@@ -69,6 +69,10 @@ public struct Bindable<T> {
         storage = .const(wrappedValue)
     }
 
+    public mutating func bind(_ expression: @autoclosure @escaping () -> T) {
+        self.storage = .getter(expression)
+    }
+
     public mutating func bind(to computation: @escaping () -> T) {
         self.storage = .getter(computation)
     }

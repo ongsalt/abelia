@@ -14,6 +14,8 @@ class Delegate: Swinit.EventLoopDelegate {
     var compositor: Compositor!
     var animationController: CompositorAnimationController!
 
+    var position: SpringAnimator<Vec2<Float>>!
+
     func setupLayer(root: Layer) {
         let gammaTestLayer = gammaTest()
         root.insert(gammaTestLayer)
@@ -25,22 +27,22 @@ class Delegate: Swinit.EventLoopDelegate {
         animationLayer.offset = [0, 360, 0]
         root.insert(animationLayer)
 
-        let s = SpringAnimator(value: 0, controller: animationController)
-        s.value = 200
+        position = SpringAnimator(value: Vec2(0, 0), controller: animationController)
 
-        let bindingLayer = Layer(size: [100, 100], brush: .solid(.pink))
-        bindingLayer.$offset.bind {
-            SIMD3(0, Float(s.value), 0)
+        let bindingLayer = Layer(size: [100, 100], brush: .solid(.brown))
+        bindingLayer.$offset.bind { [self] in
+            let p = position.value.simd
+            return SIMD3(p.x, p.y, 0)
         }
-        
+
         root.insert(bindingLayer)
     }
 
     func canCreateSurfaces(_ eventLoop: Swinit.EventLoop) {
         self.context = try! GraphicsContext(applicationName: "yomum", version: 12)
-        self.window = eventLoop.openWindow(
-            .init(title: "hihi", size: Size(width: 800, height: 600))
-        )
+        let attr = WindowAttributes(title: "hihi", size: Size(width: 800, height: 600))
+
+        self.window = eventLoop.openWindow(attr)
 
         #if os(Linux)
             surface = try! context.createWaylandSurface(
@@ -68,12 +70,20 @@ class Delegate: Swinit.EventLoopDelegate {
         _ eventLoop: Swinit.EventLoop, window: Swinit.Window, event: SwinitCore.WindowEvent
     ) {
         switch event {
-        case .resized(let size, let isFinal):
+        case .resized(let size, _):
             surfaceConfig.width = size.width
             surfaceConfig.height = size.height
             try! surface.configure(surfaceConfig)
             compositor.root.size = SIMD2(Float(size.width), Float(size.height))
             compositor.onDirty()
+
+        case .keyboardInput(_, let event, _) where event.state == .pressed:
+            let x = Float.random(in: 0...compositor.root.size.x)
+            let y = Float.random(in: 0...compositor.root.size.y)
+            position.value = Vec2(x, y)
+
+        case .cursorMoved(_, let p):
+            position.value = Vec2(Float(p.x), Float(p.y))
 
         case .closeRequested:
             compositor.stop {
