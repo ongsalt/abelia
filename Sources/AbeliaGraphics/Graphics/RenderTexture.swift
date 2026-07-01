@@ -101,6 +101,7 @@ class TextureRegistry {
         }
 
         if let texture {
+            availableTextures.remove(at: 0)
             texture.size = size
         } else {
             var usages: ImageUsageFlags = [.sampled, .colorAttachment, .transferSrc]
@@ -161,6 +162,10 @@ class TextureRegistry {
     }
 
     func recycle(_ texture: consuming RenderTexture) {
+        Log.verbose(
+            .textureRegistry,
+            "recycle texture [\(texture.index)] with size=\(texture.size) image:\(texture.image.handle!)"
+        )
         availableTextures.append(texture)
     }
 
