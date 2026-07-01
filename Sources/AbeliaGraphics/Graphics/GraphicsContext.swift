@@ -49,11 +49,25 @@ public class GraphicsContext: @unchecked Sendable {
             debugMessenger = try vulkanInstance.createDebugUtilsMessengerEXT(
                 .init(
                     flags: [],
-                    messageSeverity: [.warning, .error],
-                    messageType: [.general, .performance, .validation],
+                    messageSeverity: [.warning, .error, .info],
+                    messageType: [.general, .performance, .validation, .deviceAddressBinding],
                     pfnUserCallback: { severity, type, callbackData, userData in
-                        print("[vulkan] \(String(cString: callbackData!.pointee.pMessage))")
-                        print()
+                        guard let pMessage = callbackData?.pointee.pMessage else {
+                            return 0
+                        }
+                        let message = String(cString: pMessage)
+
+                        let severity: DebugUtilsMessageSeverityFlagsEXT =
+                            DebugUtilsMessageSeverityFlagsEXT(rawValue: severity.rawValue)
+                        if severity.contains(.error) {
+                            Log.error(.vulkan, message)
+                        } else if severity.contains(.warning) {
+                            Log.warn(.vulkan, message)
+                        } else if severity.contains(.info) {
+                            Log.info(.vulkan, message)
+                        } else {
+                            Log.debug(.vulkan, message)
+                        }
                         return 0
                     },
                     userData: nil
@@ -123,15 +137,17 @@ public class DeviceContext: @unchecked Sendable {
                         return names
                     }(),
                 )
-                .push(PhysicalDeviceVulkan12Features(
-                    shaderSampledImageArrayNonUniformIndexing: true,
-                    shaderStorageBufferArrayNonUniformIndexing: true,
-                    descriptorBindingSampledImageUpdateAfterBind: true,
-                    descriptorBindingPartiallyBound: true,
-                    descriptorBindingVariableDescriptorCount: true,
-                    runtimeDescriptorArray: true,
-                    bufferDeviceAddress: true,
-                ))
+                .push(
+                    PhysicalDeviceVulkan12Features(
+                        shaderSampledImageArrayNonUniformIndexing: true,
+                        shaderStorageBufferArrayNonUniformIndexing: true,
+                        descriptorBindingSampledImageUpdateAfterBind: true,
+                        descriptorBindingPartiallyBound: true,
+                        descriptorBindingVariableDescriptorCount: true,
+                        runtimeDescriptorArray: true,
+                        bufferDeviceAddress: true,
+                    )
+                )
                 .push(PhysicalDeviceVulkan11Features(shaderDrawParameters: true))
                 .push(
                     PhysicalDeviceVulkan13Features(
