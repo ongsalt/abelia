@@ -27,24 +27,29 @@ public struct SurfaceConfiguration {
     public var height: UInt32
     public var imageFormat: Format
     public var colorSpace: ColorSpaceKHR
+    public var useMailbox: Bool = false
 }
 
 extension SurfaceConfiguration {
     func onlySizeChanged(comparedTo other: borrowing SurfaceConfiguration) -> Bool {
-        device === other.device && imageFormat == other.imageFormat
-            && colorSpace == other.colorSpace && (width != other.width || height != other.height)
+        device === other.device
+            && imageFormat == other.imageFormat
+            && colorSpace == other.colorSpace
+            && useMailbox == other.useMailbox
+            && (width != other.width || height != other.height)
     }
 }
 
 extension DeviceContext {
-    public func vulkanSurfaceConfig(width: UInt32, height: UInt32) -> SurfaceConfiguration {
+    public func vulkanSurfaceConfig(width: UInt32, height: UInt32, mailbox: Bool = false) -> SurfaceConfiguration {
         // TODO: query surface config
         return SurfaceConfiguration(
             device: self,
             width: width,
             height: height,
             imageFormat: .b8g8r8a8Srgb,
-            colorSpace: .srgbNonlinear
+            colorSpace: .srgbNonlinear,
+            useMailbox: mailbox
         )
     }
 }
@@ -92,14 +97,14 @@ public class Surface: SurfaceProtocol {
         {
             let prevSize = (c.lastConfiguration.width, c.lastConfiguration.height)
             let currentSize = (configuration.width, configuration.height)
-            Log.debug(.general, "Reusing... swapchain \(prevSize) -> \(currentSize)")
+            Log.verbose(.general, "Reusing... swapchain \(prevSize) -> \(currentSize)")
             return
         }
-        Log.debug(.general, "Recreating swapchain \((configuration.width, configuration.height))")
+        Log.info(.general, "Recreating swapchain \((configuration.width, configuration.height))")
 
         let caps = try configuration.device.physicalDevice.getSurfaceCapabilitiesKHR(
             surface: handle)
-        
+
         let size = SIMD2(Float(configuration.width), Float(configuration.height)) * 1.2
         let clamped = Extent2D(width: UInt32(size.x), height: UInt32(size.y))
             .clamped(from: caps.minImageExtent, to: caps.maxImageExtent)
@@ -192,12 +197,17 @@ public class Surface: SurfaceProtocol {
 
     private static func recreateSwapchain(
         device: Device, surface: SurfaceKHR, caps: SurfaceCapabilitiesKHR, imageFormat: Format,
-        colorspace: ColorSpaceKHR, extent: Extent2D, previous: SwapchainKHR? = nil
+        colorspace: ColorSpaceKHR, extent: Extent2D, useMailbox: Bool = true,
+        previous: SwapchainKHR? = nil
     ) throws(Vulkan.Result) -> (SwapchainKHR, [Image], [ImageView]) {
+        var targetImageCount = caps.minImageCount + 1
+        if caps.maxImageCount != 0 {
+            targetImageCount = max(targetImageCount, caps.maxImageCount)
+        }
         let swapchain = try device.createSwapchainKHR(
             .init(
                 surface: surface,
-                minImageCount: caps.minImageCount,
+                minImageCount: targetImageCount,
                 imageFormat: imageFormat,
                 imageColorSpace: colorspace,
                 imageExtent: extent,
@@ -212,7 +222,7 @@ public class Surface: SurfaceProtocol {
                         .opaque
                     #endif
                 }(),
-                presentMode: .fifo,
+                presentMode: useMailbox ? .mailbox : .fifo,
                 clipped: true,
                 oldSwapchain: previous
             )

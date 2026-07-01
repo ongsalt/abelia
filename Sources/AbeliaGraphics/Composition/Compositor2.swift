@@ -1,0 +1,186 @@
+import Foundation
+import Swinit
+import Synchronization
+import Vulkan
+
+/// Flow
+///  1. Main thread: hi there i want to render: lastRenderRequest mutex?
+///  2. render thread: wait
+///  3. render thread & main: pls run animation frame
+///  4. render thread & main: produce pass
+///  5. do its thing
+
+@MainActor
+public class Compositor {
+    let notifier: RenderNotifier
+    private nonisolated(unsafe) let renderLoop: RenderLoop
+    private nonisolated(unsafe) var renderer: Renderer
+
+    // private var knownSurfaces: [Angle] = []
+    // TODO: move compositionSurface out
+    nonisolated(unsafe) private let surface: Surface
+    public var root = Layer()
+
+    private var scheduler = RenderScheduler()
+
+    public init(surface: Surface, device: DeviceContext) throws {
+        self.renderLoop = try RenderLoop(context: device, maxFrameInFlightCount: 2)
+        self.renderer = try Renderer(
+            context: device, frameInFlightCount: renderLoop.maxFrameInFlightCount)
+        self.surface = surface
+        self.notifier = RenderNotifier()
+
+        self.startRenderThread()
+    }
+
+    func onDirty() {
+        notifier.request()
+    }
+
+    public func createImage(filename: String) throws -> CompositionImage {
+        let future = try renderer.textureRegistry.loadImage(filename: filename)
+        return CompositionImage(future.value)
+    }
+
+    var animationFrameCallbacks: [() -> Void] = []
+    public func requestAnimationFrame(callback: @escaping () -> Void) {
+        animationFrameCallbacks.append(callback)
+    }
+
+    func sync() -> Pass? {
+        let callbacks = animationFrameCallbacks
+        animationFrameCallbacks = []
+        for cb in callbacks {
+            cb()
+        }
+
+        // mark layers clean
+
+        // generate pass
+        let (time, pass) = measure {
+            scheduler.schedule(root: root)
+        }
+        Log.verbose(.scheduler, "Completed batching in \((time / .milliseconds(1)))ms")
+        return pass
+    }
+
+    public func start() {
+        // startRenderThread()
+    }
+
+    private func startRenderThread() {
+        let renderThread = Thread { [self] in
+            // block until dirty
+            while notifier.shouldRender() {
+                do {
+                    let res = try renderLoop.waitForAvailableFrameInFlight()
+
+                    // let frameContext
+                    // this should be async -> so not block main thread
+                    let backBuffer = try surface.acquireCurrentTexture(
+                        signalling: res.imageAvailableSemaphore)
+
+                    // wait()
+
+                    let commands: GPUCommands = GPUCommands { [self] commandBuffer in
+                        backBuffer.prepareRender().apply(to: commandBuffer)
+                        let pass = DispatchQueue.main.sync {
+                            sync()
+                        }
+
+                        if let pass {
+                            // Log.info(.scheduler, pass.dumpTree())
+                            do {
+                                _ = try renderer.render(
+                                    pass,
+                                    to: backBuffer.texture.image,
+                                    view: backBuffer.texture.view,
+                                    in: commandBuffer
+                                )
+                            } catch {
+                                print("[compositor] flushFrame: error: \(error)")
+                            }
+                        } else {
+                            // Log.info(.scheduler, "No pass.")
+                        }
+
+                        let c = RenderTextureState.renderTarget
+                        let transitionToPresent = ImageMemoryBarrier2(
+                            srcStageMask: c.stageMask, srcAccessMask: c.accessMask,
+                            dstStageMask: .bottomOfPipe, dstAccessMask: .none,
+                            oldLayout: c.layout, newLayout: .presentSrcKHR, srcQueueFamilyIndex: 0,
+                            dstQueueFamilyIndex: 0, image: backBuffer.texture.image,
+                            subresourceRange: subresourceRange
+
+                        )
+                        commandBuffer.pipelineBarrier2(
+                            .init(imageMemoryBarriers: [transitionToPresent]))
+                    }
+
+                    try renderLoop.submit(
+                        commands: commands,
+                        waiting: res.imageAvailableSemaphore,
+                        signalling: backBuffer.renderCompletedSemaphore,
+                    )
+
+                    if let ms = try renderLoop.getLatestAvailableFrameTime() {
+                        Log.verbose(.compositor, "Finished frame in \(ms)ms")
+                    }
+
+                    try backBuffer.present()
+                } catch {
+                    Log.error(.compositor, "error: \(error)")
+                    // self.lastRenderStartTime = self.clock.now
+                }
+
+            }
+            Log.info(.compositor, "Render thread stopped")
+        }
+
+        renderThread.start()
+    }
+
+    public func stop() {
+        self.notifier.stop()
+    }
+
+}
+
+class RenderNotifier: @unchecked Sendable {
+    let condition = NSCondition()
+    var hasRequest: Bool = false
+    var hasStopped: Bool = false
+    let mailbox: Bool
+
+    init(mailbox: Bool = false) {
+        self.mailbox = mailbox
+    }
+
+    func stop() {
+        condition.withLock {
+            hasStopped = true
+            condition.signal()
+        }
+    }
+
+    func request() {
+        condition.withLock {
+            hasRequest = true
+            condition.signal()
+        }
+    }
+
+    func shouldRender() -> Bool {
+        condition.withLock {
+            if hasStopped {
+                return false
+            }
+            if mailbox {
+                return true
+            }
+            condition.wait()
+            hasRequest = false
+            return true
+        }
+    }
+}

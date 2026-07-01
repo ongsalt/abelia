@@ -30,7 +30,8 @@ extension Renderer {
     init(context: DeviceContext, frameInFlightCount: Int) throws(Vulkan.Result) {
         let pipelines = try Pipelines(
             format: .b8g8r8a8Srgb,
-            context: context
+            context: context,
+            frameInFlightCount: frameInFlightCount
         )
         let releaseQueue = ReleaseQueue()
         let textureDescriptorSet = try pipelines.createTextureDescriptorSet(context)
@@ -220,11 +221,11 @@ extension Renderer {
         let cmd = commandBuffer
         let size = texture.size  // TODO: get overridedImageView size
         let view = overridedImageView ?? texture.view
-        Log.debug(
+        Log.verbose(
             .renderer,
             "drawing: size=\(size), nodes.count=\(nodes.count), useCustomBlend=\(useCustomBlend), into=\(view.handle!)"
         )
-        Log.debug(.renderer, "firstInstance=\(firstInstance), renderNodeCount=\(renderNodeCount)")
+        Log.verbose(.renderer, "firstInstance=\(firstInstance), renderNodeCount=\(renderNodeCount)")
 
         if beginRendering {
             cmd.beginRendering(
@@ -384,7 +385,7 @@ extension Renderer {
             )
             // we need to crop again cuz actual texture can be larger than logical size
             node.brush = .texture(index: index, crop: crop)
-            Log.debug(.renderer, "Resolved backdrop brush index:\(index) for key:\(key)")
+            Log.verbose(.renderer, "Resolved backdrop brush index:\(index) for key:\(key)")
         }
     }
 

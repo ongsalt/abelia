@@ -141,6 +141,7 @@ component boundary do not exist as we cant really transform function content. So
 
 ## Fix
 - COMPUTE SHADOW IN LOCAL COMPOSITION GROUP
+- tell wayland that surface is cropped, setOpaqueRegion or something
 
 ## the rest
 - animation frame

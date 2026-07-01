@@ -2,6 +2,10 @@ import AbeliaGraphics
 import Foundation
 import Swinit
 
+#if canImport(WaylandClient)
+    import WaylandClient
+#endif
+
 class Delegate: Swinit.EventLoopDelegate {
     var window: Window!
     var surface: Surface!
@@ -32,15 +36,9 @@ class Delegate: Swinit.EventLoopDelegate {
         try! surface.configure(surfaceConfig)
 
         self.compositor = try! Compositor(surface: surface, device: device)
-        // let layer = buildLayers()
-        // let grid = nonOverlapBlurGrid(w: 10, h: 10)
-        // layer.insert(grid)
 
-        // self.compositor.root = buildLayersWithCompositionGroup(compositor)
         // self.compositor.root = buildHealthRings()
         self.compositor.root = buildAnimationDemo(compositor, window: window)
-
-        window.requestRedraw()
     }
 
     func windowEvent(
@@ -52,18 +50,9 @@ class Delegate: Swinit.EventLoopDelegate {
             surfaceConfig.height = size.height
             try! surface.configure(surfaceConfig)
             compositor.root.size = SIMD2(Float(size.width), Float(size.height))
-            window.requestRedraw()
-
-        // if isFinal {
-        // }
-        case .redrawRequested:
-            do {
-                try compositor.flushFrame()
-            } catch {
-                print(error)
-            }
 
         case .closeRequested:
+            compositor.stop()
             window.close()
             eventLoop.quit()
         default:
@@ -72,13 +61,13 @@ class Delegate: Swinit.EventLoopDelegate {
     }
 
     func aboutToWait(_ eventLoop: EventLoop) {
-        window.requestRedraw()
-    }
 
+    }
 }
 
 EventLoop().run(Delegate())
 
+@MainActor
 func buildLayersWithCompositionGroup(_ compositor: Compositor) -> Layer {
     let layer = Layer(brush: .solid(.white))
 
@@ -238,6 +227,7 @@ func buildHealthRings() -> Layer {
     return root
 }
 
+@MainActor
 func buildAnimationDemo(_ compositor: Compositor, window: Window) -> Layer {
     let root = Layer(brush: .solid(.black))
     let canvas = ShapeLayer()
@@ -245,9 +235,28 @@ func buildAnimationDemo(_ compositor: Compositor, window: Window) -> Layer {
 
     let clock = ContinuousClock()
     let start = clock.now
+    var lastFrame = clock.now
+    var frameCount = 0
+    var lastReport = clock.now
 
     func tick() {
-        let t = Float((clock.now - start) / .seconds(1))
+        let now = clock.now
+        let t = Float((now - start) / .seconds(1))
+        let frameTime = (now - lastFrame) / .milliseconds(1)
+        lastFrame = now
+        frameCount += 1
+
+        if now - lastReport >= .seconds(1) {
+            let elapsed = (now - lastReport) / .seconds(1)
+            let fps = Double(frameCount) / elapsed
+            Log.info(
+                .general,
+                "fps: \(String(format: "%.1f", fps))  frame time: \(String(format: "%.2f", frameTime))ms"
+            )
+            frameCount = 0
+            lastReport = now
+        }
+
         let progress = Float(sin(t) * 0.5 + 0.5)
         canvas.shapes = [
             ShapeItem(

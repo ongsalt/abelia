@@ -16,7 +16,8 @@ final class Pipelines {
 
     init(
         format: Format,
-        context: borrowing DeviceContext
+        context: borrowing DeviceContext,
+        frameInFlightCount: Int
     )
         throws(Vulkan.Result)
     {
@@ -101,9 +102,9 @@ final class Pipelines {
         self.descriptorPool = try context.device.createDescriptorPool(
             .init(
                 flags: .updateAfterBind,
-                maxSets: 4,
+                maxSets: 2 + UInt32(frameInFlightCount),
                 poolSizes: [
-                    .init(type: .storageBuffer, descriptorCount: 2 * 5),
+                    .init(type: .storageBuffer, descriptorCount: UInt32(frameInFlightCount) * 5),
                     .init(type: .sampledImage, descriptorCount: 512 * 1024),
                     .init(type: .sampler, descriptorCount: 4),
                 ]

@@ -1,7 +1,7 @@
 import Foundation
 
-struct Log {
-    enum Tag {
+public struct Log {
+    public enum Tag {
         case general
         case renderer
         case compositor
@@ -12,7 +12,7 @@ struct Log {
 
         var colored: String {
             switch self {
-            case .general: return "\u{001B}[37m\(self)\u{001B}[0m"
+            case .general: return "\u{001B}[30;47m\(self)\u{001B}[0m"
             case .renderer: return "\u{001B}[35m\(self)\u{001B}[0m"
             case .compositor: return "\u{001B}[36m\(self)\u{001B}[0m"
             case .gpuStorage: return "\u{001B}[33m\(self)\u{001B}[0m"
@@ -23,7 +23,7 @@ struct Log {
         }
     }
 
-    nonisolated(unsafe) static var displayedTags: Set<Tag> = [
+    public nonisolated(unsafe) static var displayedTags: Set<Tag> = [
         .general,
         .renderer,
         .compositor,
@@ -33,7 +33,7 @@ struct Log {
         .vulkan,
     ]
 
-    static func info(_ tag: Tag, _ message: String, align: Bool = true) {
+    public static func info(_ tag: Tag, _ message: String, align: Bool = true) {
         log("\u{001B}[32m   INFO\u{001B}[0m", tag, message, align: align)
     }
 
@@ -47,7 +47,13 @@ struct Log {
 
     static func debug(_ tag: Tag, _ message: String, align: Bool = true) {
         #if DEBUG
-            // log("\u{001B}[34m  DEBUG\u{001B}[0m", tag, message, align: align)
+            log("\u{001B}[34m  DEBUG\u{001B}[0m", tag, message, align: align)
+        #endif
+    }
+
+    static func verbose(_ tag: Tag, _ message: String, align: Bool = true) {
+        #if DEBUG
+            // log("\u{001B}[90mVERBOSE\u{001B}[0m", tag, message, align: align)
         #endif
     }
 

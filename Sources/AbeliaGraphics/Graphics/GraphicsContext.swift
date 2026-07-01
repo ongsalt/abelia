@@ -66,6 +66,8 @@ public class GraphicsContext: @unchecked Sendable {
                             Log.warn(.vulkan, message)
                         } else if severity.contains(.info) {
                             Log.info(.vulkan, message)
+                        } else if severity.contains(.verbose) {
+                            Log.verbose(.vulkan, message)
                         } else {
                             Log.debug(.vulkan, message)
                         }

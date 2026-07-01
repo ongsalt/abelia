@@ -99,7 +99,7 @@ let package = Package(
                 "CSTBImage",
                 .product(name: "Vulkan", package: "swift-vulkan"),
                 .product(name: "SwiftBlend2D", package: "swift-blend2d"),
-                // .product(name: "Swinit", package: "swinit"),
+                .product(name: "Swinit", package: "swinit"),
             ],
             exclude: [
                 "Resources/"
