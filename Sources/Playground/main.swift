@@ -16,7 +16,7 @@ class Delegate: Swinit.EventLoopDelegate {
     func canCreateSurfaces(_ eventLoop: Swinit.EventLoop) {
         self.context = try! GraphicsContext(applicationName: "yomum", version: 12)
         self.window = eventLoop.openWindow(
-            .init(title: "hihi", size: Size(width: 800, height: 600))
+            .init(title: "hihi", size: Size(width: 800, height: 600), opaqueRegion: true)
         )
 
         #if os(Linux)
@@ -53,9 +53,15 @@ class Delegate: Swinit.EventLoopDelegate {
             compositor.onDirty()
 
         case .closeRequested:
-            compositor.stop()
-            window.close()
-            eventLoop.quit()
+            compositor.stop {
+                window.close()
+                eventLoop.quit()
+            }
+        case .keyboardInput(_, let keyEvent, _):
+            compositor.stop {
+                window.close()
+                eventLoop.quit()
+            }
         default:
             do {}
         }

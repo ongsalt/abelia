@@ -65,12 +65,9 @@ public class Compositor {
         return pass
     }
 
-    public func start() {
-        // startRenderThread()
-    }
-
+    var renderThread: Thread?
     private func startRenderThread() {
-        let renderThread = Thread { [self] in
+        self.renderThread = Thread { [self] in
             // block until dirty
             while frameNotifier.shouldRender() {
                 do {
@@ -129,26 +126,30 @@ public class Compositor {
                 } catch {
                     Log.error(.compositor, "error: \(error)")
                 }
-
             }
             Log.info(.compositor, "Render thread stopped")
+            
+            DispatchQueue.main.async {
+                self.onStop?()
+            }
         }
 
-        renderThread.start()
+        renderThread?.start()
     }
 
-    public func stop() {
+    var onStop: (() -> Void)?
+    public func stop(onStop: (() -> Void)? = nil) {
         self.frameNotifier.stop()
+        self.onStop = onStop
     }
-
 }
 
-class RenderNotifier: @unchecked Sendable {
+struct RenderNotifier: @unchecked Sendable {
     let condition = NSCondition()
-    var hasRequested: Bool = false
-    var hasStopped: Bool = false
     let ignored: Bool
     var preRenderFrameCount: Int
+    var hasRequested: Bool = false
+    var shouldStop: Bool = false
 
     init(ignored: Bool = false, preRenderFrameCount: Int) {
         self.ignored = ignored
@@ -157,7 +158,7 @@ class RenderNotifier: @unchecked Sendable {
 
     func stop() {
         condition.withLock {
-            hasStopped = true
+            shouldStop = true
             condition.signal()
         }
     }
@@ -171,7 +172,7 @@ class RenderNotifier: @unchecked Sendable {
 
     func shouldRender() -> Bool {
         condition.withLock {
-            if hasStopped {
+            if shouldStop {
                 return false
             }
             if ignored {
@@ -186,7 +187,7 @@ class RenderNotifier: @unchecked Sendable {
                 return true
             }
             condition.wait()
-            return true
+            return !shouldStop
         }
     }
 }
