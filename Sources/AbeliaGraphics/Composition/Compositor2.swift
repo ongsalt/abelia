@@ -12,7 +12,7 @@ import Vulkan
 
 @MainActor
 public class Compositor {
-    let notifier: RenderNotifier
+    let frameNotifier: RenderNotifier
     private nonisolated(unsafe) let renderLoop: RenderLoop
     private nonisolated(unsafe) var renderer: Renderer
 
@@ -28,13 +28,13 @@ public class Compositor {
         self.renderer = try Renderer(
             context: device, frameInFlightCount: renderLoop.maxFrameInFlightCount)
         self.surface = surface
-        self.notifier = RenderNotifier()
+        self.frameNotifier = RenderNotifier(preRenderFrameCount: 2)
 
         self.startRenderThread()
     }
 
-    func onDirty() {
-        notifier.request()
+    public func onDirty() {
+        frameNotifier.request()
     }
 
     public func createImage(filename: String) throws -> CompositionImage {
@@ -45,6 +45,7 @@ public class Compositor {
     var animationFrameCallbacks: [() -> Void] = []
     public func requestAnimationFrame(callback: @escaping () -> Void) {
         animationFrameCallbacks.append(callback)
+        frameNotifier.request()
     }
 
     func sync() -> Pass? {
@@ -71,7 +72,7 @@ public class Compositor {
     private func startRenderThread() {
         let renderThread = Thread { [self] in
             // block until dirty
-            while notifier.shouldRender() {
+            while frameNotifier.shouldRender() {
                 do {
                     let res = try renderLoop.waitForAvailableFrameInFlight()
 
@@ -80,13 +81,10 @@ public class Compositor {
                     let backBuffer = try surface.acquireCurrentTexture(
                         signalling: res.imageAvailableSemaphore)
 
-                    // wait()
+                    let pass = DispatchQueue.main.sync { self.sync() }
 
                     let commands: GPUCommands = GPUCommands { [self] commandBuffer in
                         backBuffer.prepareRender().apply(to: commandBuffer)
-                        let pass = DispatchQueue.main.sync {
-                            sync()
-                        }
 
                         if let pass {
                             // Log.info(.scheduler, pass.dumpTree())
@@ -98,7 +96,7 @@ public class Compositor {
                                     in: commandBuffer
                                 )
                             } catch {
-                                print("[compositor] flushFrame: error: \(error)")
+                                Log.error(.compositor, "render error: \(error)")
                             }
                         } else {
                             // Log.info(.scheduler, "No pass.")
@@ -130,7 +128,6 @@ public class Compositor {
                     try backBuffer.present()
                 } catch {
                     Log.error(.compositor, "error: \(error)")
-                    // self.lastRenderStartTime = self.clock.now
                 }
 
             }
@@ -141,19 +138,21 @@ public class Compositor {
     }
 
     public func stop() {
-        self.notifier.stop()
+        self.frameNotifier.stop()
     }
 
 }
 
 class RenderNotifier: @unchecked Sendable {
     let condition = NSCondition()
-    var hasRequest: Bool = false
+    var hasRequested: Bool = false
     var hasStopped: Bool = false
-    let mailbox: Bool
+    let ignored: Bool
+    var preRenderFrameCount: Int
 
-    init(mailbox: Bool = false) {
-        self.mailbox = mailbox
+    init(ignored: Bool = false, preRenderFrameCount: Int) {
+        self.ignored = ignored
+        self.preRenderFrameCount = preRenderFrameCount
     }
 
     func stop() {
@@ -165,7 +164,7 @@ class RenderNotifier: @unchecked Sendable {
 
     func request() {
         condition.withLock {
-            hasRequest = true
+            hasRequested = true
             condition.signal()
         }
     }
@@ -175,11 +174,18 @@ class RenderNotifier: @unchecked Sendable {
             if hasStopped {
                 return false
             }
-            if mailbox {
+            if ignored {
+                return true
+            }
+            if preRenderFrameCount > 0 {
+                preRenderFrameCount -= 1
+                return true
+            }
+            if hasRequested {
+                hasRequested = false
                 return true
             }
             condition.wait()
-            hasRequest = false
             return true
         }
     }

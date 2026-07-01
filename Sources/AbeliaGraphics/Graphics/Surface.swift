@@ -124,6 +124,7 @@ public class Surface: SurfaceProtocol {
             imageFormat: configuration.imageFormat,
             colorspace: configuration.colorSpace,
             extent: clamped,
+            useMailbox: configuration.useMailbox,
             previous: prev,
         )
         let time = (clock.now - start) / .milliseconds(1)
@@ -197,7 +198,7 @@ public class Surface: SurfaceProtocol {
 
     private static func recreateSwapchain(
         device: Device, surface: SurfaceKHR, caps: SurfaceCapabilitiesKHR, imageFormat: Format,
-        colorspace: ColorSpaceKHR, extent: Extent2D, useMailbox: Bool = true,
+        colorspace: ColorSpaceKHR, extent: Extent2D, useMailbox: Bool = false,
         previous: SwapchainKHR? = nil
     ) throws(Vulkan.Result) -> (SwapchainKHR, [Image], [ImageView]) {
         var targetImageCount = caps.minImageCount + 1

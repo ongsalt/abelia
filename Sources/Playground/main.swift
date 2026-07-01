@@ -50,6 +50,7 @@ class Delegate: Swinit.EventLoopDelegate {
             surfaceConfig.height = size.height
             try! surface.configure(surfaceConfig)
             compositor.root.size = SIMD2(Float(size.width), Float(size.height))
+            compositor.onDirty()
 
         case .closeRequested:
             compositor.stop()
