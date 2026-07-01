@@ -80,8 +80,9 @@ func buildLayersWithCompositionGroup(_ compositor: Compositor) -> Layer {
     let layer = Layer(brush: .solid(.white))
 
     let image = try! compositor.createImage(filename: "Resources/riko.png")
-    let riko = Layer(offset: [100, 120, 0], size: [320, 180])
+    let riko = Layer(offset: [500, 50, 0], size: [320, 180])
     riko.brush = .texture(image)
+    riko.rotation = .degrees(30)
     layer.insert(riko)
 
     layer.insert(buildLayers())
@@ -93,7 +94,7 @@ func buildLayersWithCompositionGroup(_ compositor: Compositor) -> Layer {
     // )
     // child2.shadow = Shadow()
     child2.opacity = 0.5
-    child2.offset = [100, 100, 0]
+    child2.offset = [0, 120, 0]
     layer.insert(child2)
 
     layer.insert(buildHealthRings())
@@ -135,12 +136,12 @@ func gammaTest() -> Layer {
 
 public func buildLayers() -> Layer {
     // EventLoop().run(Delegate())
-    let layer = Layer(size: [100, 100], brush: .solid(.purple))
+    let layer = Layer(size: [100, 100])
     layer.insert {
         Layer(
             offset: [0, 0, 0],
             size: [50, 50],
-            brush: .solid(.blue),
+            brush: .solid(.red),
             cornerRadius: 12,
             // shadow: Shadow(),
         )
@@ -148,7 +149,7 @@ public func buildLayers() -> Layer {
         Layer(
             offset: [50, 0, 0],
             size: [50, 50],
-            brush: .solid(.cyan),
+            brush: .solid(.green),
             cornerRadius: 12,
             // shadow: Shadow(),
         )
@@ -156,7 +157,7 @@ public func buildLayers() -> Layer {
         Layer(
             offset: [0, 50, 0],
             size: [50, 50],
-            brush: .solid(.teal),
+            brush: .solid(.blue),
             cornerRadius: 12,
             // shadow: Shadow(),
         )
@@ -164,7 +165,7 @@ public func buildLayers() -> Layer {
         Layer(
             offset: [50, 50, 0],
             size: [50, 50],
-            brush: .solid(.green),
+            brush: .solid(.yellow),
             cornerRadius: 12,
             // shadow: Shadow(),
         )
@@ -176,7 +177,7 @@ public func buildLayers() -> Layer {
 func buildHealthRings() -> Layer {
     let root = Layer(size: [800, 600])
 
-    let center: SIMD3<Float> = [400, 300, 0]
+    let center: SIMD3<Float> = [300, 140, 0]
 
     let moveProgress: Float = 0.75
     let moveBg = ShapeItem(
@@ -220,8 +221,9 @@ func buildHealthRings() -> Layer {
     let blob = ShapeItem(
         shape: Shape.rect(width: 240, height: 240, cornerRadius: 80)
             .union(Shape.circle(100), offset: [100, 100], smoothing: 60),
-        brush: .solid(.blue.with(alpha: 0.75)),
-        border: Border(width: 12, brush: .solid(.mint)),
+        brush: .solid(.blue),
+        border: Border(width: 3, brush: .solid(.mint)),
+        shadow: Shadow(blur: 30),
         offset: [600, 400, 0],
         rotation: .degrees(10),
         rotationAxis: [0.1, 1, 0]

@@ -49,11 +49,11 @@ public struct Shadow {
     public var blur: Float = 15
     public var spread: Float = 0
     public var color: Color = .black
-    public var opacity: Float = 0.75
+    public var opacity: Float = 0.65
 
     public init(
         offset: SIMD2<Float> = .zero, blur: Float = 15, spread: Float = 0, color: Color = .black,
-        opacity: Float = 0.75
+        opacity: Float = 0.65
     ) {
         self.offset = offset
         self.blur = blur

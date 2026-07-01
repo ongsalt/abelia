@@ -128,7 +128,7 @@ float4 fsMain(VertexOutput input): SV_Target {
 }
 
 float4 computeBorder(RenderNode renderNode, float2 position) {
-  var d = sdfDistance(renderNode, position) + 0.33;
+  var d = sdfDistance(renderNode, position);
   var color = float4(0.0, 0.0, 0.0, 0.0);
 
   // TODO: correction term when merging
@@ -170,10 +170,10 @@ float4 computeFill(RenderNode renderNode, float2 position, float2 uv) {
     color = textures[NonUniformResourceIndex(brush.textureIndex)].SampleLevel(sampler, textureLocalPositionOf(uv, brush), 0.0);
     // color = float4(brush.cropWidth, brush.cropHeight, brush.cropLeft, 1.0);
     // color = float4(textureLocalPositionOf(position, brush), 0.0, 1.0);
-    color.xyz *= color.w * renderNode.opacity;
+    color.xyz *= color.w;
   }
   
-  return color * smoothCoverageOf(d);
+  return color * smoothCoverageOf(d) * renderNode.opacity;
 }
 
 float2 textureLocalPositionOf(float2 uv, TextureBrush brush) {
@@ -252,8 +252,7 @@ float sdf(float2 position, ShapeKind kind, uint4 data) {
 }
 
 float smoothCoverageOf(float distance) {
-  float edgeWidth = 0.5;
-  return smoothstep(edgeWidth, -edgeWidth, distance);
+  return clamp(0.5 - distance/fwidth(distance), 0, 1.0);
 }
 
 // bias is for shadow
