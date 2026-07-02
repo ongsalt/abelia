@@ -1,54 +1,28 @@
-private func api() {
-    // qt shit
-    Box {
-    }.width(12)
-
-}
-
-// copied from PanGui, need to see clay
-enum Size: Sendable {
-    /// [0, 1] fraction of parent
-    case fraction(Float)
-    case fit(fractionOfSelf: Float)
-    case fill(weight: Float)
-    case pixels(Float)
-
-    // depends on other axis
-    case aspectRatio(Float)
-}
-
-extension Size {
-    static let fill = Self.fill(weight: 1)
-    static let fit = Self.fit(fractionOfSelf: 1)
-}
-
-class LayoutComponent {
-    @Bindable
-    var a: Float = 5
-
-    func width(_ value: @autoclosure @escaping () -> Float) {
-        $a.bind(to: value)
-    }
-}
-
-// make this property wrapper maybe
-private enum BindableStorage<T> {
+package enum BindableStorage<T: Equatable> {
     case const(T)
     case getter(() -> T)
-    case source(any Source<T>)
+    case thunk(_Thunk<T>)
 
     var value: T {
         switch self {
         case .const(let value): value
         case .getter(let g): g()
-        case .source(let source): source.value
+        case .thunk(let thunk): thunk.value
+        }
+    }
+
+    package var _dirty: Bool {
+        switch self {
+        case .const(_): false
+        case .getter(_): false
+        case .thunk(let t): t.dirty
         }
     }
 }
 
 @propertyWrapper
-public struct Bindable<T> {
-    private var storage: BindableStorage<T>
+public struct Bindable<T: Equatable> {
+    package var storage: BindableStorage<T>
 
     public var projectedValue: Self {
         // might use borrow/mutate
@@ -70,19 +44,20 @@ public struct Bindable<T> {
     }
 
     public mutating func bind(_ expression: @autoclosure @escaping () -> T) {
-        self.storage = .getter(expression)
+        self.storage = .thunk(_Thunk(computation: expression))
     }
 
-    public mutating func bind(to computation: @escaping () -> T) {
-        self.storage = .getter(computation)
+    public mutating func _bind(getter: @escaping () -> T) {
+        self.storage = .getter(getter)
     }
 
-    public mutating func bind(to source: any Source<T>) {
-        self.storage = .source(source)
+    // must itself be a computed node. so we can report .dirty/need pull
+    public mutating func bind(source: _Thunk<T>) {
+        self.storage = .thunk(source)
     }
 }
 
-final class Box: LayoutComponent {
-    init(children: () -> Void) {}
-    init(children: (Self) -> Void) {}
+// TODO: ~escapable
+struct BindableProjection {
+
 }

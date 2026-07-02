@@ -128,7 +128,7 @@ public class DeviceContext: @unchecked Sendable {
                     queueCreateInfos: Set([graphicsFamilyIndex, presentationFamilyIndex])
                         .map { .init(queueFamilyIndex: $0, queuePriorities: [1.0]) },
                     enabledExtensionNames: {
-                        var names = ["VK_KHR_swapchain"]
+                        var names = ["VK_KHR_swapchain", "VK_KHR_dynamic_rendering_local_read"]
 
                         #if os(Windows)
                             names += [
@@ -157,6 +157,11 @@ public class DeviceContext: @unchecked Sendable {
                     PhysicalDeviceVulkan13Features(
                         synchronization2: true,
                         dynamicRendering: true,
+                    )
+                )
+                .push(
+                    PhysicalDeviceDynamicRenderingLocalReadFeatures(
+                        dynamicRenderingLocalRead: true
                     )
                 )
             )
@@ -215,6 +220,10 @@ public class DeviceContext: @unchecked Sendable {
         let physicalDevices = try instance.getPhysicalDevices()
 
         for physicalDevice in physicalDevices {
+            // llvmpipe, software renderer
+            // if !physicalDevice.getProperties().deviceName.contains("llvm") {
+            //     continue
+            // }
 
             // Device must support the VK_KHR_swapchain extension
             let extensions = try physicalDevice.getDeviceExtensionProperties(layerName: nil)
