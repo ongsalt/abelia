@@ -29,7 +29,7 @@ extension Layer {
         opacity: Float = 1,
         brush: CompositionBrush? = nil,
         cornerRadius: Float = 0,
-        cornerDegree: Float = 4,
+        cornerDegree: Float = 2,
         border: Border? = nil,
         shadow: Shadow? = nil,
         @LayerBuilder children: () -> [_BaseLayer] = { [] }

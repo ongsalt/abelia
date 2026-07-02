@@ -11,7 +11,7 @@ public struct SpringConfiguration<Scalar: RealScalar> {
     public var visibilityThreshold: Scalar
 
     public init(
-        mass: Scalar = 1, response: Scalar = 0.5, dampingRatio: Scalar = 1,
+        mass: Scalar = 1, response: Scalar = 0.45, dampingRatio: Scalar = 1,
         visibilityThreshold: Scalar = 0.01
     ) {
         self.mass = mass
@@ -71,10 +71,13 @@ public struct SpringConfiguration<Scalar: RealScalar> {
             let sinCoeff = (velocity - r * displacement) * (1 / dampedFreq)
             let dFdT = dampedFreq * t
             let decay = Scalar.exp(r * t)
-            let newDisplacement = decay * (cosCoeff * Scalar.cos(dFdT) + sinCoeff * Scalar.sin(dFdT))
+            let newDisplacement =
+                decay * (cosCoeff * Scalar.cos(dFdT) + sinCoeff * Scalar.sin(dFdT))
             let newVelocity =
                 newDisplacement * r
-                + decay * (sinCoeff * dampedFreq * Scalar.cos(dFdT) - cosCoeff * dampedFreq * Scalar.sin(dFdT))
+                + decay
+                * (sinCoeff * dampedFreq * Scalar.cos(dFdT) - cosCoeff * dampedFreq
+                    * Scalar.sin(dFdT))
             return (newDisplacement, newVelocity)
         }
     }
@@ -127,11 +130,22 @@ public class SpringAnimator<T: VectorArithmetic> where T.Scalar: RealScalar {
 
         self.controller = controller
     }
+
+    func animate(to target: T, initialVelocity: T? = nil) {
+        if simulation.isFinished {
+            controller.add(simulation)
+        }
+        simulation.target = target
+        if let initialVelocity {
+            simulation.velocity = initialVelocity
+        }
+    }
 }
 
 /// A mass-spring-damper simulation: m * x'' + c * x' + k * (x - target) = 0, advanced each
 /// frame via `SpringConfiguration`'s closed-form solution.
-public class SpringSimulation<T: VectorArithmetic>: AnimationFrameUpdatable where T.Scalar: RealScalar {
+public class SpringSimulation<T: VectorArithmetic>: AnimationFrameUpdatable
+where T.Scalar: RealScalar {
     var configuration: SpringConfiguration<T.Scalar> = SpringConfiguration()
 
     var target: T = .zero {
@@ -154,7 +168,8 @@ public class SpringSimulation<T: VectorArithmetic>: AnimationFrameUpdatable wher
         let dt = T.Scalar(deltaTime / .seconds(1))
         guard dt > 0 else { return }
 
-        let motion = configuration.solve(displacement: current - target, velocity: velocity, deltaTime: dt)
+        let motion = configuration.solve(
+            displacement: current - target, velocity: velocity, deltaTime: dt)
         current = target + motion.displacement
         velocity = motion.velocity
 

@@ -119,7 +119,7 @@ public class Compositor {
                     )
 
                     if let ms = try renderLoop.getLatestAvailableFrameTime() {
-                        Log.verbose(.compositor, "Finished frame in \(ms)ms")
+                        Log.verbose(.compositor, "Finished frame in \(ms)ms: \(1000 / ms)fps")
                     }
 
                     try backBuffer.present()

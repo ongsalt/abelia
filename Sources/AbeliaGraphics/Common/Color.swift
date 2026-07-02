@@ -79,7 +79,6 @@ extension Color {
   public static let black = Color(red: 0, green: 0, blue: 0)
   public static let white = Color(red: 1, green: 1, blue: 1)
 
-  // Apple Human Interface Guidelines Colors
   public static let red = Color(red: 1.0, green: 0.2196, blue: 0.2353)
   public static let orange = Color(red: 1.0, green: 0.5529, blue: 0.1569)
   public static let yellow = Color(red: 1.0, green: 0.8, blue: 0.0)

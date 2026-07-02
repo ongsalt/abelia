@@ -56,14 +56,17 @@ public struct Border {
 
 public struct Shadow {
     public var offset: SIMD2<Float> = .zero
-    public var blur: Float = 15
+    public var blur: Float = 48
     public var spread: Float = 0
     public var color: Color = .black
-    public var opacity: Float = 0.65
+    public var opacity: Float = 0.36
 
     public init(
-        offset: SIMD2<Float> = .zero, blur: Float = 15, spread: Float = 0, color: Color = .black,
-        opacity: Float = 0.65
+        offset: SIMD2<Float> = .zero, 
+        blur: Float = 48,
+        spread: Float = 0, 
+        color: Color = .black,
+        opacity: Float = 0.36
     ) {
         self.offset = offset
         self.blur = blur

@@ -17,6 +17,8 @@ class Delegate: Swinit.EventLoopDelegate {
     var position: SpringAnimator<Vec2<Float>>!
 
     func setupLayer(root: Layer) {
+        root.brush = .solid(.white)
+
         let gammaTestLayer = gammaTest()
         root.insert(gammaTestLayer)
 
@@ -25,13 +27,20 @@ class Delegate: Swinit.EventLoopDelegate {
 
         let animationLayer = buildAnimationDemo(compositor)
         animationLayer.offset = [0, 360, 0]
+        // animationLayer.opacity = 0.85
         root.insert(animationLayer)
 
         position = SpringAnimator(value: Vec2(0, 0), controller: animationController)
 
-        let bindingLayer = Layer(size: [100, 100], brush: .solid(.brown))
-        bindingLayer.$offset.bind { [self] in
-            let p = position.value.simd
+        let bindingLayer = Layer(
+            size: [100, 100], 
+            brush: .solid(.white), 
+            cornerRadius: 14, 
+            // border: Border(),
+            shadow: Shadow(opacity: 0.2)
+        )
+        bindingLayer.$offset.bind { [weak self] in
+            let p = self?.position.value.simd ?? .zero
             return SIMD3(p.x, p.y, 0)
         }
 
@@ -57,7 +66,7 @@ class Delegate: Swinit.EventLoopDelegate {
         #endif
 
         let device = try! context.createDevice(compatibleWith: surface)
-        surfaceConfig = device.vulkanSurfaceConfig(width: 800, height: 600)
+        surfaceConfig = device.vulkanSurfaceConfig(width: 800, height: 600, mailbox: false)
         try! surface.configure(surfaceConfig)
 
         self.compositor = try! Compositor(surface: surface, device: device)
@@ -66,9 +75,7 @@ class Delegate: Swinit.EventLoopDelegate {
         setupLayer(root: self.compositor.root)
     }
 
-    func windowEvent(
-        _ eventLoop: Swinit.EventLoop, window: Swinit.Window, event: SwinitCore.WindowEvent
-    ) {
+    func windowEvent(_ eventLoop: EventLoop, window: Window, event: WindowEvent) {
         switch event {
         case .resized(let size, _):
             surfaceConfig.width = size.width
@@ -92,13 +99,11 @@ class Delegate: Swinit.EventLoopDelegate {
             }
 
         default:
-            do {}
+            print(event, window)
         }
     }
 
-    func aboutToWait(_ eventLoop: EventLoop) {
-
-    }
+    func aboutToWait(_ eventLoop: EventLoop) {}
 }
 
 EventLoop().run(Delegate())
@@ -265,7 +270,7 @@ func buildHealthRings() -> Layer {
 
 @MainActor
 func buildAnimationDemo(_ compositor: Compositor) -> Layer {
-    let root = Layer(brush: .solid(.black))
+    let root = Layer()
     root.size = [300, 300]
     let canvas = ShapeLayer()
     root.insert(canvas)
@@ -299,8 +304,9 @@ func buildAnimationDemo(_ compositor: Compositor) -> Layer {
             ShapeItem(
                 shape: Shape.arc(radius: 120, angle: .radians(.pi * 2 * progress), thickness: 24),
                 brush: .solid(.cyan),
+                shadow: Shadow(),
                 offset: [150, 150, 0],
-                rotation: .radians(t)
+                rotation: .radians(t),
             ),
             ShapeItem(
                 shape: Shape.arc(

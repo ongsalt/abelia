@@ -76,7 +76,7 @@ VertexOutput vsMain(VertexInput input) {
   let renderNode = renderNodeData[item.index];
   
   let antialiasingExpand: float = 2;
-  let expand: float = item.drawMode == DrawMode.Shadow ? (renderNode.shadowSpread + renderNode.shadowBlur) : 0 + antialiasingExpand;
+  let expand: float = (item.drawMode == DrawMode.Shadow ? (renderNode.shadowSpread + renderNode.shadowBlur) : 0) + antialiasingExpand;
 
   let boundSize = float2(renderNode.boundMaxX, renderNode.boundMaxY) - float2(renderNode.boundMinX, renderNode.boundMinY);
   let uvExpand = float2(expand) / boundSize ;
@@ -154,7 +154,7 @@ float4 computeShadow(RenderNode renderNode, float2 position) {
   let color = renderNode.shadowColor;
   let progress = clamp(1 - d / (renderNode.shadowBlur * 2), 0, 1);
 
-  return color * renderNode.shadowOpacity * pow(progress, 4);
+  return color * renderNode.shadowOpacity * pow(progress, 4); // we really should use erf
 }
 
 
