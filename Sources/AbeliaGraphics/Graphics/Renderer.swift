@@ -437,17 +437,17 @@ extension Renderer {
 // this should be per frame context
 struct RendererFrameResource {
     let mainDescriptorSet: DescriptorSet
-    let renderNodeStorage: RenderNodeStorage
-    let shapeGroupStorage: ShapeGroupStorage
-    let drawListStorage: DrawListStorage
+    let renderNodeStorage: RenderNodeBuffer
+    let shapeGroupStorage: ShapeBuffer
+    let drawListStorage: DrawListBuffer
 
     fileprivate init(index: Int, context: borrowing DeviceContext, pipelines: borrowing Pipelines)
         throws(Vulkan.Result)
     {
         let mainDescriptorSet = try pipelines.createMainDescriptorSet(context)
-        let renderNodeStorage = try RenderNodeStorage(context: context)
-        let shapeGroupStorage = try ShapeGroupStorage(context: context)
-        let drawListStorage = try DrawListStorage(context: context)
+        let renderNodeStorage = try RenderNodeBuffer(context: context)
+        let shapeGroupStorage = try ShapeBuffer(context: context)
+        let drawListStorage = try DrawListBuffer(context: context)
 
         context.device.updateDescriptorSets(descriptorWrites: [
             .init(

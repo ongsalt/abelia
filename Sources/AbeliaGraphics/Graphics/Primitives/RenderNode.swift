@@ -5,7 +5,7 @@ import Vulkan
 
 // 1 to 1 with shader data (in term of information not layout)
 // This should be swift struct
-// sdf is center-anchor
+// sdf is center-anchor, this is mainly 2d, so on fast path (no 3d) we shouldnot do any matrix math on the cpu at all
 public struct RenderNode: Sendable {
     public var brush: Brush = .solid(.transparent)
     public var shape: any ShapeProtocol = Shape.rect(width: 0, height: 0)
@@ -14,7 +14,7 @@ public struct RenderNode: Sendable {
     public var shadow: NodeShadow?
 
     public var opacity: Float = 1
-    // TODO: backfaceVisibility
+    // TODO: backfaceVisibility, might just filter out
     public var affine: Affine = .identity
 }
 

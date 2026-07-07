@@ -28,14 +28,14 @@ final class Pipelines {
         self.mainDescriptorSetLayout = try context.device.createDescriptorSetLayout(
             DescriptorSetLayoutCreateInfo(
                 bindings: [
-                    // RenderNodeStorage
+                    // RenderNodeBuffer
                     .init(
                         binding: 0,
                         descriptorType: .storageBuffer,
                         descriptorCount: 1,
                         stageFlags: [.fragment, .vertex]
                     ),
-                    // ShapeGroupStorage
+                    // ShapeBuffer
                     .init(
                         binding: 1,
                         descriptorType: .storageBuffer,

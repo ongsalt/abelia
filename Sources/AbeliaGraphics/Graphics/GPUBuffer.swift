@@ -1,7 +1,7 @@
 import CShim
 import Vulkan
 
-class GPUStorage<T> {
+class GPUBuffer<T> {
     private let vmaBuffer: VmaBuffer
     var buffer: Buffer {
         vmaBuffer.buffer
@@ -55,15 +55,12 @@ class GPUStorage<T> {
 }
 
 // TODO: buffer resizing
-class RenderNodeStorage: GPUStorage<CShim.RenderNode> {
-}
+typealias RenderNodeBuffer = GPUBuffer<CShim.RenderNode>
 
 // claude wrote reusing part
-class ShapeGroupStorage: GPUStorage<CShim.ShapeMergingEntry> {
-}
+typealias ShapeBuffer = GPUBuffer<CShim.ShapeMergingEntry>
 
-class DrawListStorage: GPUStorage<DrawListItem> {
-}
+typealias DrawListBuffer = GPUBuffer<DrawListItem>
 
 extension DrawListItem: @retroactive CustomStringConvertible {
     public var description: String {

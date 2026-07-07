@@ -13,11 +13,9 @@ final class SpringCircleScene {
     let canvas: ShapeLayer
     private let compositor: Compositor
     private let primaryCircle: SpringAnimator<Vec2<Float>>
-    private let secondaryCircle: SpringAnimator<Vec2<Float>>
 
     private let primaryRadius: Float = 44
     private let secondaryRadius: Float = 32
-    private let trailingOffset = Vec2<Float>(84, -52)
 
     init(
         compositor: Compositor,
@@ -28,13 +26,8 @@ final class SpringCircleScene {
         self.canvas = ShapeLayer(size: bounds)
 
         self.primaryCircle = SpringAnimator(
-            value: Vec2(bounds.x * 0.35, bounds.y * 0.45),
-            configuration: SpringConfiguration(response: 0.22, dampingRatio: 0.88),
-            controller: controller
-        )
-        self.secondaryCircle = SpringAnimator(
-            value: Vec2(bounds.x * 0.6, bounds.y * 0.55),
-            configuration: SpringConfiguration(response: 0.32, dampingRatio: 0.72),
+            value: .zero,
+            configuration: SpringConfiguration(response: 1, dampingRatio: 0.88),
             controller: controller
         )
 
@@ -115,7 +108,7 @@ class Delegate: Swinit.EventLoopDelegate {
 
     func canCreateSurfaces(_ eventLoop: Swinit.EventLoop) {
         self.context = try! GraphicsContext(applicationName: "yomum", version: 12)
-        let attr = WindowAttributes(title: "hihi", size: Size(width: 800, height: 600))
+        let attr = WindowAttributes(title: "hihi", size: Size(width: 800, height: 600), noRedirectionBitmap: true)
 
         self.window = eventLoop.openWindow(attr)
 

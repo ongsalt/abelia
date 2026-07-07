@@ -142,6 +142,9 @@ component boundary do not exist as we cant really transform function content. So
 ## Fix
 - COMPUTE SHADOW IN LOCAL COMPOSITION GROUP
 - tell wayland that surface is cropped, setOpaqueRegion or something
+- shapelayer positioning
+    - might make the sdf translate content back
+- dxgi swapchain, cuz resizing is pain
 
 ## the rest
 - clipping
