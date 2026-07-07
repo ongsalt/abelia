@@ -141,27 +141,24 @@ component boundary do not exist as we cant really transform function content. So
 
 ## Fix
 - COMPUTE SHADOW IN LOCAL COMPOSITION GROUP
-- tell wayland that surface is cropped, setOpaqueRegion or something
 - shapelayer positioning
     - might make the sdf translate content back
-- dxgi swapchain, cuz resizing is pain
+- dxgi swapchain and proper resizing
 
 ## the rest
-- clipping
-- shapes layer (retained)
+- shadow blur api
+- erf shadow dropoff
+
 - better image filing api
     - fill/stretch
     - crop
     - ninepatch
 - optimize `arc` bounding box
-- bring back blend2d
-
 - hidpi - screen space and framebuffer size wont match
     - `wp_fractional_scale_v1`
     - sdf must be in world space
 - wayland expect a premultiplied gamma-encoded srgb not gamma-encoded srgb premultiplied.
 - `GradientRegistry` - 1d for now
-- DXGI swapchain
 - clip and mask
     - sdf when sampling, 
     - CALayer-like mask

@@ -60,18 +60,28 @@ public struct Shadow: Equatable {
     public var spread: Float = 0
     public var color: Color = .black
     public var opacity: Float = 0.36
+    public var rendering: ShadowRendering = .auto
 
     public init(
         offset: SIMD2<Float> = .zero, 
         blur: Float = 48,
         spread: Float = 0, 
         color: Color = .black,
-        opacity: Float = 0.36
+        opacity: Float = 0.36,
+        rendering: ShadowRendering = .auto
     ) {
         self.offset = offset
         self.blur = blur
         self.spread = spread
         self.color = color
         self.opacity = opacity
+        self.rendering = rendering
     }
+}
+
+public enum ShadowRendering: Equatable, Sendable {
+    // rouned rect -> sdf. blur otherwise
+    case auto
+    case sdf
+    case blur
 }
