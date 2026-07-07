@@ -59,7 +59,7 @@ public class GraphicsContext: @unchecked Sendable {
                         let message = String(cString: pMessage)
 
                         let severity: DebugUtilsMessageSeverityFlagsEXT =
-                            DebugUtilsMessageSeverityFlagsEXT(rawValue: severity.rawValue)
+                            DebugUtilsMessageSeverityFlagsEXT(rawValue: numericCast(severity.rawValue))
                         if severity.contains(.error) {
                             Log.error(.vulkan, message)
                         } else if severity.contains(.warning) {
@@ -128,7 +128,7 @@ public class DeviceContext: @unchecked Sendable {
                     queueCreateInfos: Set([graphicsFamilyIndex, presentationFamilyIndex])
                         .map { .init(queueFamilyIndex: $0, queuePriorities: [1.0]) },
                     enabledExtensionNames: {
-                        var names = ["VK_KHR_swapchain", "VK_KHR_dynamic_rendering_local_read"]
+                        var names = ["VK_KHR_swapchain"]
 
                         #if os(Windows)
                             names += [

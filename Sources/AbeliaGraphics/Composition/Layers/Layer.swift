@@ -41,7 +41,7 @@ public class Layer: _BaseLayer {
     }
 }
 
-public struct Border {
+public struct Border: Equatable {
     public var width: Float = 1
     public var brush: CompositionBrush = .solid(Color.black.with(alpha: 0.3))
 
@@ -54,7 +54,7 @@ public struct Border {
     }
 }
 
-public struct Shadow {
+public struct Shadow: Equatable {
     public var offset: SIMD2<Float> = .zero
     public var blur: Float = 48
     public var spread: Float = 0

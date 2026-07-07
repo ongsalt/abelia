@@ -1,6 +1,6 @@
 import Foundation
 
-public enum Angle: Sendable {
+public enum Angle: Sendable, Equatable {
     case radians(Float)
     case degrees(Float)
     case pi(Float)
@@ -14,7 +14,7 @@ public enum Angle: Sendable {
     }
 }
 
-public struct Affine: Sendable {
+public struct Affine: Sendable, Equatable {
     public var col0: SIMD4<Float>
     public var col1: SIMD4<Float>
     public var col2: SIMD4<Float>
@@ -112,8 +112,6 @@ public struct Affine: Sendable {
         self = self.rotated(angle, axis: axis)
     }
 }
-
-extension Affine: Equatable {}
 
 extension Affine: CustomStringConvertible {
     public var description: String {

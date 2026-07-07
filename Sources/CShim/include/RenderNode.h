@@ -148,6 +148,7 @@ enum __attribute__((enum_extensibility(closed))) ShapeMergingInstructionKind : u
   merge = 1,
 };
 
+// we can nuke this, and just make a mergenode a variant of Shape
 union ShapeMergingInstruction {
   struct MergeNode merge;
   struct ShapeMetadata shape;

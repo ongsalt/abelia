@@ -1,4 +1,4 @@
-public enum Brush: Sendable {
+public enum Brush: Sendable, Equatable {
   case solid(Color)
   /// nineSlices and crop are normalized
   case texture(
@@ -15,7 +15,7 @@ public enum Brush: Sendable {
   )
 }
 
-public enum TextureFillMode: Sendable {
+public enum TextureFillMode: Sendable, Equatable {
   case stretch
   case tile(scale: SIMD2<Float> = .one, offset: SIMD2<Float> = .zero)
   case absolute

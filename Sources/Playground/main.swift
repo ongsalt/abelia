@@ -1,11 +1,95 @@
 import AbeliaGraphics
+
 import Foundation
+
 import Swinit
 
 #if canImport(WaylandClient)
     import WaylandClient
 #endif
 
+@MainActor
+final class SpringCircleScene {
+    let canvas: ShapeLayer
+    private let compositor: Compositor
+    private let primaryCircle: SpringAnimator<Vec2<Float>>
+    private let secondaryCircle: SpringAnimator<Vec2<Float>>
+
+    private let primaryRadius: Float = 44
+    private let secondaryRadius: Float = 32
+    private let trailingOffset = Vec2<Float>(84, -52)
+
+    init(
+        compositor: Compositor,
+        controller: CompositorAnimationController,
+        bounds: SIMD2<Float>
+    ) {
+        self.compositor = compositor
+        self.canvas = ShapeLayer(size: bounds)
+
+        self.primaryCircle = SpringAnimator(
+            value: Vec2(bounds.x * 0.35, bounds.y * 0.45),
+            configuration: SpringConfiguration(response: 0.22, dampingRatio: 0.88),
+            controller: controller
+        )
+        self.secondaryCircle = SpringAnimator(
+            value: Vec2(bounds.x * 0.6, bounds.y * 0.55),
+            configuration: SpringConfiguration(response: 0.32, dampingRatio: 0.72),
+            controller: controller
+        )
+
+        refreshShapes()
+        compositor.requestAnimationFrame(callback: tick)
+    }
+
+    func updateBounds(_ bounds: SIMD2<Float>) {
+        canvas.size = bounds
+        refreshShapes()
+    }
+
+    func move(toward position: Vec2<Float>) {
+        primaryCircle.value = clamp(position, within: canvas.size, radius: primaryRadius)
+    }
+
+    private func tick() {
+        refreshShapes()
+        compositor.requestAnimationFrame(callback: tick)
+    }
+
+    private func refreshShapes() {
+        canvas.shapes = [
+            // ShapeItem(
+            //     shape: Shape.rect(width: canvas.size.x, height: canvas.size.y),
+            //     brush: .solid(.red.with(alpha: 0.1)),
+            // ),
+            ShapeItem(
+                shape:
+                    Shape
+                    .circle(primaryRadius)
+                    .union(
+                        Shape.circle(secondaryRadius),
+                        offset: primaryCircle.value.simd,
+                        smoothing: 40
+                    ),
+                brush: .solid(.black),
+                shadow: Shadow(blur: 20, opacity: 0.18),
+                offset: .zero
+            ),
+        ]
+    }
+
+    private func clamp(_ point: Vec2<Float>, within bounds: SIMD2<Float>, radius: Float) -> Vec2<
+        Float
+    > {
+        guard bounds.x > radius * 2, bounds.y > radius * 2 else {
+            return Vec2(bounds.x * 0.5, bounds.y * 0.5)
+        }
+
+        let x = min(max(point.x, radius), bounds.x - radius)
+        let y = min(max(point.y, radius), bounds.y - radius)
+        return Vec2(x, y)
+    }
+}
 class Delegate: Swinit.EventLoopDelegate {
     var window: Window!
     var surface: Surface!
@@ -13,38 +97,20 @@ class Delegate: Swinit.EventLoopDelegate {
     var context: GraphicsContext!
     var compositor: Compositor!
     var animationController: CompositorAnimationController!
-
-    var position: SpringAnimator<Vec2<Float>>!
+    var springCircles: SpringCircleScene!
 
     func setupLayer(root: Layer) {
+        root.size = [800, 600]
         root.brush = .solid(.white)
 
-        let gammaTestLayer = gammaTest()
-        root.insert(gammaTestLayer)
-
-        // let shapeLayer = buildHealthRings()
-        // root.insert(shapeLayer)
-
-        let animationLayer = buildAnimationDemo(compositor)
-        animationLayer.offset = [0, 360, 0]
-        // animationLayer.opacity = 0.85
-        root.insert(animationLayer)
-
-        position = SpringAnimator(value: Vec2(0, 0), controller: animationController)
-
-        let bindingLayer = Layer(
-            size: [100, 100], 
-            brush: .solid(.white), 
-            cornerRadius: 14, 
-            // border: Border(),
-            shadow: Shadow(opacity: 0.2)
+        springCircles = SpringCircleScene(
+            compositor: compositor,
+            controller: animationController,
+            bounds: root.size
         )
-        bindingLayer.$offset.bind { [weak self] in
-            let p = self?.position.value.simd ?? .zero
-            return SIMD3(p.x, p.y, 0)
-        }
 
-        root.insert(bindingLayer)
+        // root.insert(gammaTest())
+        root.insert(springCircles.canvas)
     }
 
     func canCreateSurfaces(_ eventLoop: Swinit.EventLoop) {
@@ -66,11 +132,13 @@ class Delegate: Swinit.EventLoopDelegate {
         #endif
 
         let device = try! context.createDevice(compatibleWith: surface)
-        surfaceConfig = device.vulkanSurfaceConfig(width: 800, height: 600, mailbox: false)
+        surfaceConfig = device.vulkanSurfaceConfig(
+            width: window.size.width, height: window.size.height, mailbox: false)
         try! surface.configure(surfaceConfig)
 
         self.compositor = try! Compositor(surface: surface, device: device)
         self.animationController = CompositorAnimationController(compositor)
+        self.compositor.root.size = SIMD2(Float(surfaceConfig.width), Float(surfaceConfig.height))
 
         setupLayer(root: self.compositor.root)
     }
@@ -78,19 +146,22 @@ class Delegate: Swinit.EventLoopDelegate {
     func windowEvent(_ eventLoop: EventLoop, window: Window, event: WindowEvent) {
         switch event {
         case .resized(let size, _):
-            surfaceConfig.width = size.width
-            surfaceConfig.height = size.height
-            try! surface.configure(surfaceConfig)
-            compositor.root.size = SIMD2(Float(size.width), Float(size.height))
-            compositor.onDirty()
+            if let surface {
+                surfaceConfig.width = size.width
+                surfaceConfig.height = size.height
+                try! surface.configure(surfaceConfig)
+                compositor.root.size = SIMD2(Float(size.width), Float(size.height))
+                springCircles.updateBounds(compositor.root.size)
+                compositor.onDirty()
+            }
 
         case .keyboardInput(_, let event, _) where event.state == .pressed:
             let x = Float.random(in: 0...compositor.root.size.x)
             let y = Float.random(in: 0...compositor.root.size.y)
-            position.value = Vec2(x, y)
+            springCircles.move(toward: Vec2(x, y))
 
         case .cursorMoved(_, let p):
-            position.value = Vec2(Float(p.x), Float(p.y))
+            springCircles.move(toward: Vec2(Float(p.x), Float(p.y)))
 
         case .closeRequested:
             compositor.stop {
@@ -105,9 +176,7 @@ class Delegate: Swinit.EventLoopDelegate {
 
     func aboutToWait(_ eventLoop: EventLoop) {}
 }
-
 EventLoop().run(Delegate())
-
 @MainActor
 func buildLayersWithCompositionGroup(_ compositor: Compositor) -> Layer {
     let layer = Layer(brush: .solid(.white))
@@ -138,7 +207,6 @@ func buildLayersWithCompositionGroup(_ compositor: Compositor) -> Layer {
 
     return layer
 }
-
 func gammaTest() -> Layer {
     let container = Layer()
 
@@ -166,7 +234,6 @@ func gammaTest() -> Layer {
 
     return container
 }
-
 public func buildLayers() -> Layer {
     // EventLoop().run(Delegate())
     let layer = Layer(size: [100, 100])
@@ -206,7 +273,6 @@ public func buildLayers() -> Layer {
 
     return layer
 }
-
 func buildHealthRings() -> Layer {
     let root = Layer(size: [800, 600])
 
@@ -267,7 +333,6 @@ func buildHealthRings() -> Layer {
     root.insert(rings)
     return root
 }
-
 @MainActor
 func buildAnimationDemo(_ compositor: Compositor) -> Layer {
     let root = Layer()
@@ -322,7 +387,6 @@ func buildAnimationDemo(_ compositor: Compositor) -> Layer {
     compositor.requestAnimationFrame(callback: tick)
     return root
 }
-
 func nonOverlapBlurGrid(w: Int, h: Int, size: Float = 10) -> Layer {
     let root = Layer(size: SIMD2(Float(w) * size, Float(h) * size))
     for x in 0..<w {

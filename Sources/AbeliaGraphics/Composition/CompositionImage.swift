@@ -1,4 +1,4 @@
-public class CompositionImage: CompositionTexture {
+public class CompositionImage: CompositionTexture, Equatable {
     public var index: Int {
         texture.index
     }
@@ -7,5 +7,8 @@ public class CompositionImage: CompositionTexture {
     init(_ texture: RenderTexture) {
         self.texture = texture
     }
-}
 
+    public static func == (lhs: CompositionImage, rhs: CompositionImage) -> Bool {
+        lhs === rhs
+    }
+}

@@ -1,4 +1,4 @@
-public enum CompositionBrush {
+public enum CompositionBrush: Equatable {
   case solid(Color, blendMode: BlendMode = .normal)
   case texture(
     any CompositionTexture,
@@ -8,6 +8,23 @@ public enum CompositionBrush {
   )
   // mapped to Brush.texture
   // case gradient(Color) mapped to Brush.texture
+
+  public static func == (lhs: CompositionBrush, rhs: CompositionBrush) -> Bool {
+    switch (lhs, rhs) {
+    case let (.solid(lhsColor, lhsBlendMode), .solid(rhsColor, rhsBlendMode)):
+      return lhsColor == rhsColor && lhsBlendMode == rhsBlendMode
+    case let (
+      .texture(lhsTexture, lhsFillMode, lhsCrop, lhsNineSlices),
+      .texture(rhsTexture, rhsFillMode, rhsCrop, rhsNineSlices)
+    ):
+      return lhsTexture.index == rhsTexture.index
+        && lhsFillMode == rhsFillMode
+        && lhsCrop == rhsCrop
+        && lhsNineSlices == rhsNineSlices
+    default:
+      return false
+    }
+  }
 }
 
 public protocol CompositionTexture {

@@ -1,7 +1,7 @@
 import Foundation
 
 // store
-public struct Color: Sendable {
+public struct Color: Sendable, Equatable {
   public var red: Float
   public var green: Float
   public var blue: Float
