@@ -41,7 +41,7 @@ final class SpringCircleScene {
     }
 
     func move(toward position: Vec2<Float>) {
-        primaryCircle.value = clamp(position, within: canvas.size, radius: primaryRadius)
+        primaryCircle.value = clamp(position, within: canvas.size, radius: primaryRadius) - Vec2(canvas.size / 2)
     }
 
     private func tick() {

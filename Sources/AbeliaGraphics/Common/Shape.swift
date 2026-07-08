@@ -120,6 +120,7 @@ extension MergedShape: ShapeProtocol {
     let left = min(a.left, b.left)
     let top = min(a.top, b.top)
     return Rect(topLeft: SIMD2(left, top), size: SIMD2(max(a.right, b.right) - left, max(a.bottom, b.bottom) - top))
+      .padded(self.smoothing / 2)
   }
 
   public func sdf(_ p: SIMD2<Float>) -> Float {
