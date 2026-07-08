@@ -144,6 +144,8 @@ component boundary do not exist as we cant really transform function content. So
 - shapelayer positioning
     - might make the sdf translate content back
 - dxgi swapchain and proper resizing
+- make sure that d3d12 device is the same one as vulkan
+    - should generally be the same cuz we are selecting device with surface capabilities
 
 ## the rest
 - shadow blur api

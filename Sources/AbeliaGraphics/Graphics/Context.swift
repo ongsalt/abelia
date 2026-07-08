@@ -99,6 +99,15 @@ public class GraphicsContext: @unchecked Sendable {
         }
     #endif
 
+    #if os(Windows)
+        public func createDXGISurface(hwnd: HWND)
+            throws(Vulkan.Result) -> DXGISurface
+        {
+            DXGISurface(hwnd: hwnd)
+        }
+    #endif
+
+
     public func createDevice(compatibleWith surface: Surface)
         throws(DeviceInitializationError) -> DeviceContext
     {
@@ -214,9 +223,6 @@ public class DeviceContext: @unchecked Sendable {
             physicalDevice: PhysicalDevice
         )?
     {
-        guard let surface = surface as? Surface else {
-            fatalError("Unimplemented")
-        }
         let physicalDevices = try instance.getPhysicalDevices()
 
         for physicalDevice in physicalDevices {
@@ -224,6 +230,19 @@ public class DeviceContext: @unchecked Sendable {
             // if !physicalDevice.getProperties().deviceName.contains("llvm") {
             //     continue
             // }
+
+            guard let surface = surface as? Surface else {
+                // dxgi swapchain device selection
+                let queueFamilies = physicalDevice.getQueueFamilyProperties()
+                guard
+                    let graphicsFamilyIndex = queueFamilies.firstIndex(where: {
+                        $0.queueFlags.contains(.graphics)
+                    })
+                else { continue }
+
+                // ignore presentation queue
+                return (UInt32(graphicsFamilyIndex), 0, physicalDevice)
+            }
 
             // Device must support the VK_KHR_swapchain extension
             let extensions = try physicalDevice.getDeviceExtensionProperties(layerName: nil)

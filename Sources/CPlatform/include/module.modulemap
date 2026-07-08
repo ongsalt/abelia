@@ -1,0 +1,3 @@
+module CPlatform {
+  header "platform.h"
+}

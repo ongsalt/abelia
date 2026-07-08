@@ -1,3 +1,4 @@
 {
-  "makefile.configureOnOpen": false
+  "makefile.configureOnOpen": false,
+  "swift.sourcekit-lsp.serverArguments": ["--code-completion-max-results", "100"]
 }

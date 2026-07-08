@@ -36,6 +36,9 @@ let package = Package(
         ),
 
         .target(name: "CSTBImage"),
+        .target(
+            name: "CPlatform",
+        ),
 
         .target(
             name: "AbeliaUI",
@@ -98,4 +101,5 @@ let package = Package(
     ],
     swiftLanguageModes: [.v6],
     cLanguageStandard: .c2x,
+    cxxLanguageStandard: .cxx20,
 )
