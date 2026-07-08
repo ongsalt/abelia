@@ -1,7 +1,0 @@
-module CEmaPlatforms {
-    header "wrapper.h"
-    link "dcomp.lib"
-    link "d3d12.lib"
-    link "dxgi.lib"
-    export *
-}

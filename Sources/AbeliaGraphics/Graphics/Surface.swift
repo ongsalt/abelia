@@ -3,7 +3,7 @@ import Vulkan
 public protocol SurfaceProtocol {
     associatedtype Texture: SurfaceTextureProtocol
 
-    func configure(_ configuration: borrowing SurfaceConfiguration) throws
+    func configure(_ configuration: SurfaceConfiguration) throws
 
     // may block
     func acquireCurrentTexture(signalling semaphore: Semaphore) throws -> Texture
@@ -223,7 +223,7 @@ public class Surface: SurfaceProtocol {
                         .opaque
                     #endif
                 }(),
-                presentMode: useMailbox ? .mailbox : .fifo,
+                presentMode: useMailbox ? .mailbox : .fifoRelaxed,
                 clipped: true,
                 oldSwapchain: previous
             )

@@ -2,18 +2,18 @@
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import CompilerPluginSupport
+
 import Foundation
+
 import PackageDescription
 
 var vulkanIncludePath: [CSetting] = [
     .define("VK_USE_PLATFORM_WAYLAND_KHR", .when(platforms: [.linux])),
     .define("VK_USE_PLATFORM_WIN32_KHR", .when(platforms: [.windows])),
 ]
-
 if let vulkanSDK = ProcessInfo.processInfo.environment["VULKAN_SDK"] {
     vulkanIncludePath.append(.unsafeFlags(["-I\(vulkanSDK)/Include"]))
 }
-
 let package = Package(
     name: "graphics-101",
     dependencies: [
@@ -22,52 +22,29 @@ let package = Package(
         .package(
             url: "https://github.com/ongsalt/swift-vulkan",
             revision: "ad4cffdd4e159479b1ebcbd06a8c68a122bf9520"),
+        .package(url: "https://github.com/tomasf/Apus.git", branch: "master"),
         // .package(url: "https://github.com/LuizZak/swift-blend2d", branch: "master"),
 
     ],
     targets: [
-        // bruh, how do i do this on windows
-        // .systemLibrary(name: "CPango", pkgConfig: "pangoft2"),
         .target(name: "Reactivity"),
         .target(name: "ReactivityGraph"),
 
         .target(
             name: "CShim",
-            // dependencies: [
-            //     .product(name: "Vulkan", package: "swift-vulkan"),
-            // ]
             cSettings: vulkanIncludePath
         ),
 
         .target(name: "CSTBImage"),
 
-        // .target(
-        //     name: "Legacy",
-        //     dependencies: [
-        //         "Reactivity",
-        //         "Pointer",
-        //         "DSLMacro",
-        //         "CShim",
-        //         "CEmaPlatforms",
-        //         .product(name: "SwiftBlend2D", package: "swift-blend2d"),
-        //     ],
-        //     exclude: [
-        //         "Resources/Shaders/"
-        //     ],
-        //     resources: [
-        //         .copy("Generated/Resources")
-        //         // .ignore("Resources/Shaders"),
-        //     ],
-        // ),
-
-        // .target(
-        //     name: "AbeliaUI",
-        //     dependencies: [
-        //         "Legacy",
-        //         "DSLMacro",
-        //         .product(name: "Swinit", package: "swinit"),
-        //     ],
-        // ),
+        .target(
+            name: "AbeliaUI",
+            dependencies: [
+                "AbeliaGraphics",
+                "DSLMacro",
+                .product(name: "Swinit", package: "swinit"),
+            ],
+        ),
 
         .macro(
             name: "DSLMacro",
@@ -78,20 +55,6 @@ let package = Package(
             ]
         ),
 
-        .testTarget(
-            name: "ReactivityTests",
-            dependencies: [
-                "Reactivity"
-            ]
-        ),
-
-        .testTarget(
-            name: "AbeliaGraphicsTests",
-            dependencies: [
-                "AbeliaGraphics",
-            ]
-        ),
-
         .target(
             name: "AbeliaGraphics",
             dependencies: [
@@ -99,6 +62,7 @@ let package = Package(
                 "CSTBImage",
                 "ReactivityGraph",
                 .product(name: "Vulkan", package: "swift-vulkan"),
+                .product(name: "Apus", package: "Apus"),
                 // .product(name: "SwiftBlend2D", package: "swift-blend2d"),
                 .product(name: "Swinit", package: "swinit"),
             ],
@@ -116,6 +80,20 @@ let package = Package(
                 "AbeliaGraphics",
                 .product(name: "Swinit", package: "swinit"),
             ],
+        ),
+
+        .testTarget(
+            name: "ReactivityTests",
+            dependencies: [
+                "Reactivity"
+            ]
+        ),
+
+        .testTarget(
+            name: "AbeliaGraphicsTests",
+            dependencies: [
+                "AbeliaGraphics"
+            ]
         ),
     ],
     swiftLanguageModes: [.v6],
