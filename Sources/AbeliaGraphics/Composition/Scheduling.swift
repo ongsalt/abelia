@@ -481,6 +481,10 @@ extension ShapeItem {
 
 extension ShapeLayer {
     func shapeItemRenderNodes(_ affine: Affine) -> [RenderNode] {
-        shapes.map { $0.renderNode(baseAffine: affine) }
+        // the resolved affine is center-anchored (localTotalAffine shifts by +size/2 so the
+        // layer's own center-anchored sdf lands right). ShapeItem offsets are measured from
+        // the layer's top-left, so undo that shift.
+        let topLeft = affine.translated(x: -size.x / 2, y: -size.y / 2)
+        return shapes.map { $0.renderNode(baseAffine: topLeft) }
     }
 }

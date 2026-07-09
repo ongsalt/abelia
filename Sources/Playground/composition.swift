@@ -41,7 +41,7 @@ final class SpringCircleScene {
     }
 
     func move(toward position: Vec2<Float>) {
-        primaryCircle.value = clamp(position, within: canvas.size, radius: primaryRadius) - Vec2(canvas.size / 2)
+        primaryCircle.value = clamp(position, within: canvas.size, radius: primaryRadius)
     }
 
     private func tick() {
@@ -50,6 +50,8 @@ final class SpringCircleScene {
     }
 
     private func refreshShapes() {
+        let c = canvas.size / 2
+        let center = SIMD3(c.x, c.y, 0)
         canvas.shapes = [
             // ShapeItem(
             //     shape: Shape.rect(width: canvas.size.x, height: canvas.size.y),
@@ -61,12 +63,12 @@ final class SpringCircleScene {
                     .circle(primaryRadius)
                     .union(
                         Shape.circle(secondaryRadius),
-                        offset: primaryCircle.value.simd,
+                        offset: primaryCircle.value.simd - c,
                         smoothing: 40
                     ),
                 brush: .solid(.black),
                 shadow: Shadow(blur: 20, opacity: 0.18),
-                offset: .zero
+                offset: center
             ),
         ]
     }
