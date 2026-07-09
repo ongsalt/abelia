@@ -62,6 +62,9 @@ typealias ShapeBuffer = GPUBuffer<CShim.ShapeMergingEntry>
 
 typealias DrawListBuffer = GPUBuffer<DrawListItem>
 
+// vertices for Shape.polygon
+typealias PolygonVertexBuffer = GPUBuffer<SIMD2<Float>>
+
 extension DrawListItem: @retroactive CustomStringConvertible {
     public var description: String {
         "DrawListItem(index: \(index), mode: \(drawMode.rawValue))"

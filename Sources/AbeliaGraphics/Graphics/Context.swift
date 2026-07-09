@@ -99,13 +99,13 @@ public class GraphicsContext: @unchecked Sendable {
         }
     #endif
 
-    #if os(Windows)
-        public func createDXGISurface(hwnd: HWND)
-            throws(Vulkan.Result) -> DXGISurface
-        {
-            DXGISurface(hwnd: hwnd)
-        }
-    #endif
+    // #if os(Windows)
+    //     public func createDXGISurface(hwnd: HWND)
+    //         throws(Vulkan.Result) -> DXGISurface
+    //     {
+    //         DXGISurface(hwnd: hwnd)
+    //     }
+    // #endif
 
 
     public func createDevice(compatibleWith surface: Surface)

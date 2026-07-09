@@ -1,4 +1,4 @@
-import AbeliaGraphicss
+import AbeliaGraphics
 import Foundation
 import Swinit
 
@@ -6,4 +6,4 @@ import Swinit
     import WaylandClient
 #endif
 
-// EventLoop().run(Delegate())
+EventLoop().run(Delegate())

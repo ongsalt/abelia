@@ -15,6 +15,10 @@ uniform StructuredBuffer<ShapeMergingEntry> shapeGroupData;
 [[vk::binding(2, 0)]]
 uniform StructuredBuffer<DrawListItem> drawList;
 
+// vertices for Shape.polygon, indexed by Polygon.startIndex / count
+[[vk::binding(5, 0)]]
+uniform StructuredBuffer<float2> polygonVertexData;
+
 // this is per node
 struct DrawListItem {
   uint32_t index;
@@ -201,6 +205,11 @@ float sdfMerge(float2 position, uint startIndex, uint count) {
     if (entry.kind == ShapeMergingInstructionKind.push) {
       stack[top] = sdf(position - entry.offset, bit_cast<ShapeKind>(entry.mergeMode_or_shapeKind), entry.data);
       top += 1;
+    } else if (entry.kind == ShapeMergingInstructionKind.modify) {
+      // unary op on the top of the stack (opRound / opOnion)
+      let modifyMode = bit_cast<ModifyMode>(entry.mergeMode_or_shapeKind);
+      let r = bit_cast<float>(entry.data0); // radius stored as float bits
+      stack[top - 1] = modifyMode == ModifyMode.opRound ? opRound(stack[top - 1], r) : opOnion(stack[top - 1], r);
     } else {
       // merge
       let mergeMode = bit_cast<MergeMode>(entry.mergeMode_or_shapeKind);
@@ -246,6 +255,22 @@ float sdf(float2 position, ShapeKind kind, uint4 data) {
   case ShapeKind.ellipse:
     var ellipse = bit_cast<Ellipse>(data.xy);
     return sdfEllipse(position, float2(ellipse.radiusX, ellipse.radiusY));
+  case ShapeKind.pentagon:
+    return sdfPentagon(position, asfloat(data.x));
+  case ShapeKind.hexagon:
+    return sdfHexagon(position, asfloat(data.x));
+  case ShapeKind.octagon:
+    return sdfOctagon(position, asfloat(data.x));
+  case ShapeKind.hexagram:
+    return sdfHexagram(position, asfloat(data.x));
+  case ShapeKind.pentagram:
+    var star = bit_cast<Star>(data.xy);
+    return sdfPentagram(position, star.radius, star.innerRadiusFactor);
+  case ShapeKind.quadraticCircle:
+    return sdfQuadraticCircle(position, asfloat(data.x));
+  case ShapeKind.polygon:
+    var poly = bit_cast<Polygon>(data.xyz);
+    return sdfPolygon(position, polygonVertexData, poly.startIndex, poly.count) - poly.perimeterOffset;
   }
 
   return distance;
@@ -277,6 +302,18 @@ float2 getShapeBound(uint corner, ShapeKind kind, uint4 data, float bias = 0.0) 
   case ShapeKind.ellipse:
     var ellipse = bit_cast<Ellipse>(data.xy);
     half = float2(ellipse.radiusX, ellipse.radiusY) + bias;
+    break;
+  case ShapeKind.pentagon:
+  case ShapeKind.hexagon:
+  case ShapeKind.octagon:
+  case ShapeKind.hexagram:
+  case ShapeKind.quadraticCircle:
+    // radius is the circumradius
+    half = float2(asfloat(data.x)) + bias;
+    break;
+  case ShapeKind.pentagram:
+    var star = bit_cast<Star>(data.xy);
+    half = float2(star.radius) + bias;
     break;
   default:
     return float2(0.0);

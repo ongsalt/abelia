@@ -67,6 +67,7 @@ extension Renderer {
         resource.drawListStorage.resetOffset()
         resource.renderNodeStorage.resetOffset()
         resource.shapeGroupStorage.resetOffset()
+        resource.polygonVertexStorage.resetOffset()
 
         let src = RenderTextureState.undefined
         let dst = RenderTextureState.renderTarget
@@ -327,7 +328,7 @@ extension Renderer {
         let instructions = Array(node.shape.drawInstructions)
         let startIndex = resource.shapeGroupStorage.offset
         for i in instructions {
-            resource.shapeGroupStorage.append(i.c)
+            resource.shapeGroupStorage.append(appendingPolygonVertices(i))
         }
         data.shapeStartIndex = UInt32(startIndex)
         data.shapeCount = UInt32(instructions.count)
@@ -370,6 +371,35 @@ extension Renderer {
             resource.drawListStorage.append(DrawListItem(index: UInt32(index), drawMode: .stroke))
         }
 
+    }
+
+    // Polygon vertices live in a dedicated buffer; write them and patch the shape's startIndex
+    // (Shape.c can't know the buffer offset). Non-polygon instructions pass straight through.
+    private func appendingPolygonVertices(_ instruction: ShapeMergingInstruction)
+        -> CShim.ShapeMergingEntry
+    {
+        guard case .push(let meta) = instruction,
+            case .polygon(let vertices, let perimeterOffset) = meta.shape
+        else {
+            return instruction.c
+        }
+
+        let start = resource.polygonVertexStorage.offset
+        for v in vertices {
+            resource.polygonVertexStorage.append(v)
+        }
+
+        var shape = CShim.Shape()
+        shape.polygon = CShim.Polygon(
+            startIndex: UInt32(start),
+            count: UInt32(vertices.count),
+            perimeterOffset: perimeterOffset
+        )
+        var entry = CShim.ShapeMergingEntry()
+        entry.kind = .push
+        entry.data.shape = CShim.ShapeMetadata(
+            shapeKind: .polygon, shape: shape, offset: (meta.offset.x, meta.offset.y))
+        return entry
     }
 
     private func resolveBackdropBrush(for node: inout RenderNode) {
@@ -440,6 +470,7 @@ struct RendererFrameResource {
     let renderNodeStorage: RenderNodeBuffer
     let shapeGroupStorage: ShapeBuffer
     let drawListStorage: DrawListBuffer
+    let polygonVertexStorage: PolygonVertexBuffer
 
     fileprivate init(index: Int, context: borrowing DeviceContext, pipelines: borrowing Pipelines)
         throws(Vulkan.Result)
@@ -448,6 +479,7 @@ struct RendererFrameResource {
         let renderNodeStorage = try RenderNodeBuffer(context: context)
         let shapeGroupStorage = try ShapeBuffer(context: context)
         let drawListStorage = try DrawListBuffer(context: context)
+        let polygonVertexStorage = try PolygonVertexBuffer(context: context)
 
         context.device.updateDescriptorSets(descriptorWrites: [
             .init(
@@ -486,6 +518,18 @@ struct RendererFrameResource {
                 ],
                 texelBufferView: []
             ),
+            .init(
+                dstSet: mainDescriptorSet,
+                dstBinding: 5,
+                dstArrayElement: 0,
+                descriptorCount: 1,
+                descriptorType: .storageBuffer,
+                imageInfo: [],
+                bufferInfo: [
+                    .init(buffer: polygonVertexStorage.buffer, offset: 0, range: VK_WHOLE_SIZE)
+                ],
+                texelBufferView: []
+            ),
 
         ])
 
@@ -493,6 +537,7 @@ struct RendererFrameResource {
         self.renderNodeStorage = renderNodeStorage
         self.shapeGroupStorage = shapeGroupStorage
         self.drawListStorage = drawListStorage
+        self.polygonVertexStorage = polygonVertexStorage
     }
 }
 

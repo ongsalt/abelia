@@ -102,7 +102,7 @@ class Delegate: Swinit.EventLoopDelegate {
             bounds: root.size
         )
 
-        // root.insert(gammaTest())
+        root.insert(buildLayersWithCompositionGroup(compositor))
         root.insert(springCircles.canvas)
     }
 
@@ -175,7 +175,7 @@ func buildLayersWithCompositionGroup(_ compositor: Compositor) -> Layer {
     let layer = Layer(brush: .solid(.white))
 
     let image = try! compositor.createImage(filename: "Resources/riko.png")
-    let riko = Layer(offset: [500, 50, 0], size: [320, 180])
+    let riko = Layer(offset: [300, -150, 0], size: [320 * 3, 180 * 3])
     riko.brush = .texture(image)
     riko.rotation = .degrees(30)
     layer.insert(riko)

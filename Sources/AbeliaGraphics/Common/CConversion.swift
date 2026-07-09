@@ -77,6 +77,29 @@ extension Shape {
     case .ellipse(let radiusX, let radiusY):
       shapeKind = ShapeKind.ellipse
       shape.ellipse = CShim.Ellipse(radiusX: radiusX, radiusY: radiusY)
+    case .pentagon(let radius):
+      shapeKind = ShapeKind.pentagon
+      shape.regular = CShim.RegularShape(radius: radius)
+    case .hexagon(let radius):
+      shapeKind = ShapeKind.hexagon
+      shape.regular = CShim.RegularShape(radius: radius)
+    case .octagon(let radius):
+      shapeKind = ShapeKind.octagon
+      shape.regular = CShim.RegularShape(radius: radius)
+    case .hexagram(let radius):
+      shapeKind = ShapeKind.hexagram
+      shape.regular = CShim.RegularShape(radius: radius)
+    case .pentagram(let radius, let innerRadiusFactor):
+      shapeKind = ShapeKind.pentagram
+      shape.star = CShim.Star(radius: radius, innerRadiusFactor: innerRadiusFactor)
+    case .quadraticCircle(let radius):
+      shapeKind = ShapeKind.quadraticCircle
+      shape.regular = CShim.RegularShape(radius: radius)
+    case .polygon(let vertices, let perimeterOffset):
+      // startIndex is patched in by the renderer once the vertices are written to the vertex buffer
+      shapeKind = ShapeKind.polygon
+      shape.polygon = CShim.Polygon(
+        startIndex: 0, count: UInt32(vertices.count), perimeterOffset: perimeterOffset)
     }
 
     return (shapeKind, shape)
@@ -119,6 +142,12 @@ extension ShapeMergingInstruction {
         shapeKind: kind,
         shape: shapeData,
         offset: (metadata.offset.x, metadata.offset.y)
+      )
+    case .modify(let mode, let radius):
+      entry.kind = .modify
+      entry.data.modify = CShim.ModifyNode(
+        mode: CShim.ModifyMode(rawValue: mode.rawValue)!,
+        radius: radius
       )
     }
     return entry

@@ -4,8 +4,14 @@ enum __attribute__((enum_extensibility(closed))) ShapeKind : uint32_t {
   rect = 0,
   arc = 1,
   pie = 2,
-  // polygon = 3,
+  polygon = 3,
   ellipse = 4,
+  pentagon = 5,
+  hexagon = 6,
+  octagon = 7,
+  hexagram = 8,
+  pentagram = 9,
+  quadraticCircle = 10,
 };
 
 struct Rect {
@@ -32,11 +38,32 @@ struct Ellipse {
   float radiusY;
 };
 
+// pentagon / hexagon / octagon / hexagram / quadraticCircle: `radius` is the circumradius
+struct RegularShape {
+  float radius;
+};
+
+// pentagram
+struct Star {
+  float radius;
+  float innerRadiusFactor;
+};
+
+// arbitrary polygon; vertices live in a dedicated vertex SSBO
+struct Polygon {
+  uint32_t startIndex;
+  uint32_t count;
+  float perimeterOffset;
+};
+
 union Shape {
   struct Rect rect;
   struct Arc arc;
   struct Pie pie;
   struct Ellipse ellipse;
+  struct RegularShape regular;
+  struct Star star;
+  struct Polygon polygon;
 };
 
 
@@ -143,14 +170,27 @@ struct MergeNode {
   float smoothing;
 };
 
+// unary op (opRound / opOnion) applied to the top of the merge stack
+enum __attribute__((enum_extensibility(closed))) ModifyMode : uint32_t {
+  opRound = 0,
+  opOnion = 1,
+};
+
+struct ModifyNode {
+  enum ModifyMode mode;
+  float radius;
+};
+
 enum __attribute__((enum_extensibility(closed))) ShapeMergingInstructionKind : uint32_t {
   push = 0,
   merge = 1,
+  modify = 2,
 };
 
 // we can nuke this, and just make a mergenode a variant of Shape
 union ShapeMergingInstruction {
   struct MergeNode merge;
+  struct ModifyNode modify;
   struct ShapeMetadata shape;
 };
 

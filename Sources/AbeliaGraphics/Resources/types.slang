@@ -4,8 +4,14 @@ public enum ShapeKind : uint {
   rect = 0,
   arc = 1,
   pie = 2,
-  // polygon = 3,
+  polygon = 3,
   ellipse = 4,
+  pentagon = 5,
+  hexagon = 6,
+  octagon = 7,
+  hexagram = 8,
+  pentagram = 9,
+  quadraticCircle = 10,
 };
 
 public struct Rect {
@@ -30,6 +36,24 @@ public struct Pie {
 public struct Ellipse {
   public float radiusX;
   public float radiusY;
+};
+
+// pentagon / hexagon / octagon / hexagram / quadraticCircle: radius is the circumradius
+public struct RegularShape {
+  public float radius;
+};
+
+// pentagram
+public struct Star {
+  public float radius;
+  public float innerRadiusFactor;
+};
+
+// arbitrary polygon; vertices live in a dedicated vertex SSBO
+public struct Polygon {
+  public uint startIndex;
+  public uint count;
+  public float perimeterOffset;
 };
 
 
@@ -84,9 +108,16 @@ public struct MergeNode {
   public float smoothing;
 };
 
+// unary op (opRound / opOnion) applied to the top of the merge stack
+public enum ModifyMode : uint {
+  opRound = 0,
+  opOnion = 1,
+};
+
 public enum ShapeMergingInstructionKind : uint {
   push = 0,
   merge = 1,
+  modify = 2,
 };
 
 // Matches C union ShapeMergingInstruction (28 bytes, size of larger member ShapeMetadata).

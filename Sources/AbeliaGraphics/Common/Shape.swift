@@ -14,6 +14,16 @@ public struct ShapeMetadata: Sendable {
 public enum ShapeMergingInstruction {
   case merge(MergeMode, smoothing: Float)
   case push(ShapeMetadata)
+  /// unary op applied to the top of the merge stack (opRound / opOnion)
+  case modify(ModifyMode, radius: Float)
+}
+
+/// Unary distance-field operators from https://iquilezles.org/articles/distfunctions2d/
+public enum ModifyMode: UInt32, Sendable {
+  /// `d - r`: grows the shape outward, rounding convex corners
+  case round = 0
+  /// `abs(d) - r`: turns the shape into an annular ring of half-thickness `r`
+  case onion = 1
 }
 
 public protocol ShapeProtocol: Sendable {
@@ -25,13 +35,23 @@ public protocol ShapeProtocol: Sendable {
 }
 
 /// perimeterOffset just directly subtract the distance, effectively moving isoperimeter out and rounding it
+///
+/// For the regular shapes (pentagon…quadraticCircle) `radius` is the circumradius:
+/// the shape's vertices/tips lie on a circle of that radius, so the axis-aligned bound is `radius`.
 public enum Shape: Sendable {
   case rect(width: Float, height: Float, cornerRadius: Float = 0, cornerDegree: Float = 4)
   case arc(radius: Float, angle: Angle, thickness: Float)
   case pie(radius: Float, angle: Angle, perimeterOffset: Float = 0)
-  /// 0, 0 is the center
-  // case polygon(_ vertices: [SIMD2<Float>], perimeterOffset: Float = 0)
   case ellipse(radiusX: Float, radiusY: Float)
+  case pentagon(radius: Float)
+  case hexagon(radius: Float)
+  case octagon(radius: Float)
+  case hexagram(radius: Float)
+  /// `innerRadiusFactor` in (0, 1): ratio of the inner to the outer vertex radius; 0.382 gives the classic 5-point star
+  case pentagram(radius: Float, innerRadiusFactor: Float = 0.382)
+  case quadraticCircle(radius: Float)
+  /// arbitrary closed polygon; `vertices` are in local space (0,0 is the center). Stored in a dedicated GPU vertex buffer.
+  case polygon(_ vertices: [SIMD2<Float>], perimeterOffset: Float = 0)
 }
 
 extension Shape {
@@ -59,6 +79,17 @@ extension Shape: ShapeProtocol {
       return Rect(center: .zero, size: SIMD2(s, s))
     case .ellipse(let radiusX, let radiusY):
       return Rect(center: .zero, size: SIMD2(radiusX * 2, radiusY * 2))
+    case .pentagon(let radius), .hexagon(let radius), .octagon(let radius),
+      .hexagram(let radius), .pentagram(let radius, _), .quadraticCircle(let radius):
+      return Rect(center: .zero, size: SIMD2(radius * 2, radius * 2))
+    case .polygon(let vertices, let perimeterOffset):
+      guard let first = vertices.first else { return .zero }
+      var lo = first, hi = first
+      for v in vertices {
+        lo = SIMD2(min(lo.x, v.x), min(lo.y, v.y))
+        hi = SIMD2(max(hi.x, v.x), max(hi.y, v.y))
+      }
+      return Rect(topLeft: lo, size: hi - lo).padded(max(perimeterOffset, 0))
     }
   }
 
@@ -72,6 +103,20 @@ extension Shape: ShapeProtocol {
       return _sdfPie(p, radius: radius, angle: angle.radians, perimeterOffset: perimeterOffset)
     case .ellipse(let radiusX, let radiusY):
       return _sdfEllipse(p, ab: SIMD2(radiusX, radiusY))
+    case .pentagon(let radius):
+      return _sdfPentagon(p, radius)
+    case .hexagon(let radius):
+      return _sdfHexagon(p, radius)
+    case .octagon(let radius):
+      return _sdfOctagon(p, radius)
+    case .hexagram(let radius):
+      return _sdfHexagram(p, radius)
+    case .pentagram(let radius, let innerRadiusFactor):
+      return _sdfPentagram(p, radius, innerRadiusFactor)
+    case .quadraticCircle(let radius):
+      return _sdfQuadraticCircle(p, radius)
+    case .polygon(let vertices, let perimeterOffset):
+      return _sdfPolygon(p, vertices, perimeterOffset)
     }
   }
 
@@ -144,6 +189,44 @@ extension MergedShape: ShapeProtocol {
   }
 }
 
+/// Wraps a shape with a unary distance-field operator (opRound / opOnion).
+public struct ModifiedShape<Base: ShapeProtocol>: Sendable {
+  @usableFromInline let mode: ModifyMode
+  @usableFromInline let radius: Float
+  @usableFromInline let base: Base
+
+  @inlinable
+  init(mode: ModifyMode, radius: Float, base: Base) {
+    self.mode = mode
+    self.radius = radius
+    self.base = base
+  }
+}
+
+extension ModifiedShape: ShapeProtocol {
+  @inlinable
+  public var drawInstructions: some Sequence<ShapeMergingInstruction> {
+    base.drawInstructions.chain(CollectionOfOne(.modify(self.mode, radius: self.radius)))
+  }
+
+  public var bounds: Rect {
+    // both operators can push the outer isoline out by `radius`
+    base.bounds.padded(max(radius, 0))
+  }
+
+  public func sdf(_ p: SIMD2<Float>) -> Float {
+    let d = base.sdf(p)
+    switch mode {
+    case .round: return d - radius
+    case .onion: return abs(d) - radius
+    }
+  }
+
+  public func contains(_ point: SIMD2<Float>) -> Bool {
+    sdf(point) <= 0
+  }
+}
+
 public enum MergeMode: UInt32, Sendable {
   case union = 0
   case intersect = 1
@@ -186,6 +269,18 @@ extension ShapeProtocol {
     _ other: Other, offset: SIMD2<Float> = .zero, smoothing: Float = 0
   ) -> MergedShape<Self, Other> {
     MergedShape(mode: .xor, smoothing: smoothing, first: self, second: other, secondOffset: offset)
+  }
+
+  /// opRound: grow the shape outward by `radius`, rounding its convex corners.
+  @inlinable
+  public func rounded(_ radius: Float) -> ModifiedShape<Self> {
+    ModifiedShape(mode: .round, radius: radius, base: self)
+  }
+
+  /// opOnion: hollow the shape into an annular ring of half-thickness `radius`.
+  @inlinable
+  public func onion(_ radius: Float) -> ModifiedShape<Self> {
+    ModifiedShape(mode: .onion, radius: radius, base: self)
   }
 }
 
@@ -258,4 +353,115 @@ private func _sdfEllipse(_ position: SIMD2<Float>, ab: SIMD2<Float>) -> Float {
   let rx = ax * co, ry = ay * sqrt(1 - co * co)
   let dx = rx - px, dy = ry - py
   return sqrt(dx * dx + dy * dy) * (py >= ry ? 1 : -1)
+}
+
+// MARK: - Regular polygon / star SDFs (ported from https://iquilezles.org/articles/distfunctions2d/)
+// `radius` is the circumradius; iq's functions take the inradius/tip radius, so we rescale at the call site.
+
+@inline(__always) private func _dot(_ a: SIMD2<Float>, _ b: SIMD2<Float>) -> Float {
+  a.x * b.x + a.y * b.y
+}
+@inline(__always) private func _len(_ a: SIMD2<Float>) -> Float {
+  (a.x * a.x + a.y * a.y).squareRoot()
+}
+@inline(__always) private func _abs(_ a: SIMD2<Float>) -> SIMD2<Float> {
+  SIMD2(abs(a.x), abs(a.y))
+}
+
+private func _sdfPentagon(_ p0: SIMD2<Float>, _ radius: Float) -> Float {
+  let r = radius * 0.809016994  // circumradius -> inradius
+  let k = SIMD3<Float>(0.809016994, 0.587785252, 0.726542528)
+  var p = p0
+  p.x = abs(p.x)
+  p -= 2 * min(_dot(SIMD2(-k.x, k.y), p), 0) * SIMD2(-k.x, k.y)
+  p -= 2 * min(_dot(SIMD2(k.x, k.y), p), 0) * SIMD2(k.x, k.y)
+  p -= SIMD2(p.x.clamped(from: -r * k.z, to: r * k.z), r)
+  return _len(p) * (p.y < 0 ? -1 : 1)
+}
+
+private func _sdfHexagon(_ p0: SIMD2<Float>, _ radius: Float) -> Float {
+  let r = radius * 0.866025404  // circumradius -> inradius
+  let k = SIMD3<Float>(-0.866025404, 0.5, 0.577350269)
+  var p = _abs(p0)
+  p -= 2 * min(_dot(SIMD2(k.x, k.y), p), 0) * SIMD2(k.x, k.y)
+  p -= SIMD2(p.x.clamped(from: -k.z * r, to: k.z * r), r)
+  return _len(p) * (p.y < 0 ? -1 : 1)
+}
+
+private func _sdfOctagon(_ p0: SIMD2<Float>, _ radius: Float) -> Float {
+  let r = radius * 0.923879533  // circumradius -> inradius
+  let k = SIMD3<Float>(-0.9238795325, 0.3826834323, 0.4142135623)
+  var p = _abs(p0)
+  p -= 2 * min(_dot(SIMD2(k.x, k.y), p), 0) * SIMD2(k.x, k.y)
+  p -= 2 * min(_dot(SIMD2(-k.x, k.y), p), 0) * SIMD2(-k.x, k.y)
+  p -= SIMD2(p.x.clamped(from: -k.z * r, to: k.z * r), r)
+  return _len(p) * (p.y < 0 ? -1 : 1)
+}
+
+private func _sdfHexagram(_ p0: SIMD2<Float>, _ radius: Float) -> Float {
+  let r = radius * 0.5  // circumradius (tip) -> iq r
+  let k = SIMD4<Float>(-0.5, 0.8660254038, 0.5773502692, 1.7320508076)
+  var p = _abs(p0)
+  p -= 2 * min(_dot(SIMD2(k.x, k.y), p), 0) * SIMD2(k.x, k.y)
+  p -= 2 * min(_dot(SIMD2(k.y, k.x), p), 0) * SIMD2(k.y, k.x)
+  p -= SIMD2(p.x.clamped(from: r * k.z, to: r * k.w), r)
+  return _len(p) * (p.y < 0 ? -1 : 1)
+}
+
+private func _sdfPentagram(_ p0: SIMD2<Float>, _ radius: Float, _ rf: Float) -> Float {
+  let k1 = SIMD2<Float>(0.809016994375, -0.587785252292)
+  let k2 = SIMD2<Float>(-k1.x, k1.y)
+  var p = p0
+  p.x = abs(p.x)
+  p -= 2 * max(_dot(k1, p), 0) * k1
+  p -= 2 * max(_dot(k2, p), 0) * k2
+  p.x = abs(p.x)
+  p.y -= radius
+  let ba = rf * SIMD2<Float>(-k1.y, k1.x) - SIMD2<Float>(0, 1)
+  let h = (_dot(p, ba) / _dot(ba, ba)).clamped(from: 0, to: radius)
+  return _len(p - ba * h) * ((p.y * ba.x - p.x * ba.y) < 0 ? -1 : 1)
+}
+
+private func _sdfQuadraticCircle(_ p0: SIMD2<Float>, _ radius: Float) -> Float {
+  var p = _abs(p0 / radius)
+  if p.y > p.x { p = SIMD2(p.y, p.x) }
+  let a = p.x - p.y
+  let b = p.x + p.y
+  let c = (2 * b - 1) / 3
+  let h = a * a + c * c * c
+  var t: Float
+  if h >= 0 {
+    let hs = h.squareRoot()
+    let m = hs - a
+    t = (m < 0 ? -1 : 1) * pow(abs(m), 1.0 / 3) - pow(hs + a, 1.0 / 3)
+  } else {
+    let z = (-c).squareRoot()
+    let v = acos(a / (c * z)) / 3
+    t = -z * (cos(v) + sin(v) * 1.732050808)
+  }
+  t *= 0.5
+  let w = SIMD2(-t, t) + SIMD2(0.75, 0.75) - SIMD2(t * t, t * t) - p
+  return _len(w) * ((a * a * 0.5 + b - 1.5) < 0 ? -1 : 1) * radius
+}
+
+private func _sdfPolygon(
+  _ p: SIMD2<Float>, _ v: [SIMD2<Float>], _ perimeterOffset: Float
+) -> Float {
+  let n = v.count
+  guard n > 0 else { return .greatestFiniteMagnitude }
+  var d = _dot(p - v[0], p - v[0])
+  var s: Float = 1
+  var j = n - 1
+  for i in 0..<n {
+    let e = v[j] - v[i]
+    let w = p - v[i]
+    let b = w - e * (_dot(w, e) / _dot(e, e)).clamped(from: 0, to: 1)
+    d = min(d, _dot(b, b))
+    let c0 = p.y >= v[i].y
+    let c1 = p.y < v[j].y
+    let c2 = e.x * w.y > e.y * w.x
+    if (c0 && c1 && c2) || (!c0 && !c1 && !c2) { s = -s }
+    j = i
+  }
+  return s * d.squareRoot() - perimeterOffset
 }

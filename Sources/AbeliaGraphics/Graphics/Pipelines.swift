@@ -61,6 +61,13 @@ final class Pipelines {
                         descriptorType: .storageBuffer,
                         stageFlags: [.vertex, .fragment]
                     ),
+                    // Polygon vertex storage
+                    .init(
+                        binding: 5,
+                        descriptorType: .storageBuffer,
+                        descriptorCount: 1,
+                        stageFlags: [.fragment]
+                    ),
                 ]
             )
         )
@@ -104,7 +111,7 @@ final class Pipelines {
                 flags: .updateAfterBind,
                 maxSets: 2 + UInt32(frameInFlightCount),
                 poolSizes: [
-                    .init(type: .storageBuffer, descriptorCount: UInt32(frameInFlightCount) * 5),
+                    .init(type: .storageBuffer, descriptorCount: UInt32(frameInFlightCount) * 6),
                     .init(type: .sampledImage, descriptorCount: 512 * 1024),
                     .init(type: .sampler, descriptorCount: 4),
                 ]
