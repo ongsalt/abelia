@@ -44,3 +44,7 @@ extension Vulkan.Rect2D: @unchecked @retroactive Sendable {}
 extension Vulkan.Rect2D {
   static let zero = Rect2D(offset: .zero, extent: .zero)
 }
+
+extension Vulkan.VkOffset3D {
+  static let zero = VkOffset3D(x: 0, y: 0, z: 0)
+}

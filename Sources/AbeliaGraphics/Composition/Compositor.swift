@@ -18,12 +18,12 @@ public class Compositor {
 
     // private var knownSurfaces: [Angle] = []
     // TODO: move compositionSurface out
-    nonisolated(unsafe) private let surface: Surface
+    nonisolated(unsafe) private let surface: any Surface2
     public var root = Layer()
 
     private var scheduler = RenderScheduler()
 
-    public init(surface: Surface, device: DeviceContext) throws {
+    public init(surface: any Surface2, device: DeviceContext) throws {
         self.renderLoop = try RenderLoop(context: device, maxFrameInFlightCount: 2)
         self.renderer = try Renderer(
             context: device, frameInFlightCount: renderLoop.maxFrameInFlightCount)
@@ -34,6 +34,11 @@ public class Compositor {
     }
 
     public func onDirty() {
+        frameNotifier.request()
+    }
+
+    public func forceFlush() {
+        frameNotifier.shouldWait = false
         frameNotifier.request()
     }
 
@@ -71,64 +76,126 @@ public class Compositor {
             // block until dirty
             while frameNotifier.shouldRender() {
                 do {
-                    let res = try renderLoop.waitForAvailableFrameInFlight()
-
+                    surface.wait()
                     // let frameContext
                     // this should be async -> so not block main thread
-                    let backBuffer = try surface.acquireCurrentTexture(
-                        signalling: res.imageAvailableSemaphore)
+                    let surfaceTexture = try surface.acquire()
 
                     let pass = DispatchQueue.main.sync { self.sync() }
 
                     let commands: GPUCommands = GPUCommands { [self] commandBuffer in
-                        backBuffer.prepareRender().apply(to: commandBuffer)
-
-                        if let pass {
-                            // Log.info(.scheduler, pass.dumpTree())
-                            do {
-                                _ = try renderer.render(
-                                    pass,
-                                    to: backBuffer.texture.image,
-                                    view: backBuffer.texture.view,
-                                    in: commandBuffer
-                                )
-                            } catch {
-                                Log.error(.compositor, "render error: \(error)")
-                            }
-                        } else {
-                            // Log.info(.scheduler, "No pass.")
+                        guard let pass else {
+                            Log.info(.scheduler, "No pass.")
+                            return
                         }
 
-                        let c = RenderTextureState.renderTarget
-                        let transitionToPresent = ImageMemoryBarrier2(
-                            srcStageMask: c.stageMask, srcAccessMask: c.accessMask,
-                            dstStageMask: .bottomOfPipe, dstAccessMask: .none,
-                            oldLayout: c.layout, newLayout: .presentSrcKHR, srcQueueFamilyIndex: 0,
-                            dstQueueFamilyIndex: 0, image: backBuffer.texture.image,
-                            subresourceRange: subresourceRange
+                        // Log.info(.scheduler, pass.dumpTree())
+                        do {
+                            let output = try renderer.render(
+                                pass,
+                                in: commandBuffer
+                            )
 
-                        )
-                        commandBuffer.pipelineBarrier2(
-                            .init(imageMemoryBarriers: [transitionToPresent]))
+                            var src = RenderTextureState.undefined
+                            var dst = RenderTextureState.transferTarget
+                            let surfaceToCopyDest = ImageMemoryBarrier2(
+                                srcStageMask: src.stageMask, srcAccessMask: src.accessMask,
+                                dstStageMask: dst.stageMask, dstAccessMask: dst.accessMask,
+                                oldLayout: src.layout, newLayout: dst.layout,
+                                srcQueueFamilyIndex: 0,
+                                dstQueueFamilyIndex: 0, image: surfaceTexture.image,
+                                subresourceRange: subresourceRange
+                            )
+
+                            src = .renderTarget
+                            dst = .transferSource
+                            let outputToCopySource = ImageMemoryBarrier2(
+                                srcStageMask: src.stageMask, srcAccessMask: src.accessMask,
+                                dstStageMask: dst.stageMask, dstAccessMask: dst.accessMask,
+                                oldLayout: src.layout, newLayout: dst.layout,
+                                srcQueueFamilyIndex: 0,
+                                dstQueueFamilyIndex: 0, image: output.image,
+                                subresourceRange: subresourceRange
+                            )
+                            output.currentLayout = dst.layout
+
+                            commandBuffer.pipelineBarrier2(
+                                .init(imageMemoryBarriers: [surfaceToCopyDest, outputToCopySource]))
+
+                            // blit
+                            let subresource = ImageSubresourceLayers(
+                                aspectMask: .color, mipLevel: 0,
+                                baseArrayLayer: 0, layerCount: 1)
+                            let destSize = VkOffset3D(
+                                x: Int32(surfaceTexture.width),
+                                y: Int32(surfaceTexture.height),
+                                z: 1
+                            )
+                            var color = VkClearColorValue(float32: (0.0, 0.0, 0.0, 0.0))
+                            commandBuffer.clearColorImage(
+                                image: surfaceTexture.image, imageLayout: .transferDstOptimal,
+                                color: &color,
+                                ranges: [
+                                    ImageSubresourceRange(
+                                        aspectMask: .color, baseMipLevel: 0,
+                                        levelCount: 1, baseArrayLayer: 0,
+                                        layerCount: 1)
+                                ])
+                            commandBuffer.blitImage2(
+                                BlitImageInfo2(
+                                    srcImage: output.image,
+                                    srcImageLayout: output.currentLayout,
+                                    dstImage: surfaceTexture.image,
+                                    dstImageLayout: .transferDstOptimal,
+                                    regions: [
+                                        ImageBlit2(
+                                            srcSubresource: subresource,
+                                            srcOffsets: (.zero, destSize),
+                                            dstSubresource: subresource,
+                                            dstOffsets: (.zero, destSize)
+                                        )
+                                    ],
+                                    filter: .nearest
+                                )
+                            )
+
+                            src = .transferTarget
+                            let transitionToPresent = ImageMemoryBarrier2(
+                                srcStageMask: src.stageMask, srcAccessMask: src.accessMask,
+                                dstStageMask: .bottomOfPipe, dstAccessMask: .none,
+                                oldLayout: src.layout, newLayout: surfaceTexture.finalLayout,
+                                srcQueueFamilyIndex: 0,
+                                dstQueueFamilyIndex: 0, image: surfaceTexture.image,
+                                subresourceRange: subresourceRange
+
+                            )
+                            commandBuffer.pipelineBarrier2(
+                                DependencyInfo(imageMemoryBarriers: [transitionToPresent])
+                            )
+
+                        } catch {
+                            Log.error(.compositor, "render error: \(error)")
+                        }
                     }
 
                     try renderLoop.submit(
                         commands: commands,
-                        waiting: res.imageAvailableSemaphore,
-                        signalling: backBuffer.renderCompletedSemaphore,
+                        waiting: surfaceTexture.acquireWait,
+                        signalling: surfaceTexture.renderFinishedSignal,
+                        signallingFence: surfaceTexture.inFlightFence
                     )
 
                     if let ms = try renderLoop.getLatestAvailableFrameTime() {
                         Log.verbose(.compositor, "Finished frame in \(ms)ms: \(1000 / ms)fps")
                     }
 
-                    try backBuffer.present()
+                    try surfaceTexture.present()
                 } catch {
                     Log.error(.compositor, "error: \(error)")
                 }
             }
             Log.info(.compositor, "Render thread stopped")
-            
+
             DispatchQueue.main.async {
                 self.onStop?()
             }
@@ -188,6 +255,16 @@ class RenderNotifier: @unchecked Sendable {
             }
             condition.wait()
             return !shouldStop
+        }
+    }
+
+    private let _shouldWait = Mutex(true)
+    var shouldWait: Bool {
+        get {
+            _shouldWait.withLock { $0 }
+        }
+        set {
+            _shouldWait.withLock { $0 = newValue }
         }
     }
 }

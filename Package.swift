@@ -38,6 +38,7 @@ let package = Package(
         .target(name: "CSTBImage"),
         .target(
             name: "CPlatform",
+            
         ),
 
         .target(

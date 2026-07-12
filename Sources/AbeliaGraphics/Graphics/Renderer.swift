@@ -57,8 +57,6 @@ extension Renderer {
     // TODO: stop resolving this, but do it in shader to map color back
     mutating func render(
         _ pass: Pass,
-        to outputImage: Image,
-        view outputView: ImageView? = nil,
         in commandBuffer: CommandBuffer,
         incrementFrameCounter: Bool = true
     )
@@ -69,19 +67,7 @@ extension Renderer {
         resource.shapeGroupStorage.resetOffset()
         resource.polygonVertexStorage.resetOffset()
 
-        let src = RenderTextureState.undefined
-        let dst = RenderTextureState.renderTarget
-        let barrier = ImageMemoryBarrier2(
-            srcStageMask: src.stageMask, srcAccessMask: src.accessMask,
-            dstStageMask: dst.stageMask, dstAccessMask: dst.accessMask,
-            oldLayout: src.layout, newLayout: dst.layout, srcQueueFamilyIndex: 0,
-            dstQueueFamilyIndex: 0, image: outputImage,
-            subresourceRange: subresourceRange
-        )
-
-        commandBuffer.pipelineBarrier2(.init(imageMemoryBarriers: [barrier]))
-
-        let texture = try walk(pass, commandBuffer, overridedImageView: outputView)
+        let texture = try walk(pass, commandBuffer)
 
         // resource.renderNodeStorage.dump()
         // resource.shapeGroupStorage.dump()

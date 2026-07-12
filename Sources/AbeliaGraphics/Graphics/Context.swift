@@ -1,4 +1,5 @@
 import CShim
+import Swinit
 import Vulkan
 
 #if os(Windows)
@@ -59,7 +60,8 @@ public class GraphicsContext: @unchecked Sendable {
                         let message = String(cString: pMessage)
 
                         let severity: DebugUtilsMessageSeverityFlagsEXT =
-                            DebugUtilsMessageSeverityFlagsEXT(rawValue: numericCast(severity.rawValue))
+                            DebugUtilsMessageSeverityFlagsEXT(
+                                rawValue: numericCast(severity.rawValue))
                         if severity.contains(.error) {
                             Log.error(.vulkan, message)
                         } else if severity.contains(.warning) {
@@ -77,41 +79,34 @@ public class GraphicsContext: @unchecked Sendable {
                 )
             )
         #endif
-
     }
 
-    #if os(Linux)
-        public func createWaylandSurface(display: OpaquePointer, surface: OpaquePointer)
-            throws(Vulkan.Result) -> Surface
-        {
-            Surface(
-                try vulkanInstance.createWaylandSurfaceKHR(
-                    .init(display: display, surface: surface)))
-        }
-    #endif
+    @MainActor
+    public func createSurface(window: Swinit::Window) throws -> any Surface2 {
+        #if os(Linux)
+            let vulkanSurface = try vulkanInstance.createWaylandSurfaceKHR(
+                WaylandSurfaceCreateInfoKHR(
+                    display: window.display.raw,
+                    surface: window.surface.raw
+                )
+            )
+            return VulkanWSISurface(vulkanSurface)
+        // #elseif os(Windows)
 
-    #if os(Windows)
-        public func createWin32Surface(hinstance: HINSTANCE, hwnd: HWND)
-            throws(Vulkan.Result) -> Surface
-        {
-            Surface(
-                try vulkanInstance.createWin32SurfaceKHR(.init(hinstance: hinstance, hwnd: hwnd)))
-        }
-    #endif
+        #else
+            fatalError("Unsupport os")
+        #endif
+    }
 
-    // #if os(Windows)
-    //     public func createDXGISurface(hwnd: HWND)
-    //         throws(Vulkan.Result) -> DXGISurface
-    //     {
-    //         DXGISurface(hwnd: hwnd)
-    //     }
-    // #endif
-
-
-    public func createDevice(compatibleWith surface: Surface)
+    public func createDevice(compatibleWith surface: any Surface2)
         throws(DeviceInitializationError) -> DeviceContext
     {
-        return try DeviceContext(compatibleWith: surface, context: self)
+        let device = try DeviceContext(compatibleWith: surface, context: self)
+        if let wsiSurface = surface as? VulkanWSISurface {
+            wsiSurface.associate(device: device)
+        }
+
+        return device
     }
 }
 public enum DeviceInitializationError: Error {
@@ -126,7 +121,7 @@ public class DeviceContext: @unchecked Sendable {
     let device: Device
     let allocator: VmaAllocator
 
-    init(compatibleWith surface: any SurfaceProtocol, context: borrowing GraphicsContext)
+    init(compatibleWith surface: any Surface2, context: borrowing GraphicsContext)
         throws(DeviceInitializationError)
     {
         guard
@@ -216,7 +211,7 @@ public class DeviceContext: @unchecked Sendable {
     }
 
     static func selectPhysicalDevice(
-        _ instance: Instance, compatibleWith surface: any SurfaceProtocol
+        _ instance: Instance, compatibleWith surface: any Surface2
     )
         throws(Vulkan.Result) -> (
             graphicsFamilyIndex: UInt32, presentationFamilyIndex: UInt32,
@@ -231,7 +226,7 @@ public class DeviceContext: @unchecked Sendable {
             //     continue
             // }
 
-            guard let surface = surface as? Surface else {
+            guard let surface = surface as? VulkanWSISurface else {
                 // dxgi swapchain device selection
                 let queueFamilies = physicalDevice.getQueueFamilyProperties()
                 guard

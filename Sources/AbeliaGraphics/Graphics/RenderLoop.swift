@@ -10,7 +10,6 @@ public final class RenderLoop {
   let maxFrameInFlightCount: Int
   private var currentFrameInFlightIndex: Int = 0
   var frameResources: [FrameResource]
-
   var currentFrameIndex: UInt32 = 0
   let timestampPeriod: Float
 
@@ -36,22 +35,13 @@ public final class RenderLoop {
     self.timestampPeriod = context.physicalDevice.getProperties().limits.timestampPeriod
   }
 
-  public func waitForAvailableFrameInFlight(reset: Bool = true) throws -> FrameResource {
-    try context.device.waitForFences(
-      fences: [currentFrameResource.everythingCompletedFence], waitAll: true,
-      timeout: UInt64.max)
-    if reset {
-      try context.device.resetFences(fences: [currentFrameResource.everythingCompletedFence])
-    }
-
-    return currentFrameResource
-  }
-
   // the semaphore returned will be signal when finished rendering
   public func submit(
     commands: GPUCommands,
-    waiting imageAvailableSemaphore: Semaphore,
-    signalling renderFinishedSemaphore: Semaphore,
+    waiting imageAvailableSemaphore: Semaphore?,
+    signalling renderFinishedSemaphore: Semaphore?,
+    signallingFence fence: Fence?,
+    // timeline semaphore?
   ) throws {
     self.releaseQueue.flushWithFences(context)
 
@@ -76,27 +66,30 @@ public final class RenderLoop {
     try res.commandBuffer.end()
 
     let graphicsSubmit = SubmitInfo2(
-      waitSemaphoreInfos: [
-        .init(
-          semaphore: imageAvailableSemaphore, value: 0,
-          stageMask: .colorAttachmentOutput, deviceIndex: 0
-        )
-      ],
+      waitSemaphoreInfos: imageAvailableSemaphore.map {
+        [
+          SemaphoreSubmitInfo(
+            semaphore: $0, value: 0,
+            stageMask: .colorAttachmentOutput, deviceIndex: 0
+          )
+        ]
+      } ?? [],
       commandBufferInfos: [.init(commandBuffer: res.commandBuffer, deviceMask: 0)],
-      signalSemaphoreInfos: [
-        .init(
-          semaphore: renderFinishedSemaphore, value: 0,
-          stageMask: .colorAttachmentOutput, deviceIndex: 0
-        )
-      ]
-      //   } else {
-      //     []
-      //   }
+      signalSemaphoreInfos: renderFinishedSemaphore.map {
+        [
+          SemaphoreSubmitInfo(
+            semaphore: $0, value: 0,
+            stageMask: .colorAttachmentOutput, deviceIndex: 0
+          )
+        ]
+      } ?? []
     )
 
     currentFrameIndex += 1
     try context.graphicsQueue.submit2(
-      submits: [graphicsSubmit], fence: res.everythingCompletedFence)
+      submits: [graphicsSubmit],
+      fence: fence
+    )
   }
 
   func getFrameTime(index: UInt32) throws -> Double {
@@ -128,9 +121,6 @@ public class FrameResource {
   let commandPool: CommandPool
   let commandBuffer: CommandBuffer
 
-  public let imageAvailableSemaphore: Semaphore
-  let everythingCompletedFence: Fence
-
   init(index: Int, context: borrowing DeviceContext) throws(Vulkan.Result) {
     let commandPool = try context.device.createCommandPool(
       .init(flags: .resetCommandBuffer, queueFamilyIndex: context.graphicsFamilyIndex))
@@ -140,7 +130,5 @@ public class FrameResource {
     self.index = index
     self.commandPool = commandPool
     self.commandBuffer = commandBuffer[0]
-    self.imageAvailableSemaphore = try context.device.createSemaphore()
-    self.everythingCompletedFence = try context.device.createFence(.init(flags: .signaled))
   }
 }

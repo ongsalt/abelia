@@ -1,7 +1,5 @@
 import AbeliaGraphics
-
 import Foundation
-
 import Swinit
 
 #if canImport(WaylandClient)
@@ -69,7 +67,7 @@ final class SpringCircleScene {
                 brush: .solid(.black),
                 shadow: Shadow(blur: 20, opacity: 0.18),
                 offset: center
-            ),
+            )
         ]
     }
 
@@ -87,8 +85,8 @@ final class SpringCircleScene {
 }
 class Delegate: Swinit.EventLoopDelegate {
     var window: Window!
-    var surface: Surface!
-    var surfaceConfig: SurfaceConfiguration!
+    var surface: (any Surface2)!
+    var surfaceConfig: SurfaceConfiguration2!
     var context: GraphicsContext!
     var compositor: Compositor!
     var animationController: CompositorAnimationController!
@@ -106,30 +104,24 @@ class Delegate: Swinit.EventLoopDelegate {
 
         root.insert(buildLayersWithCompositionGroup(compositor))
         root.insert(springCircles.canvas)
+        root.insert(buildAnimationDemo(compositor))
     }
 
     func canCreateSurfaces(_ eventLoop: Swinit.EventLoop) {
         self.context = try! GraphicsContext(applicationName: "yomum", version: 12)
-        let attr = WindowAttributes(title: "hihi", size: Size(width: 800, height: 600), noRedirectionBitmap: true)
+        let attr = WindowAttributes(
+            title: "hihi", size: Size(width: 800, height: 600), noRedirectionBitmap: true)
 
         self.window = eventLoop.openWindow(attr)
 
-        #if os(Linux)
-            surface = try! context.createWaylandSurface(
-                display: window!.display.raw,
-                surface: window!.surface.raw
-            )
-        #elseif os(Windows)
-            surface = try! context.createWin32Surface(
-                hinstance: window!.hInstance,
-                hwnd: window!.handle
-            )
-        #endif
+        surface = try! context.createSurface(window: window)
 
         let device = try! context.createDevice(compatibleWith: surface)
-        surfaceConfig = device.vulkanSurfaceConfig(
-            width: window.size.width, height: window.size.height, mailbox: false)
-        try! surface.configure(surfaceConfig)
+        surfaceConfig = SurfaceConfiguration2(
+            width: window.size.width,
+            height: window.size.height,
+        )
+        surface.configure(surfaceConfig)
 
         self.compositor = try! Compositor(surface: surface, device: device)
         self.animationController = CompositorAnimationController(compositor)
@@ -165,7 +157,7 @@ class Delegate: Swinit.EventLoopDelegate {
             }
 
         default:
-            print(event, window)
+            do {}
         }
     }
 
