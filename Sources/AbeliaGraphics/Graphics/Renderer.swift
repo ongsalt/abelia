@@ -84,6 +84,19 @@ extension Renderer {
         currentFrameInFlight = (currentFrameInFlight + 1) % self.frameInFlightCount
     }
 
+    mutating func updateFrameInFlightCount(_ count: Int) {
+        let prev = frameInFlightCount
+        if count > prev {
+            for i in prev..<count {
+                frameResources.append(
+                    try! RendererFrameResource(
+                        index: i, context: context, pipelines: self.pipelines))
+            }
+        }
+
+        self.frameInFlightCount = count
+    }
+
     private func walk(
         _ pass: borrowing Pass,
         _ commandBuffer: CommandBuffer,

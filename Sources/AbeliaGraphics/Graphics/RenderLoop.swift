@@ -7,7 +7,7 @@ public final class RenderLoop {
 
   let timeQueryPool: QueryPool
 
-  let maxFrameInFlightCount: Int
+  var maxFrameInFlightCount: Int
   private var currentFrameInFlightIndex: Int = 0
   var frameResources: [FrameResource]
   var currentFrameIndex: UInt32 = 0
@@ -90,6 +90,18 @@ public final class RenderLoop {
       submits: [graphicsSubmit],
       fence: fence
     )
+  }
+
+  func updateFrameInFlightCount(_ count: Int) {
+    let prev = self.maxFrameInFlightCount
+    if count > prev {
+      for i in prev..<count {
+        try! frameResources.append(FrameResource(index: i, context: context))
+      }
+    }
+
+    self.maxFrameInFlightCount = count
+
   }
 
   func getFrameTime(index: UInt32) throws -> Double {

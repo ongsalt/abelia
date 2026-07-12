@@ -24,11 +24,11 @@ public class Compositor {
     private var scheduler = RenderScheduler()
 
     public init(surface: any Surface2, device: DeviceContext) throws {
-        self.renderLoop = try RenderLoop(context: device, maxFrameInFlightCount: 2)
-        self.renderer = try Renderer(
-            context: device, frameInFlightCount: renderLoop.maxFrameInFlightCount)
+        self.renderLoop = try RenderLoop(
+            context: device, maxFrameInFlightCount: surface.frameLatency)
+        self.renderer = try Renderer(context: device, frameInFlightCount: surface.frameLatency)
         self.surface = surface
-        self.frameNotifier = RenderNotifier(preRenderFrameCount: 2)
+        self.frameNotifier = RenderNotifier(preRenderFrameCount: surface.frameLatency)
 
         self.startRenderThread()
     }
@@ -37,9 +37,12 @@ public class Compositor {
         frameNotifier.request()
     }
 
-    public func forceFlush() {
+    public func notifyReconfigure() {
         frameNotifier.shouldWait = false
         frameNotifier.request()
+        // we should update fif 
+        renderLoop.updateFrameInFlightCount(surface.frameLatency)
+        renderer.updateFrameInFlightCount(surface.frameLatency)
     }
 
     public func createImage(filename: String) throws -> CompositionImage {
