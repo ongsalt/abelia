@@ -1,3 +1,4 @@
+#ifdef _WIN32
 #pragma once
 
 // The D3D12 side of the interop. It owns *only* the presentation path:
@@ -72,3 +73,5 @@ private:
   wil::unique_handle sharedFenceHandle_;
   wil::unique_event fenceEvent_;
 };
+
+#endif

@@ -1,3 +1,5 @@
+#ifdef _WIN32
+
 #include "d3d12_presenter.hpp"
 
 #include "wil.h"
@@ -239,3 +241,4 @@ void D3D12Presenter::Resize(uint32_t width, uint32_t height,
         swapChain_->GetBuffer(i, IID_PPV_ARGS(backBuffers_[i].put())));
   CreateSharedTexture();
 }
+#endif

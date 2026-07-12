@@ -1,3 +1,4 @@
+#ifdef _WIN32
 #pragma once
 
 // The contract handed from the D3D12 side to the Vulkan side so Vulkan can
@@ -17,3 +18,5 @@ struct SharedInterop {
     uint32_t width;
     uint32_t height;
 };
+
+#endif

@@ -1,3 +1,4 @@
+#ifdef _WIN32
 #include "d3d12_presenter.hpp"
 #include <cstdint>
 #include <cstdlib>
@@ -31,7 +32,8 @@ void d3d12_presenter_wait(void *_Nonnull handle) {
   presenter->Wait();
 }
 
-int d3d12_presenter_submit(void *_Nonnull handle, int imageIndex, uint64_t renderDoneValue, uint64_t copyDoneValue) { 
+int d3d12_presenter_submit(void *_Nonnull handle, int imageIndex,
+                           uint64_t renderDoneValue, uint64_t copyDoneValue) {
   auto presenter = (D3D12Presenter *)handle;
   presenter->Present(imageIndex, renderDoneValue, copyDoneValue);
   return 0;
@@ -44,3 +46,4 @@ int d3d12_presenter_resize(void *_Nonnull handle, uint32_t width,
   return 0;
 }
 }
+#endif
