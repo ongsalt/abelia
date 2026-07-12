@@ -3,14 +3,14 @@
 #include <stdint.h>
 #include <windows.h>
 
-struct D3D12Images {
+typedef struct {
   uint32_t width;
   uint32_t height;
   uint32_t image_count;
   HANDLE image1;
   HANDLE image2;
   HANDLE image3;
-};
+} D3D12Images;
 
 void *_Nonnull d3d12_presenter_new(uint32_t width, uint32_t height, HWND hwnd,
                                    uint32_t image_count);

@@ -1,7 +1,8 @@
 import Foundation
+
 import Swinit
+
 import Synchronization
-import Vulkan
 
 /// Flow
 ///  1. Main thread: hi there i want to render: lastRenderRequest mutex?
@@ -10,9 +11,11 @@ import Vulkan
 ///  4. render thread & main: produce pass
 ///  5. do its thing
 
+import Vulkan
+
 @MainActor
 public class Compositor {
-    let frameNotifier: RenderNotifier
+    let notifier: RenderNotifier
     private nonisolated(unsafe) let renderLoop: RenderLoop
     private nonisolated(unsafe) var renderer: Renderer
 
@@ -28,21 +31,23 @@ public class Compositor {
             context: device, maxFrameInFlightCount: surface.frameLatency)
         self.renderer = try Renderer(context: device, frameInFlightCount: surface.frameLatency)
         self.surface = surface
-        self.frameNotifier = RenderNotifier(preRenderFrameCount: surface.frameLatency)
+        self.notifier = RenderNotifier(preRenderFrameCount: surface.frameLatency)
 
         self.startRenderThread()
     }
 
     public func onDirty() {
-        frameNotifier.request()
+        notifier.request()
     }
 
-    public func notifyReconfigure() {
-        frameNotifier.shouldWait = false
-        frameNotifier.request()
-        // we should update fif 
+    public func configureSurface(_ config: SurfaceConfiguration2) {
         renderLoop.updateFrameInFlightCount(surface.frameLatency)
         renderer.updateFrameInFlightCount(surface.frameLatency)
+        notifier.pendingSurfaceConfiguration.withLock {
+            $0 = config
+        }
+        notifier.request()
+
     }
 
     public func createImage(filename: String) throws -> CompositionImage {
@@ -53,7 +58,7 @@ public class Compositor {
     var animationFrameCallbacks: [() -> Void] = []
     public func requestAnimationFrame(callback: @escaping () -> Void) {
         animationFrameCallbacks.append(callback)
-        frameNotifier.request()
+        notifier.request()
     }
 
     func sync() -> Pass? {
@@ -77,7 +82,15 @@ public class Compositor {
     private func startRenderThread() {
         self.renderThread = Thread { [self] in
             // block until dirty
-            while frameNotifier.shouldRender() {
+            while notifier.shouldRender() {
+                // if we need to recreate swapchain
+                notifier.pendingSurfaceConfiguration.withLock {
+                    if let pendingConfig = $0 {
+                        surface.configure(pendingConfig)
+                        $0 = nil
+                    }
+                }
+
                 do {
                     surface.wait()
                     // let frameContext
@@ -209,17 +222,18 @@ public class Compositor {
 
     var onStop: (() -> Void)?
     public func stop(onStop: (() -> Void)? = nil) {
-        self.frameNotifier.stop()
+        self.notifier.stop()
         self.onStop = onStop
     }
 }
-
 class RenderNotifier: @unchecked Sendable {
     let condition = NSCondition()
     let ignored: Bool
     var preRenderFrameCount: Int
     var hasRequested: Bool = false
     var shouldStop: Bool = false
+
+    let pendingSurfaceConfiguration: Mutex<SurfaceConfiguration2?> = Mutex(nil)
 
     init(ignored: Bool = false, preRenderFrameCount: Int) {
         self.ignored = ignored

@@ -14,6 +14,17 @@ var vulkanIncludePath: [CSetting] = [
 if let vulkanSDK = ProcessInfo.processInfo.environment["VULKAN_SDK"] {
     vulkanIncludePath.append(.unsafeFlags(["-I\(vulkanSDK)/Include"]))
 }
+
+var linkerSettings: [LinkerSetting] = []
+#if os(Windows)
+// dxgi shit
+linkerSettings.append(.linkedLibrary("dcomp"))
+linkerSettings.append(.linkedLibrary("dxgi"))
+linkerSettings.append(.linkedLibrary("d3d12"))
+#endif
+
+
+
 let package = Package(
     name: "graphics-101",
     dependencies: [
@@ -38,7 +49,7 @@ let package = Package(
         .target(name: "CSTBImage"),
         .target(
             name: "CPlatform",
-            
+            linkerSettings: linkerSettings,
         ),
 
         .target(
@@ -63,6 +74,7 @@ let package = Package(
             name: "AbeliaGraphics",
             dependencies: [
                 "CShim",
+                "CPlatform",
                 "CSTBImage",
                 "ReactivityGraph",
                 .product(name: "Vulkan", package: "swift-vulkan"),

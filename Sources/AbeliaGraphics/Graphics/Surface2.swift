@@ -1,6 +1,6 @@
 import Vulkan
 
-public struct SurfaceConfiguration2 {
+public struct SurfaceConfiguration2: Sendable {
     public var width: UInt32
     public var height: UInt32
     public var imageFormat: Format = .b8g8r8a8Srgb
@@ -29,13 +29,14 @@ public struct SurfaceConfiguration2 {
     }
 }
 
-public enum PresentMode {
+public enum PresentMode: Sendable {
     case vsync
     case mailbox
 }
 
 public enum SurfaceAcquireError: Error {
     case outOfDate
+    case idk(any Error)
 }
 
 /// we can render into the image directly both on dxgi and vulkan wsi
@@ -329,8 +330,4 @@ struct VulkanWSISurfaceImage: SurfaceImageProtocol {
         //     Log.error(.vulkan, "WSI present error: \(error)")
         // }
     }
-}
-
-class DXGISurface2 {
-
 }

@@ -91,8 +91,14 @@ public class GraphicsContext: @unchecked Sendable {
                 )
             )
             return VulkanWSISurface(vulkanSurface)
-        // #elseif os(Windows)
-
+        #elseif os(Windows)
+            let vulkanSurface = try vulkanInstance.createWin32SurfaceKHR(
+                Win32SurfaceCreateInfoKHR(
+                    hinstance: window.hInstance!,
+                    hwnd: window.handle
+                )
+            )
+            return VulkanWSISurface(vulkanSurface)
         #else
             fatalError("Unsupport os")
         #endif

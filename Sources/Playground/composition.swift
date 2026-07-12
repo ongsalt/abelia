@@ -1,5 +1,7 @@
 import AbeliaGraphics
+
 import Foundation
+
 import Swinit
 
 #if canImport(WaylandClient)
@@ -85,7 +87,6 @@ final class SpringCircleScene {
 }
 class Delegate: Swinit.EventLoopDelegate {
     var window: Window!
-    var surface: (any Surface2)!
     var surfaceConfig: SurfaceConfiguration2!
     var context: GraphicsContext!
     var compositor: Compositor!
@@ -114,7 +115,7 @@ class Delegate: Swinit.EventLoopDelegate {
 
         self.window = eventLoop.openWindow(attr)
 
-        surface = try! context.createSurface(window: window)
+        let surface = try! context.createSurface(window: window)
 
         let device = try! context.createDevice(compatibleWith: surface)
         surfaceConfig = SurfaceConfiguration2(
@@ -123,7 +124,9 @@ class Delegate: Swinit.EventLoopDelegate {
         )
         surface.configure(surfaceConfig)
 
+        // compositor now own surface
         self.compositor = try! Compositor(surface: surface, device: device)
+
         self.animationController = CompositorAnimationController(compositor)
         self.compositor.root.size = SIMD2(Float(surfaceConfig.width), Float(surfaceConfig.height))
 
@@ -133,13 +136,14 @@ class Delegate: Swinit.EventLoopDelegate {
     func windowEvent(_ eventLoop: EventLoop, window: Window, event: WindowEvent) {
         switch event {
         case .resized(let size, _):
-            if let surface {
+            if let compositor {
                 surfaceConfig.width = size.width
                 surfaceConfig.height = size.height
-                try! surface.configure(surfaceConfig)
+
+                // make these happen on render thread
+                compositor.configureSurface(surfaceConfig)
                 compositor.root.size = SIMD2(Float(size.width), Float(size.height))
                 springCircles.updateBounds(compositor.root.size)
-                compositor.onDirty()
             }
 
         case .keyboardInput(_, let event, _) where event.state == .pressed:
@@ -163,7 +167,6 @@ class Delegate: Swinit.EventLoopDelegate {
 
     func aboutToWait(_ eventLoop: EventLoop) {}
 }
-
 @MainActor
 func buildLayersWithCompositionGroup(_ compositor: Compositor) -> Layer {
     let layer = Layer(brush: .solid(.white))
