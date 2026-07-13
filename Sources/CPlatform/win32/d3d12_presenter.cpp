@@ -226,9 +226,9 @@ void D3D12Presenter::CreateCompositionTarget() {
   THROW_IF_FAILED(compositor->CreateVisual(visual.put()));
   visual_ = visual.query<IDCompositionVisual3>();
 
-  wil::com_ptr<IDCompositionGaussianBlurEffect> effect;
-  THROW_IF_FAILED(compositor->CreateGaussianBlurEffect(effect.put()));
-  THROW_IF_FAILED(effect->SetStandardDeviation(5));
+  // wil::com_ptr<IDCompositionGaussianBlurEffect> effect;
+  // THROW_IF_FAILED(compositor->CreateGaussianBlurEffect(effect.put()));
+  // THROW_IF_FAILED(effect->SetStandardDeviation(15));
   // THROW_IF_FAILED(visual_->SetEffect(effect.get()));
 
   THROW_IF_FAILED(visual_->SetContent(swapChain_.get()));

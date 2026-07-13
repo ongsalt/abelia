@@ -29,10 +29,8 @@
         }
 
         var frameLatency: Int {
-            get { 2 }
-            set {
-                fatalError("unimplemented")
-            }
+            // pre-configure fallback matches SurfaceConfiguration2's default
+            info?.config.frameInFlight ?? 2
         }
 
         var timeline: (Semaphore, imageAvailable: UInt64, renderFinished: UInt64)? {
