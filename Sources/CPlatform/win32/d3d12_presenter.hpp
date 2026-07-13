@@ -72,8 +72,8 @@ private:
   wil::com_ptr<ID3D12CommandQueue> queue_;
   wil::com_ptr<IDXGISwapChain3> swapChain_;
   std::vector<wil::com_ptr<ID3D12Resource>> backBuffers_;
-  wil::com_ptr<ID3D12CommandAllocator> allocator_;
-  wil::com_ptr<ID3D12GraphicsCommandList> cmdList_;
+  std::vector<wil::com_ptr<ID3D12CommandAllocator>> allocators_;
+  std::vector<wil::com_ptr<ID3D12GraphicsCommandList>> commandLists_;
   wil::unique_handle _waitable;
 
   // shared resource

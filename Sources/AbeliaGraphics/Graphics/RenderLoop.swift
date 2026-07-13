@@ -89,14 +89,14 @@ public final class RenderLoop {
       waitSemaphoreInfos.append(
         SemaphoreSubmitInfo(
           semaphore: timelineSemaphore, value: imageAvailable,
-          stageMask: .colorAttachmentOutput, deviceIndex: 0
+          stageMask: .allCommands, deviceIndex: 0
         )
       )
 
       signalSemaphoreInfos.append(
         SemaphoreSubmitInfo(
           semaphore: timelineSemaphore, value: renderFinished,
-          stageMask: .colorAttachmentOutput, deviceIndex: 0
+          stageMask: .allCommands, deviceIndex: 0
         )
       )
     }

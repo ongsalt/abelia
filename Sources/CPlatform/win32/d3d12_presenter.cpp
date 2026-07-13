@@ -77,14 +77,19 @@ void D3D12Presenter::CreateDeviceAndSwapChain() {
     wil::com_ptr<ID3D12Resource> ptr;
     THROW_IF_FAILED(swapChain_->GetBuffer(i, IID_PPV_ARGS(ptr.put())));
     backBuffers_.push_back(ptr);
-  }
 
-  THROW_IF_FAILED(device_->CreateCommandAllocator(
-      D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(allocator_.put())));
-  THROW_IF_FAILED(device_->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
-                                             allocator_.get(), nullptr,
-                                             IID_PPV_ARGS(cmdList_.put())));
-  THROW_IF_FAILED(cmdList_->Close()); // start closed; Present() resets it
+    wil::com_ptr<ID3D12CommandAllocator> allocator;
+    wil::com_ptr<ID3D12GraphicsCommandList> commandList;
+    THROW_IF_FAILED(device_->CreateCommandAllocator(
+        D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(allocator.put())));
+    THROW_IF_FAILED(device_->CreateCommandList(
+        0, D3D12_COMMAND_LIST_TYPE_DIRECT, allocator.get(), nullptr,
+        IID_PPV_ARGS(commandList.put())));
+    THROW_IF_FAILED(commandList->Close()); // start closed; Present() resets it
+
+    allocators_.push_back(allocator);
+    commandLists_.push_back(commandList);
+  }
 
   THROW_IF_FAILED(swapChain_->SetMaximumFrameLatency(image_count_));
   _waitable.reset(swapChain_->GetFrameLatencyWaitableObject());
@@ -183,34 +188,30 @@ void D3D12Presenter::Present(uint32_t imageIndex, uint64_t renderDoneValue,
   const uint32_t index = swapChain_->GetCurrentBackBufferIndex();
   ID3D12Resource *back = backBuffers_[index].get();
 
-  THROW_IF_FAILED(allocator_->Reset());
-  THROW_IF_FAILED(cmdList_->Reset(allocator_.get(), nullptr));
+  auto commandList = commandLists_[index];
+  auto allocator = allocators_[index];
+
+  THROW_IF_FAILED(allocator->Reset());
+  THROW_IF_FAILED(commandList->Reset(allocator.get(), nullptr));
 
   auto toCopyDest = Transition(back, D3D12_RESOURCE_STATE_PRESENT,
                                D3D12_RESOURCE_STATE_COPY_DEST);
-  cmdList_->ResourceBarrier(1, &toCopyDest);
+  commandList->ResourceBarrier(1, &toCopyDest);
 
   // sharedTex_ sits in COMMON and is promoted to COPY_SOURCE implicitly.
-  cmdList_->CopyResource(back, sharedTextures_[imageIndex].get());
+  commandList->CopyResource(back, sharedTextures_[imageIndex].get());
 
   auto toPresent = Transition(back, D3D12_RESOURCE_STATE_COPY_DEST,
                               D3D12_RESOURCE_STATE_PRESENT);
-  cmdList_->ResourceBarrier(1, &toPresent);
-  THROW_IF_FAILED(cmdList_->Close());
+  commandList->ResourceBarrier(1, &toPresent);
+  THROW_IF_FAILED(commandList->Close());
 
-  ID3D12CommandList *lists[] = {cmdList_.get()};
+  ID3D12CommandList *lists[] = {commandList.get()};
   queue_->ExecuteCommandLists(1, lists);
 
   // Tell Vulkan the copy is done so it may render into the texture again.
   THROW_IF_FAILED(queue_->Signal(fence_.get(), copyDoneValue));
   THROW_IF_FAILED(swapChain_->Present(1, 0));
-
-  // Bound latency: block until this frame's copy has retired.
-  // if (fence_->GetCompletedValue() < copyDoneValue) {
-  //   THROW_IF_FAILED(
-  //       fence_->SetEventOnCompletion(copyDoneValue, fenceEvent_.get()));
-  //   fenceEvent_.wait();
-  // }
 }
 
 void D3D12Presenter::CreateCompositionTarget() {
@@ -249,7 +250,7 @@ void D3D12Presenter::RetireSharedTextures() {
   // }
   // sharedTextureHandles_.clear();
   // sharedTextures_.clear();
-  
+
   for (auto s : sharedTextureHandles_) {
     retiredSharedTextureHandles_.push_back(s);
   }
@@ -273,9 +274,9 @@ void D3D12Presenter::Resize(uint32_t width, uint32_t height,
 
   // release all fif image in next N frames?
   // actually need to retire PER SLOT, cuz we want to present the already drawn
-  // image or we discard its present? 
+  // image or we discard its present?
   ReleaseSharedTextures();
-  
+
   THROW_IF_FAILED(swapChain_->ResizeBuffers(
       0, width, height, DXGI_FORMAT_UNKNOWN,
       DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT));
