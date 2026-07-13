@@ -75,9 +75,10 @@
                 let v = (frameIndex - UInt64(frameLatency)) * 2
                 // d3d12_presenter_wait_value(presenter, v)
                 // we can actually use vulkan wait tho...
-                // try! device.device.waitSemaphores(
-                //     SemaphoreWaitInfo(semaphores: [info!.semaphore], values: [v]),
-                //     timeout: UInt64.max)
+                try! device.device.waitSemaphores(
+                    SemaphoreWaitInfo(semaphores: [info!.semaphore], values: [v]),
+                    timeout: UInt64.max
+                )
             }
         }
 
