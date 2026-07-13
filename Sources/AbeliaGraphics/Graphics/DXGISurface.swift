@@ -36,7 +36,9 @@
         }
 
         var timeline: (Semaphore, imageAvailable: UInt64, renderFinished: UInt64)? {
-            return (info!.semaphore, frameIndex * 2 - 2, frameIndex * 2 - 1)
+            let latency = UInt64(frameLatency)
+            let imageAvailable = frameIndex > latency ? (frameIndex - latency) * 2 : 0
+            return (info!.semaphore, imageAvailable, frameIndex * 2 - 1)
         }
 
         var presenter: UnsafeMutableRawPointer!
@@ -69,12 +71,13 @@
             d3d12_presenter_wait(presenter)
 
             if frameIndex > frameLatency {
+                // care only render finished
                 let v = (frameIndex - UInt64(frameLatency)) * 2
                 // d3d12_presenter_wait_value(presenter, v)
                 // we can actually use vulkan wait tho...
-                try! device.device.waitSemaphores(
-                    SemaphoreWaitInfo(semaphores: [info!.semaphore], values: [v]),
-                    timeout: UInt64.max)
+                // try! device.device.waitSemaphores(
+                //     SemaphoreWaitInfo(semaphores: [info!.semaphore], values: [v]),
+                //     timeout: UInt64.max)
             }
         }
 
