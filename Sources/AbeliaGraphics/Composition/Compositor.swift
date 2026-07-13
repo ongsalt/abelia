@@ -1,15 +1,15 @@
-import Foundation
-
-import Swinit
-
-import Synchronization
-
 /// Flow
 ///  1. Main thread: hi there i want to render: lastRenderRequest mutex?
 ///  2. render thread: wait
 ///  3. render thread & main: pls run animation frame
 ///  4. render thread & main: produce pass
 ///  5. do its thing
+
+import Foundation
+
+import Swinit
+
+import Synchronization
 
 import Vulkan
 
@@ -83,23 +83,21 @@ public class Compositor {
             // block until dirty
             while notifier.shouldRender() {
                 // if we need to recreate swapchain
-                var skipWait = false
                 notifier.pendingSurfaceConfiguration.withLock {
                     if let pendingConfig = $0 {
                         surface.configure(pendingConfig)
                         $0 = nil
-                        skipWait = true
                     }
                 }
 
                 do {
-                    if !skipWait {
-                        surface.wait()
-                    }
+                    surface.wait()
+
                     // let frameContext
                     // this should be async -> so not block main thread
                     let surfaceTexture = try surface.acquire()
 
+                    // we should force pass when resize
                     let pass = DispatchQueue.main.sync { self.sync() }
 
                     let commands: GPUCommands = GPUCommands { [self] commandBuffer in
@@ -139,13 +137,14 @@ public class Compositor {
                             output.currentLayout = dst.layout
 
                             commandBuffer.pipelineBarrier2(
-                                .init(imageMemoryBarriers: [surfaceToCopyDest, outputToCopySource]))
+                                .init(imageMemoryBarriers: [surfaceToCopyDest, outputToCopySource])
+                            )
 
                             // blit
                             let subresource = ImageSubresourceLayers(
                                 aspectMask: .color, mipLevel: 0,
                                 baseArrayLayer: 0, layerCount: 1)
-                                
+
                             let destSize = VkOffset3D(
                                 x: Int32(min(surfaceTexture.width, output.size.x)),
                                 y: Int32(min(surfaceTexture.height, output.size.y)),
@@ -275,7 +274,9 @@ class RenderNotifier: @unchecked Sendable {
                 hasRequested = false
                 return true
             }
+            Log.verbose(.scheduler, "Waiting")
             condition.wait()
+            hasRequested = false
             return !shouldStop
         }
     }

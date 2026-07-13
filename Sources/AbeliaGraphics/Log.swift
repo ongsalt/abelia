@@ -33,6 +33,8 @@ public struct Log {
         .vulkan,
     ]
 
+    public nonisolated(unsafe) static var seachString: String? = nil
+
     public static func info(_ tag: Tag, _ message: String, align: Bool = true) {
         log("\u{001B}[32m   INFO\u{001B}[0m", tag, message, align: align)
     }
@@ -59,6 +61,9 @@ public struct Log {
 
     private static func log(_ levelColored: String, _ tag: Tag, _ message: String, align: Bool) {
         if !displayedTags.contains(tag) {
+            return
+        }
+        if let seachString, !message.contains(seachString) {
             return
         }
         let timestamp = Date.now.formatFr()

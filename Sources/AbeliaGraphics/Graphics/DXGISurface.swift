@@ -35,18 +35,14 @@
             }
         }
 
-        var timeline: (Vulkan.Semaphore, imageAvailable: UInt64, renderFinished: UInt64)? {
-            if timelineValue < 2 || info == nil {
-                fatalError("tf")
-            }
-            return (info!.semaphore, timelineValue - 1, timelineValue)
+        var timeline: (Semaphore, imageAvailable: UInt64, renderFinished: UInt64)? {
+            return (info!.semaphore, frameIndex * 2 - 2, frameIndex * 2 - 1)
         }
 
         var presenter: UnsafeMutableRawPointer!
         let hwnd: HWND
 
-        var timelineValue: UInt64 = 0
-        var imageIndex: UInt32 = 0
+        var frameIndex: UInt64 = 0
 
         static let format: Format = .b8g8r8a8Srgb
 
@@ -72,12 +68,10 @@
             // wait until dxgi want us to
             d3d12_presenter_wait(presenter)
 
-            if timelineValue > frameLatency * 2 {
-                let v = timelineValue - UInt64(frameLatency - 1) * 2
-                // we can actually use vulkan wait tho...
-                // bruhhh
+            if frameIndex > frameLatency {
+                let v = (frameIndex - UInt64(frameLatency)) * 2
                 // d3d12_presenter_wait_value(presenter, v)
-                // info?.semaphore
+                // we can actually use vulkan wait tho...
                 try! device.device.waitSemaphores(
                     SemaphoreWaitInfo(semaphores: [info!.semaphore], values: [v]),
                     timeout: UInt64.max)
@@ -89,19 +83,20 @@
             guard let info else {
                 fatalError("pls call .configure first")
             }
-            let waitRenderFinished = timelineValue
-            let signalImageAvailable = timelineValue + 1
-            timelineValue += 2
-            imageIndex = (imageIndex + 1) % UInt32(frameLatency)
+            frameIndex += 1
+            let waitRenderFinished = frameIndex * 2 - 1
+            let signalImageAvailable = frameIndex * 2
+
+            let index = UInt32(frameIndex) % UInt32(frameLatency)
 
             return DXGISurfaceImage(
-                image: info.images[Int(imageIndex)],
-                view: info.imageViews[Int(imageIndex)],
+                image: info.images[Int(index)],
+                view: info.imageViews[Int(index)],
                 width: info.config.width,
                 height: info.config.height,
                 releaseQueue: releaseQueue,
                 presenter: presenter,
-                index: imageIndex,
+                index: index,
                 waitRenderFinished: waitRenderFinished,
                 signalImageAvailable: signalImageAvailable,
             )
@@ -139,7 +134,7 @@
                 "Resizing dxgi swapchain \((configuration.width, configuration.height)) at real size: \((width, height))"
             )
 
-            d3d12_presenter_resize(presenter, width, height, timelineValue)
+            d3d12_presenter_resize(presenter, width, height, frameIndex * 2)
 
             // safe to release previos images/views cuz d3d12_presenter_resize already waitIdle
             let prevViews = info.imageViews

@@ -273,9 +273,9 @@ void D3D12Presenter::Resize(uint32_t width, uint32_t height,
 
   // release all fif image in next N frames?
   // actually need to retire PER SLOT, cuz we want to present the already drawn
-  // image or we discard its present? ReleaseSharedTextures();
-  RetireSharedTextures();
-
+  // image or we discard its present? 
+  ReleaseSharedTextures();
+  
   THROW_IF_FAILED(swapChain_->ResizeBuffers(
       0, width, height, DXGI_FORMAT_UNKNOWN,
       DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT));
