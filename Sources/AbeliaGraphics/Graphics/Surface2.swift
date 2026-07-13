@@ -1,6 +1,6 @@
 import Vulkan
 
-public struct SurfaceConfiguration2: Sendable {
+public struct SurfaceConfiguration2: Sendable, Equatable {
     public var width: UInt32
     public var height: UInt32
     public var imageFormat: Format = .b8g8r8a8Srgb

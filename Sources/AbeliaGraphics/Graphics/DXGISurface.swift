@@ -75,7 +75,12 @@
             if timelineValue > frameLatency * 2 {
                 let v = timelineValue - UInt64(frameLatency - 1) * 2
                 // we can actually use vulkan wait tho...
-                d3d12_presenter_wait_value(presenter, v)
+                // bruhhh
+                // d3d12_presenter_wait_value(presenter, v)
+                // info?.semaphore
+                try! device.device.waitSemaphores(
+                    SemaphoreWaitInfo(semaphores: [info!.semaphore], values: [v]),
+                    timeout: UInt64.max)
             }
         }
 
@@ -94,6 +99,7 @@
                 view: info.imageViews[Int(imageIndex)],
                 width: info.config.width,
                 height: info.config.height,
+                releaseQueue: releaseQueue,
                 presenter: presenter,
                 index: imageIndex,
                 waitRenderFinished: waitRenderFinished,
@@ -108,28 +114,47 @@
                 return
             }
 
+            if info.config == configuration {
+                return
+            }
+
             // if we can just crop
             if info.config.onlySizeChanged(comparedTo: configuration)
                 && info.availableWidth >= configuration.width
                 && info.availableHeight >= configuration.height
             {
+                Log.info(
+                    .general,
+                    "reusing dxgi swapchain \((configuration.width, configuration.height)) at real size: \((info.availableWidth, info.availableHeight))"
+                )
                 self.info!.config = configuration
                 return
             }
 
             let width = UInt32(Float(configuration.width) * 1.2)
             let height = UInt32(Float(configuration.height) * 1.2)
-            d3d12_presenter_resize(presenter, width, height, timelineValue)
 
+            Log.info(
+                .general,
+                "Resizing dxgi swapchain \((configuration.width, configuration.height)) at real size: \((width, height))"
+            )
+
+            d3d12_presenter_resize(presenter, width, height, timelineValue)
+            
             // safe to release previos images/views cuz d3d12_presenter_resize already waitIdle
-            for view in info.imageViews {
-                view.destroy()
-            }
-            for image in info.images {
-                image.destroy()
-            }
-            for memory in info.memories {
-                memory.freeMemory()
+            let prevViews = info.imageViews
+            let prevImages = info.images
+            let prevMemories = info.memories
+            releaseQueue.schedule(in: info.config.frameInFlight + 1) {
+                for view in prevViews {
+                    view.destroy()
+                }
+                for image in prevImages {
+                    image.destroy()
+                }
+                for memory in prevMemories {
+                    memory.freeMemory()
+                }
             }
 
             let d3d12Images = d3d12_presenter_get_images(presenter)
@@ -288,12 +313,14 @@
             .transferSrcOptimal
         }
 
+        let releaseQueue: ReleaseQueue
         let presenter: UnsafeMutableRawPointer
         let index: UInt32
         let waitRenderFinished: UInt64
         let signalImageAvailable: UInt64
 
         func present() throws {
+            releaseQueue.flush()
             d3d12_presenter_present(presenter, index, waitRenderFinished, signalImageAvailable)
         }
     }

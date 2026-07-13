@@ -249,9 +249,10 @@ void D3D12Presenter::Resize(uint32_t width, uint32_t height,
   width_ = width;
   height_ = height;
 
-  // release all ref to backbuffer
+  // release all ref to backbuffer, must clear NOW
   backBuffers_.clear();
-  // release all fif image
+
+  // release all fif image in next N frames?
   ReleaseSharedTextures();
 
   THROW_IF_FAILED(swapChain_->ResizeBuffers(

@@ -41,8 +41,8 @@ public class Compositor {
     }
 
     public func configureSurface(_ config: SurfaceConfiguration2) {
-        renderLoop.updateFrameInFlightCount(surface.frameLatency)
-        renderer.updateFrameInFlightCount(surface.frameLatency)
+        // renderLoop.updateFrameInFlightCount(surface.frameLatency)
+        // renderer.updateFrameInFlightCount(surface.frameLatency)
         notifier.pendingSurfaceConfiguration.withLock {
             $0 = config
         }
@@ -141,9 +141,10 @@ public class Compositor {
                             let subresource = ImageSubresourceLayers(
                                 aspectMask: .color, mipLevel: 0,
                                 baseArrayLayer: 0, layerCount: 1)
+                                
                             let destSize = VkOffset3D(
-                                x: Int32(surfaceTexture.width),
-                                y: Int32(surfaceTexture.height),
+                                x: Int32(min(surfaceTexture.width, output.size.x)),
+                                y: Int32(min(surfaceTexture.height, output.size.y)),
                                 z: 1
                             )
                             var color = VkClearColorValue(float32: (0.0, 0.0, 0.0, 0.0))

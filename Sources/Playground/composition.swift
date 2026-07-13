@@ -141,8 +141,8 @@ class Delegate: Swinit.EventLoopDelegate {
                 surfaceConfig.height = size.height
 
                 // make these happen on render thread
-                compositor.configureSurface(surfaceConfig)
                 compositor.root.size = SIMD2(Float(size.width), Float(size.height))
+                compositor.configureSurface(surfaceConfig)
                 springCircles.updateBounds(compositor.root.size)
             }
 
