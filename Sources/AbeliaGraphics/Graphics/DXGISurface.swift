@@ -123,10 +123,10 @@
                 && info.availableWidth >= configuration.width
                 && info.availableHeight >= configuration.height
             {
-                Log.info(
-                    .general,
-                    "reusing dxgi swapchain \((configuration.width, configuration.height)) at real size: \((info.availableWidth, info.availableHeight))"
-                )
+                // Log.verbose(
+                //     .general,
+                //     "reusing dxgi swapchain \((configuration.width, configuration.height)) at real size: \((info.availableWidth, info.availableHeight))"
+                // )
                 self.info!.config = configuration
                 return
             }
@@ -140,7 +140,7 @@
             )
 
             d3d12_presenter_resize(presenter, width, height, timelineValue)
-            
+
             // safe to release previos images/views cuz d3d12_presenter_resize already waitIdle
             let prevViews = info.imageViews
             let prevImages = info.images

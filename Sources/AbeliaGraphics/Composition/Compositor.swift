@@ -83,15 +83,19 @@ public class Compositor {
             // block until dirty
             while notifier.shouldRender() {
                 // if we need to recreate swapchain
+                var skipWait = false
                 notifier.pendingSurfaceConfiguration.withLock {
                     if let pendingConfig = $0 {
                         surface.configure(pendingConfig)
                         $0 = nil
+                        skipWait = true
                     }
                 }
 
                 do {
-                    surface.wait()
+                    if !skipWait {
+                        surface.wait()
+                    }
                     // let frameContext
                     // this should be async -> so not block main thread
                     let surfaceTexture = try surface.acquire()

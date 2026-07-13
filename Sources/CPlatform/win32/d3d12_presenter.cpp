@@ -1,4 +1,5 @@
 #include <iostream>
+#include <utility>
 #ifdef _WIN32
 
 #include "d3d12_presenter.hpp"
@@ -60,9 +61,9 @@ void D3D12Presenter::CreateDeviceAndSwapChain() {
   scd.Format = DXGI_FORMAT_B8G8R8A8_UNORM; // required for DComp alpha
   scd.SampleDesc = {1, 0};
   scd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-  scd.BufferCount = image_count_ + 2;
+  scd.BufferCount = image_count_ + 1;
   scd.Scaling = DXGI_SCALING_STRETCH;
-  scd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+  scd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
   scd.AlphaMode = DXGI_ALPHA_MODE_PREMULTIPLIED;
   scd.Flags = DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
 
@@ -72,7 +73,7 @@ void D3D12Presenter::CreateDeviceAndSwapChain() {
   swapChain_ = sc1.query<IDXGISwapChain3>();
 
   backBuffers_.clear();
-  for (uint32_t i = 0; i < image_count_ + 2; ++i) {
+  for (uint32_t i = 0; i < image_count_ + 1; ++i) {
     wil::com_ptr<ID3D12Resource> ptr;
     THROW_IF_FAILED(swapChain_->GetBuffer(i, IID_PPV_ARGS(ptr.put())));
     backBuffers_.push_back(ptr);
@@ -99,9 +100,10 @@ void D3D12Presenter::CreateSharedTexture() {
   rd.Height = height_;
   rd.DepthOrArraySize = 1;
   rd.MipLevels = 1;
-  // sRGB typed: Vulkan renders sRGB-encoded bytes into it (VK_FORMAT_B8G8R8A8_SRGB).
-  // The copy into the UNORM backbuffer stays inside the B8G8R8A8 typeless family,
-  // so it is a raw bit copy -- which is what DWM expects to be handed.
+  // sRGB typed: Vulkan renders sRGB-encoded bytes into it
+  // (VK_FORMAT_B8G8R8A8_SRGB). The copy into the UNORM backbuffer stays inside
+  // the B8G8R8A8 typeless family, so it is a raw bit copy -- which is what DWM
+  // expects to be handed.
   rd.Format = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
   rd.SampleDesc = {1, 0};
   rd.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
@@ -124,7 +126,8 @@ void D3D12Presenter::CreateSharedTexture() {
 
 void D3D12Presenter::ReleaseSharedTextures() {
   // Vulkan holds its own reference to the underlying resource once the handle
-  // has been imported, so closing here does not pull the memory out from under it.
+  // has been imported, so closing here does not pull the memory out from under
+  // it.
   for (auto handle : sharedTextureHandles_) {
     CloseHandle(handle);
   }
@@ -202,7 +205,7 @@ void D3D12Presenter::Present(uint32_t imageIndex, uint64_t renderDoneValue,
   THROW_IF_FAILED(queue_->Signal(fence_.get(), copyDoneValue));
   THROW_IF_FAILED(swapChain_->Present(1, 0));
 
-  // // Bound latency: block until this frame's copy has retired.
+  // Bound latency: block until this frame's copy has retired.
   // if (fence_->GetCompletedValue() < copyDoneValue) {
   //   THROW_IF_FAILED(
   //       fence_->SetEventOnCompletion(copyDoneValue, fenceEvent_.get()));
@@ -240,6 +243,22 @@ void D3D12Presenter::WaitFence(uint64_t value) {
   fenceEvent_.wait();
 }
 
+void D3D12Presenter::RetireSharedTextures() {
+  // for (auto handle : sharedTextureHandles_) {
+  //   CloseHandle(handle);
+  // }
+  // sharedTextureHandles_.clear();
+  // sharedTextures_.clear();
+  
+  for (auto s : sharedTextureHandles_) {
+    retiredSharedTextureHandles_.push_back(s);
+  }
+
+  for (auto t : sharedTextures_) {
+    retiredSharedTextures_.push_back(t);
+  }
+}
+
 void D3D12Presenter::Resize(uint32_t width, uint32_t height,
                             uint64_t currentFenceValue) {
   // wait until all rendering + copying are done
@@ -253,14 +272,16 @@ void D3D12Presenter::Resize(uint32_t width, uint32_t height,
   backBuffers_.clear();
 
   // release all fif image in next N frames?
-  ReleaseSharedTextures();
+  // actually need to retire PER SLOT, cuz we want to present the already drawn
+  // image or we discard its present? ReleaseSharedTextures();
+  RetireSharedTextures();
 
   THROW_IF_FAILED(swapChain_->ResizeBuffers(
       0, width, height, DXGI_FORMAT_UNKNOWN,
       DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT));
 
   // recreate it
-  for (uint32_t i = 0; i < image_count_ + 2; ++i) {
+  for (uint32_t i = 0; i < image_count_ + 1; ++i) {
     wil::com_ptr<ID3D12Resource> buffer;
     THROW_IF_FAILED(swapChain_->GetBuffer(i, IID_PPV_ARGS(buffer.put())));
     backBuffers_.push_back(buffer);

@@ -54,6 +54,9 @@ private:
   void CreateSharedFence();
   void CreateCompositionTarget();
 
+  void RetireSharedTextures();
+  // void FlushRetiredSharedTextures();
+
   uint32_t width_;
   uint32_t height_;
   uint32_t image_count_;
@@ -79,6 +82,9 @@ private:
   wil::com_ptr<ID3D12Fence> fence_;
   wil::unique_handle sharedFenceHandle_;
   wil::unique_event fenceEvent_;
+
+  std::vector<wil::com_ptr<ID3D12Resource>> retiredSharedTextures_;
+  std::vector<HANDLE> retiredSharedTextureHandles_;
 };
 
 #endif
