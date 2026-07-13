@@ -103,14 +103,56 @@
 
         // TODO: resize path
         func configure(_ configuration: SurfaceConfiguration2) {
-            if presenter == nil {
-                presenter = d3d12_presenter_new(
-                    UInt32(Float(configuration.width) * 2),
-                    UInt32(Float(configuration.height) * 2),
-                    hwnd,
-                    UInt32(configuration.frameInFlight)
-                )
+            guard let info else {
+                create(configuration)
+                return
             }
+
+            // if we can just crop
+            if info.config.onlySizeChanged(comparedTo: configuration)
+                && info.availableWidth >= configuration.width
+                && info.availableHeight >= configuration.height
+            {
+                self.info!.config = configuration
+                return
+            }
+
+            let width = UInt32(Float(configuration.width) * 1.2)
+            let height = UInt32(Float(configuration.height) * 1.2)
+            d3d12_presenter_resize(presenter, width, height, timelineValue)
+
+            // safe to release previos images/views cuz d3d12_presenter_resize already waitIdle
+            for view in info.imageViews {
+                view.destroy()
+            }
+            for image in info.images {
+                image.destroy()
+            }
+            for memory in info.memories {
+                memory.freeMemory()
+            }
+
+            let d3d12Images = d3d12_presenter_get_images(presenter)
+            let (images, views, memories) = importImages(from: d3d12Images)
+
+            self.info = ConfiguredInfo(
+                config: configuration,
+                availableWidth: d3d12Images.width,
+                availableHeight: d3d12Images.height,
+                semaphore: info.semaphore,
+                images: images,
+                imageViews: views,
+                memories: memories
+            )
+        }
+
+        private func create(_ configuration: SurfaceConfiguration2) {
+            presenter = d3d12_presenter_new(
+                UInt32(Float(configuration.width) * 1.2),
+                UInt32(Float(configuration.height) * 1.2),
+                hwnd,
+                UInt32(configuration.frameInFlight)
+            )
 
             let semaphore = try! device.device.createSemaphore(
                 SemaphoreCreateInfo()
@@ -241,7 +283,10 @@
         var acquireWait: Semaphore? { nil }
         var renderFinishedSignal: Semaphore? { nil }
         var inFlightFence: Fence? { nil }
-        var finalLayout: ImageLayout { .transferSrcOptimal }
+        var finalLayout: ImageLayout {
+            // bruh is this amd thing
+            .transferSrcOptimal
+        }
 
         let presenter: UnsafeMutableRawPointer
         let index: UInt32
