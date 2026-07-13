@@ -126,18 +126,25 @@ public final class RenderLoop {
 
   }
 
-  func getFrameTime(index: UInt32) throws -> Double {
-    var timestamps: [2 of UInt64] = [0, 0]
+  func getFrameTime(index: UInt32) throws -> Double? {
+    // (value, availability) per query
+    var results: [4 of UInt64] = [0, 0, 0, 0]
     try timeQueryPool.getResults(
       firstQuery: index * 2,
       queryCount: 2,
-      dataSize: MemoryLayout<[2 of UInt64]>.size,
-      data: &timestamps,
-      stride: UInt64(MemoryLayout<UInt64>.size),
-      flags: .type64
+      dataSize: MemoryLayout<[4 of UInt64]>.size,
+      data: &results,
+      stride: UInt64(2 * MemoryLayout<UInt64>.size),
+      flags: [.type64, .typeWithAvailability]
     )
 
-    let timeMs = (Double(timestamps[1]) - Double(timestamps[0])) * Double(timestampPeriod) / 1e6
+    // NOT_READY is a success code: values are left unwritten for queries still
+    // in flight, only the availability word tells us which ones are real
+    guard results[1] != 0, results[3] != 0 else {
+      return nil
+    }
+
+    let timeMs = (Double(results[2]) - Double(results[0])) * Double(timestampPeriod) / 1e6
     return timeMs
   }
 
