@@ -82,7 +82,7 @@ public class GraphicsContext: @unchecked Sendable {
     }
 
     @MainActor
-    public func createSurface(window: Swinit::Window) throws -> any Surface2 {
+    public func createSurface(window: Swinit::Window) throws -> some Surface2 {
         #if os(Linux)
             let vulkanSurface = try vulkanInstance.createWaylandSurfaceKHR(
                 WaylandSurfaceCreateInfoKHR(
@@ -92,13 +92,14 @@ public class GraphicsContext: @unchecked Sendable {
             )
             return VulkanWSISurface(vulkanSurface)
         #elseif os(Windows)
-            let vulkanSurface = try vulkanInstance.createWin32SurfaceKHR(
-                Win32SurfaceCreateInfoKHR(
-                    hinstance: window.hInstance!,
-                    hwnd: window.handle
-                )
-            )
-            return VulkanWSISurface(vulkanSurface)
+            // let vulkanSurface = try vulkanInstance.createWin32SurfaceKHR(
+            //     Win32SurfaceCreateInfoKHR(
+            //         hinstance: window.hInstance!,
+            //         hwnd: window.handle
+            //     )
+            // )
+            let dxgiSurface = DXGISurface(hwnd: window.handle)
+            return dxgiSurface
         #else
             fatalError("Unsupport os")
         #endif
@@ -110,6 +111,8 @@ public class GraphicsContext: @unchecked Sendable {
         let device = try DeviceContext(compatibleWith: surface, context: self)
         if let wsiSurface = surface as? VulkanWSISurface {
             wsiSurface.associate(device: device)
+        } else if let dxgiSurface = surface as? DXGISurface {
+            dxgiSurface.associate(device: device)
         }
 
         return device
@@ -144,6 +147,7 @@ public class DeviceContext: @unchecked Sendable {
                             names += [
                                 "VK_KHR_external_memory",
                                 "VK_KHR_external_memory_win32",
+                                "VK_KHR_external_semaphore_win32",
                             ]
                         #endif
 
@@ -159,6 +163,7 @@ public class DeviceContext: @unchecked Sendable {
                         descriptorBindingVariableDescriptorCount: true,
                         runtimeDescriptorArray: true,
                         hostQueryReset: true,
+                        timelineSemaphore: true,
                         bufferDeviceAddress: true,
                     )
                 )

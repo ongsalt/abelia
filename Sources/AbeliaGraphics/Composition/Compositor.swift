@@ -47,7 +47,6 @@ public class Compositor {
             $0 = config
         }
         notifier.request()
-
     }
 
     public func createImage(filename: String) throws -> CompositionImage {
@@ -198,7 +197,8 @@ public class Compositor {
                         commands: commands,
                         waiting: surfaceTexture.acquireWait,
                         signalling: surfaceTexture.renderFinishedSignal,
-                        signallingFence: surfaceTexture.inFlightFence
+                        signallingFence: surfaceTexture.inFlightFence,
+                        timeline: surface.timeline
                     )
 
                     if let ms = try renderLoop.getLatestAvailableFrameTime() {

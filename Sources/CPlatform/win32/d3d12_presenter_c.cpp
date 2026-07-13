@@ -12,6 +12,13 @@ void *_Nonnull d3d12_presenter_new(uint32_t width, uint32_t height, HWND hwnd,
   return (void *)handle;
 }
 
+void d3d12_presenter_destroy(void *_Nonnull handle,
+                             uint64_t currentFenceValue) {
+  auto presenter = (D3D12Presenter *)handle;
+  presenter->WaitFence(currentFenceValue);
+  delete presenter;
+}
+
 D3D12Images d3d12_presenter_get_images(void *_Nonnull handle) {
   auto presenter = (D3D12Presenter *)handle;
   try {
@@ -32,8 +39,14 @@ void d3d12_presenter_wait(void *_Nonnull handle) {
   presenter->Wait();
 }
 
-int d3d12_presenter_submit(void *_Nonnull handle, int imageIndex,
-                           uint64_t renderDoneValue, uint64_t copyDoneValue) {
+void d3d12_presenter_wait_value(void *_Nonnull handle, uint64_t value) {
+  auto presenter = (D3D12Presenter *)handle;
+  presenter->WaitFence(value);
+}
+
+// dxgi will wait for renderDoneValue then signal renderDoneValue
+int d3d12_presenter_present(void *_Nonnull handle, uint32_t imageIndex,
+                            uint64_t renderDoneValue, uint64_t copyDoneValue) {
   auto presenter = (D3D12Presenter *)handle;
   presenter->Present(imageIndex, renderDoneValue, copyDoneValue);
   return 0;

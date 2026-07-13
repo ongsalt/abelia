@@ -58,6 +58,8 @@ public protocol Surface2: AnyObject {
     /// get predicted next present time
     // func getFrameStatistics()
 
+    var timeline: (Semaphore, imageAvailable: UInt64, renderFinished: UInt64)? { get }
+
     var frameLatency: Int { get }
 }
 
@@ -89,6 +91,7 @@ public protocol SurfaceImageProtocol {
 }
 
 class VulkanWSISurface: Surface2 {
+
     let handle: SurfaceKHR
     var device: DeviceContext!
     let releaseQueue: ReleaseQueue = ReleaseQueue()
@@ -99,6 +102,8 @@ class VulkanWSISurface: Surface2 {
     var frameLatency: Int {
         info?.config.frameInFlight ?? 3
     }
+    
+    let timeline: (Vulkan.Semaphore, imageAvailable: UInt64, renderFinished: UInt64)? = nil
 
     struct ConfiguredInfo {
         var config: SurfaceConfiguration2

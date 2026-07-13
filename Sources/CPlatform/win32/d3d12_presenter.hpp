@@ -23,7 +23,9 @@ extern "C" {
 
 class D3D12Presenter {
 public:
+  // TODO: pass device identifier here + and match the device
   D3D12Presenter(uint32_t width, uint32_t height, HWND hwnd, uint32_t image_count);
+  ~D3D12Presenter();
 
   D3D12Images Images();
 
@@ -31,7 +33,11 @@ public:
   // return current fence counter
   void Wait();
 
-  // resize to exact
+  // block until the shared fence reaches `value`
+  void WaitFence(uint64_t value);
+
+  // allocate to exact
+  // might expose a way to do clipping
   void Resize(uint32_t width, uint32_t height, uint64_t currentFenceValue);
 
   // On the GPU queue: wait until the fence reaches `renderDoneValue` (Vulkan's
@@ -44,6 +50,7 @@ public:
 private:
   void CreateDeviceAndSwapChain();
   void CreateSharedTexture();
+  void ReleaseSharedTextures();
   void CreateSharedFence();
   void CreateCompositionTarget();
 

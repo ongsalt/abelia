@@ -32,7 +32,7 @@ let package = Package(
         .package(url: "https://github.com/ongsalt/swinit", branch: "main", traits: ["WaylandCSD"]),
         .package(
             url: "https://github.com/ongsalt/swift-vulkan",
-            revision: "ad4cffdd4e159479b1ebcbd06a8c68a122bf9520"),
+            revision: "3e804ae3bddf0659d7b855a419ecc5bc091bf2ee"),
         .package(url: "https://github.com/tomasf/Apus.git", branch: "master"),
         // .package(url: "https://github.com/LuizZak/swift-blend2d", branch: "master"),
 

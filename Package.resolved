@@ -1,5 +1,5 @@
 {
-  "originHash" : "fdbe181590c8f896162a08b7bceb42750e17fa1bf8a533e98684a660a7537f3a",
+  "originHash" : "52d304ca016384f1fc1e8526d17006a7b97680df15270addc7c8601c0cc952a5",
   "pins" : [
     {
       "identity" : "apus",
@@ -33,7 +33,7 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/ongsalt/swift-vulkan",
       "state" : {
-        "revision" : "ad4cffdd4e159479b1ebcbd06a8c68a122bf9520"
+        "revision" : "3e804ae3bddf0659d7b855a419ecc5bc091bf2ee"
       }
     },
     {

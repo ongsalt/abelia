@@ -1,6 +1,7 @@
+// this is ugly
+
 import Vulkan
 
-// this is ugly
 public final class RenderLoop {
   let context: DeviceContext
   let releaseQueue: ReleaseQueue = ReleaseQueue()
@@ -41,7 +42,7 @@ public final class RenderLoop {
     waiting imageAvailableSemaphore: Semaphore?,
     signalling renderFinishedSemaphore: Semaphore?,
     signallingFence fence: Fence?,
-    // timeline semaphore?
+    timeline: (Semaphore, imageAvailable: UInt64, renderFinished: UInt64)? = nil
   ) throws {
     self.releaseQueue.flushWithFences(context)
 
@@ -65,30 +66,51 @@ public final class RenderLoop {
 
     try res.commandBuffer.end()
 
+    var waitSemaphoreInfos: [SemaphoreSubmitInfo] = []
+    if let imageAvailableSemaphore {
+      waitSemaphoreInfos.append(
+        SemaphoreSubmitInfo(
+          semaphore: imageAvailableSemaphore, value: 0,
+          stageMask: .colorAttachmentOutput, deviceIndex: 0
+        ))
+    }
+
+    var signalSemaphoreInfos: [SemaphoreSubmitInfo] = []
+    if let renderFinishedSemaphore {
+      signalSemaphoreInfos.append(
+        SemaphoreSubmitInfo(
+          semaphore: renderFinishedSemaphore, value: 0,
+          stageMask: .colorAttachmentOutput, deviceIndex: 0
+        )
+      )
+    }
+
+    if let (timelineSemaphore, imageAvailable, renderFinished) = timeline {
+      waitSemaphoreInfos.append(
+        SemaphoreSubmitInfo(
+          semaphore: timelineSemaphore, value: imageAvailable,
+          stageMask: .colorAttachmentOutput, deviceIndex: 0
+        )
+      )
+
+      signalSemaphoreInfos.append(
+        SemaphoreSubmitInfo(
+          semaphore: timelineSemaphore, value: renderFinished,
+          stageMask: .colorAttachmentOutput, deviceIndex: 0
+        )
+      )
+    }
+
     let graphicsSubmit = SubmitInfo2(
-      waitSemaphoreInfos: imageAvailableSemaphore.map {
-        [
-          SemaphoreSubmitInfo(
-            semaphore: $0, value: 0,
-            stageMask: .colorAttachmentOutput, deviceIndex: 0
-          )
-        ]
-      } ?? [],
+      waitSemaphoreInfos: waitSemaphoreInfos,
       commandBufferInfos: [.init(commandBuffer: res.commandBuffer, deviceMask: 0)],
-      signalSemaphoreInfos: renderFinishedSemaphore.map {
-        [
-          SemaphoreSubmitInfo(
-            semaphore: $0, value: 0,
-            stageMask: .colorAttachmentOutput, deviceIndex: 0
-          )
-        ]
-      } ?? []
+      signalSemaphoreInfos: signalSemaphoreInfos
     )
 
     currentFrameIndex += 1
     try context.graphicsQueue.submit2(
       submits: [graphicsSubmit],
-      fence: fence
+      fence: fence,
     )
   }
 
@@ -127,7 +149,6 @@ public final class RenderLoop {
     return try getFrameTime(index: UInt32(index))
   }
 }
-
 public class FrameResource {
   public let index: Int
   let commandPool: CommandPool

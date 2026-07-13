@@ -1,3 +1,4 @@
+#include <iostream>
 #ifdef _WIN32
 
 #include "d3d12_presenter.hpp"
@@ -70,9 +71,12 @@ void D3D12Presenter::CreateDeviceAndSwapChain() {
                                                          nullptr, sc1.put()));
   swapChain_ = sc1.query<IDXGISwapChain3>();
 
-  for (uint32_t i = 0; i < image_count_ + 1; ++i)
-    THROW_IF_FAILED(
-        swapChain_->GetBuffer(i, IID_PPV_ARGS(backBuffers_[i].put())));
+  backBuffers_.clear();
+  for (uint32_t i = 0; i < image_count_ + 1; ++i) {
+    wil::com_ptr<ID3D12Resource> ptr;
+    THROW_IF_FAILED(swapChain_->GetBuffer(i, IID_PPV_ARGS(ptr.put())));
+    backBuffers_.push_back(ptr);
+  }
 
   THROW_IF_FAILED(device_->CreateCommandAllocator(
       D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(allocator_.put())));
@@ -95,13 +99,16 @@ void D3D12Presenter::CreateSharedTexture() {
   rd.Height = height_;
   rd.DepthOrArraySize = 1;
   rd.MipLevels = 1;
-  rd.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+  // sRGB typed: Vulkan renders sRGB-encoded bytes into it (VK_FORMAT_B8G8R8A8_SRGB).
+  // The copy into the UNORM backbuffer stays inside the B8G8R8A8 typeless family,
+  // so it is a raw bit copy -- which is what DWM expects to be handed.
+  rd.Format = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
   rd.SampleDesc = {1, 0};
   rd.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
   rd.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
 
   // SHARED heap + COMMON initial state are required to share cross-API.
-  for (int i = 0; i < image_count_; i++) {
+  for (uint32_t i = 0; i < image_count_; i++) {
     wil::com_ptr<ID3D12Resource> sharedTexture;
     THROW_IF_FAILED(device_->CreateCommittedResource(
         &heap, D3D12_HEAP_FLAG_SHARED, &rd, D3D12_RESOURCE_STATE_COMMON,
@@ -114,6 +121,18 @@ void D3D12Presenter::CreateSharedTexture() {
     sharedTextureHandles_.push_back(h);
   }
 }
+
+void D3D12Presenter::ReleaseSharedTextures() {
+  // Vulkan holds its own reference to the underlying resource once the handle
+  // has been imported, so closing here does not pull the memory out from under it.
+  for (auto handle : sharedTextureHandles_) {
+    CloseHandle(handle);
+  }
+  sharedTextureHandles_.clear();
+  sharedTextures_.clear();
+}
+
+D3D12Presenter::~D3D12Presenter() { ReleaseSharedTextures(); }
 
 void D3D12Presenter::CreateSharedFence() {
   THROW_IF_FAILED(device_->CreateFence(0, D3D12_FENCE_FLAG_SHARED,
@@ -213,32 +232,38 @@ void D3D12Presenter::CreateCompositionTarget() {
   THROW_IF_FAILED(composition_device_->Commit());
 }
 
+void D3D12Presenter::WaitFence(uint64_t value) {
+  if (value == 0 || fence_->GetCompletedValue() >= value) {
+    return;
+  }
+  THROW_IF_FAILED(fence_->SetEventOnCompletion(value, fenceEvent_.get()));
+  fenceEvent_.wait();
+}
+
 void D3D12Presenter::Resize(uint32_t width, uint32_t height,
                             uint64_t currentFenceValue) {
-  // wait until all rendering are done
-  if (fence_->GetCompletedValue() < currentFenceValue) {
-    THROW_IF_FAILED(
-        fence_->SetEventOnCompletion(currentFenceValue, fenceEvent_.get()));
-    fenceEvent_.wait();
-  }
+  // wait until all rendering + copying are done
+  // stutter a bit
+  WaitFence(currentFenceValue);
+
+  width_ = width;
+  height_ = height;
 
   // release all ref to backbuffer
   backBuffers_.clear();
-
   // release all fif image
-  for (auto handle : sharedTextureHandles_) {
-    CloseHandle(handle);
-  }
-  sharedTextures_.clear();
+  ReleaseSharedTextures();
 
-  swapChain_->ResizeBuffers1(0, width, height, DXGI_FORMAT_B8G8R8A8_UNORM,
-                             DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT,
-                             nullptr, nullptr);
+  THROW_IF_FAILED(swapChain_->ResizeBuffers(
+      0, width, height, DXGI_FORMAT_UNKNOWN,
+      DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT));
 
   // recreate it
-  for (uint32_t i = 0; i < image_count_ + 1; ++i)
-    THROW_IF_FAILED(
-        swapChain_->GetBuffer(i, IID_PPV_ARGS(backBuffers_[i].put())));
+  for (uint32_t i = 0; i < image_count_ + 1; ++i) {
+    wil::com_ptr<ID3D12Resource> buffer;
+    THROW_IF_FAILED(swapChain_->GetBuffer(i, IID_PPV_ARGS(buffer.put())));
+    backBuffers_.push_back(buffer);
+  }
   CreateSharedTexture();
 }
 #endif
