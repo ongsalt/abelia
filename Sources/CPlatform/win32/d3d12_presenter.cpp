@@ -60,7 +60,7 @@ void D3D12Presenter::CreateDeviceAndSwapChain() {
   scd.Format = DXGI_FORMAT_B8G8R8A8_UNORM; // required for DComp alpha
   scd.SampleDesc = {1, 0};
   scd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-  scd.BufferCount = image_count_ + 1;
+  scd.BufferCount = image_count_ + 2;
   scd.Scaling = DXGI_SCALING_STRETCH;
   scd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
   scd.AlphaMode = DXGI_ALPHA_MODE_PREMULTIPLIED;
@@ -72,7 +72,7 @@ void D3D12Presenter::CreateDeviceAndSwapChain() {
   swapChain_ = sc1.query<IDXGISwapChain3>();
 
   backBuffers_.clear();
-  for (uint32_t i = 0; i < image_count_ + 1; ++i) {
+  for (uint32_t i = 0; i < image_count_ + 2; ++i) {
     wil::com_ptr<ID3D12Resource> ptr;
     THROW_IF_FAILED(swapChain_->GetBuffer(i, IID_PPV_ARGS(ptr.put())));
     backBuffers_.push_back(ptr);
@@ -85,7 +85,7 @@ void D3D12Presenter::CreateDeviceAndSwapChain() {
                                              IID_PPV_ARGS(cmdList_.put())));
   THROW_IF_FAILED(cmdList_->Close()); // start closed; Present() resets it
 
-  THROW_IF_FAILED(swapChain_->SetMaximumFrameLatency(1));
+  THROW_IF_FAILED(swapChain_->SetMaximumFrameLatency(image_count_));
   _waitable.reset(swapChain_->GetFrameLatencyWaitableObject());
 }
 
@@ -259,7 +259,7 @@ void D3D12Presenter::Resize(uint32_t width, uint32_t height,
       DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT));
 
   // recreate it
-  for (uint32_t i = 0; i < image_count_ + 1; ++i) {
+  for (uint32_t i = 0; i < image_count_ + 2; ++i) {
     wil::com_ptr<ID3D12Resource> buffer;
     THROW_IF_FAILED(swapChain_->GetBuffer(i, IID_PPV_ARGS(buffer.put())));
     backBuffers_.push_back(buffer);

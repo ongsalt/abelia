@@ -95,7 +95,7 @@
                 width: info.config.width,
                 height: info.config.height,
                 presenter: presenter,
-                index: 0,
+                index: imageIndex,
                 waitRenderFinished: waitRenderFinished,
                 signalImageAvailable: signalImageAvailable,
             )
@@ -105,8 +105,8 @@
         func configure(_ configuration: SurfaceConfiguration2) {
             if presenter == nil {
                 presenter = d3d12_presenter_new(
-                    UInt32(Float(configuration.width) * 1.2),
-                    UInt32(Float(configuration.height) * 1.2),
+                    UInt32(Float(configuration.width) * 2),
+                    UInt32(Float(configuration.height) * 2),
                     hwnd,
                     UInt32(configuration.frameInFlight)
                 )
@@ -126,6 +126,8 @@
 
             let d3d12Images = d3d12_presenter_get_images(presenter)
             let (images, views, memories) = importImages(from: d3d12Images)
+
+            // TODO: destroy previous one
 
             self.info = ConfiguredInfo(
                 config: configuration,
