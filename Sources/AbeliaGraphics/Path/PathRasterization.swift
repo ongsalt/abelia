@@ -1,21 +1,21 @@
 import Foundation
 
-typealias Pixel = [4 of UInt8]
+/// RGBA8, straight (non-premultiplied) alpha
+public typealias Pixel = [4 of UInt8]
 
 /// Scanline fill with analytic (trapezoid) coverage.
 ///
-/// `pixels` is tightly packed RGBA8, `width * height * 4` bytes long.
-/// `shittyBlend(_ source: borrowing Pixel, _ destination: inout Pixel, _ opacity: Float)`
-/// is left to the caller's side of the codebase.
+/// `pixels` is tightly packed RGBA8, one `Pixel` per pixel, `width * height` long. A byte buffer
+/// can be viewed as one with `rawBuffer.bindMemory(to: Pixel.self)`: `Pixel` is 4 bytes, stride 4.
 public func fillScanline(
   path: borrowing Path,
   color: borrowing Color,
   transform: Affine = .identity,
-  pixels: inout MutableSpan<UInt8>,
+  pixels: inout MutableSpan<Pixel>,
   width: Int,
   height: Int
 ) {
-  precondition(pixels.count >= width * height * 4, "pixel buffer smaller than the image")
+  precondition(pixels.count >= width * height, "pixel buffer smaller than the image")
   guard width > 0, height > 0 else { return }
 
   let lines = path.breakIntoLines(transform: transform)
@@ -99,9 +99,10 @@ public func fillScanline(
           let dy = cell.end.y - cell.start.y
           let xMid = (cell.start.x + cell.end.x) / 2 - Float(x)
 
-          coverage[x] += dy
+          // x is clamped to 0..<w and the tables are w long
+          coverage[unchecked: x] += dy
           // trapezoid, see https://www.youtube.com/watch?v=B9bztU1sTFA
-          fill[x] += dy * (1 - xMid)
+          fill[unchecked: x] += dy * (1 - xMid)
         }
       }
     }
@@ -120,8 +121,9 @@ public func fillScanline(
     var acc: Float = 0
 
     for x in rowStart...rowEnd {
-      let winding = acc + fill[x]
-      acc += coverage[x]
+      // rowStart/rowEnd came from clamped line bounds, so they are inside the tables
+      let winding = acc + fill[unchecked: x]
+      acc += coverage[unchecked: x]
 
       let opacity =
         switch fillRule {
@@ -135,14 +137,8 @@ public func fillScanline(
         continue
       }
 
-      let offset = 4 * (w * y + x)
-      var destination: Pixel = [
-        pixels[offset], pixels[offset + 1], pixels[offset + 2], pixels[offset + 3],
-      ]
-      shittyBlend(source, &destination, opacity)
-      for channel in 0..<4 {
-        pixels[offset + channel] = destination[channel]
-      }
+      // y < height, x < w, and `pixels` holds at least width * height of them
+      shittyBlend(source, &pixels[unchecked: w * y + x], opacity)
     }
   }
 }
