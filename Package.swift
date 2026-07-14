@@ -38,19 +38,19 @@ let package = Package(
 
     ],
     targets: [
-        .target(name: "Reactivity"),
-        .target(name: "ReactivityGraph"),
-
+        .target(name: "Cnanosvg"),
+        .target(name: "CSTBImage"),
         .target(
             name: "CShim",
             cSettings: vulkanIncludePath
         ),
-
-        .target(name: "CSTBImage"),
         .target(
             name: "CPlatform",
             linkerSettings: linkerSettings,
         ),
+        
+        .target(name: "Reactivity"),
+        .target(name: "ReactivityGraph"),
 
         .target(
             name: "AbeliaUI",
@@ -73,6 +73,7 @@ let package = Package(
         .target(
             name: "AbeliaGraphics",
             dependencies: [
+                "Cnanosvg",
                 "CShim",
                 "CPlatform",
                 "CSTBImage",

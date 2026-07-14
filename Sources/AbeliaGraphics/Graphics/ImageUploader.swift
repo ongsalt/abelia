@@ -9,7 +9,7 @@ extension TextureRegistry {
         var h: Int32 = 0
         var ch: Int32 = 0
         guard let pixels = stbi_load(filename, &w, &h, &ch, 4) else {
-            fatalError("stbi_load_from_fd: failed to decode image")
+            fatalError("stbi_load: failed to decode image: \(filename)")
         }
         defer { stbi_image_free(pixels) }
         let width = UInt32(w)

@@ -1,3 +1,6 @@
 [submodule "Vendors/wil"]
 	path = Vendors/wil
 	url = https://github.com/microsoft/wil.git
+[submodule "Vendors/nanosvg"]
+	path = Vendors/nanosvg
+	url = https://github.com/memononen/nanosvg.git
