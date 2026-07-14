@@ -45,6 +45,14 @@ public struct Affine: Sendable, Equatable {
         return (v.x * col0) + (v.y * col1) + (v.z * col2) + (v.w * col3)
     }
 
+    /// transforms a 2D point, treating it as (x, y, 0, 1)
+    @inline(__always)
+    public func apply(_ point: SIMD2<Float>) -> SIMD2<Float> {
+        if self == .identity { return point }
+        let v = multiplyVector(SIMD4(lowHalf: point, highHalf: SIMD2(0, 1)))
+        return SIMD2(v.x, v.y)
+    }
+
     public func multiplied(by other: Affine) -> Affine {
         return Affine(
             col0: multiplyVector(other.col0),

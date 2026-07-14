@@ -117,6 +117,16 @@ public struct Rect: Sendable {
         return x >= left && x <= left + width && y >= top && y <= top + height
     }
 
+    /// shared area with `other`, or `nil` when they do not overlap
+    public func intersection(with other: Rect) -> Rect? {
+        let top = max(self.top, other.top)
+        let left = max(self.left, other.left)
+        let bottom = min(self.bottom, other.bottom)
+        let right = min(self.right, other.right)
+        if left > right || top > bottom { return nil }
+        return Rect(top: top, left: left, bottom: bottom, right: right)
+    }
+
     public func overlap(with other: Rect) -> Bool {
         return self.left < other.right && self.right > other.left
             && self.top < other.bottom && self.bottom > other.top
