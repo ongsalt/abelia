@@ -133,12 +133,12 @@ usage, budget, to full dump of the internal state in JSON format. See
 documentation chapter: \ref statistics.
 */
 
-#ifdef __cplusplus
-extern "C" {
+#if !defined(VULKAN_H_)
+#include "vulkan/vulkan.h"
 #endif
 
-#if !defined(VULKAN_H_)
-#include <vulkan/vulkan.h>
+#ifdef __cplusplus
+extern "C" {
 #endif
 
 #define VMA_VERSION (VK_MAKE_VERSION(3, 4, 0))

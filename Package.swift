@@ -7,14 +7,6 @@ import Foundation
 
 import PackageDescription
 
-var vulkanIncludePath: [CSetting] = [
-    .define("VK_USE_PLATFORM_WAYLAND_KHR", .when(platforms: [.linux])),
-    .define("VK_USE_PLATFORM_WIN32_KHR", .when(platforms: [.windows])),
-]
-if let vulkanSDK = ProcessInfo.processInfo.environment["VULKAN_SDK"] {
-    vulkanIncludePath.append(.unsafeFlags(["-I\(vulkanSDK)/Include"]))
-}
-
 var linkerSettings: [LinkerSetting] = []
 #if os(Windows)
 // dxgi shit
@@ -32,7 +24,7 @@ let package = Package(
         .package(url: "https://github.com/ongsalt/swinit", branch: "main", traits: ["WaylandCSD"]),
         .package(
             url: "https://github.com/ongsalt/swift-vulkan",
-            revision: "3e804ae3bddf0659d7b855a419ecc5bc091bf2ee"),
+            revision: "7545f1c64236fe2c13dfdbaeda1810aaf96274db"),
         .package(url: "https://github.com/tomasf/Apus.git", branch: "master"),
         // .package(url: "https://github.com/LuizZak/swift-blend2d", branch: "master"),
 
@@ -42,7 +34,9 @@ let package = Package(
         .target(name: "CSTBImage"),
         .target(
             name: "CShim",
-            cSettings: vulkanIncludePath
+            dependencies: [
+                .product(name: "Vulkan", package: "swift-vulkan"),
+            ],
         ),
         .target(
             name: "CPlatform",
@@ -115,5 +109,5 @@ let package = Package(
     ],
     swiftLanguageModes: [.v6],
     cLanguageStandard: .c2x,
-    cxxLanguageStandard: .cxx20,
+    cxxLanguageStandard: .cxx17,
 )
