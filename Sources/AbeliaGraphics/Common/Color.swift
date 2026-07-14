@@ -43,7 +43,7 @@ public struct Color: Sendable, Equatable {
     )
   }
 
-  // this should depends on working space, probably the same as what tell us swapchain
+  // this should depends on working space, probably the same as what swapchain tell us
   var linearized: Color {
     func apply(_ x: Float) -> Float {
       if x <= 0.04045 {

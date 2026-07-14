@@ -52,12 +52,9 @@ public func fillScanline(
   // fill of everything after the current pixel
   var coverageTable = [Float](repeating: 0, count: w)
 
-  let source: Pixel = [
-    UInt8((color.red * 255).clamped(from: 0, to: 255)),
-    UInt8((color.green * 255).clamped(from: 0, to: 255)),
-    UInt8((color.blue * 255).clamped(from: 0, to: 255)),
-    UInt8((color.alpha * 255).clamped(from: 0, to: 255)),
-  ]
+  // decode once per fill, not once per pixel; alpha carries no transfer curve
+  let linear = color.linearized
+  let source = SIMD4<Float>(linear.red, linear.green, linear.blue, linear.alpha)
 
   for y in minY...maxY {
     // update active segment list, sorted by x
@@ -138,16 +135,17 @@ public func fillScanline(
       }
 
       // y < height, x < w, and `pixels` holds at least width * height of them
-      shittyBlend(source, &pixels[unchecked: w * y + x], opacity)
+      blend(source, &pixels[unchecked: w * y + x], opacity)
     }
   }
 }
 
-/// source-over onto straight (non-premultiplied) alpha, sRGB values blended as if they were
-/// linear. That last part is the shitty part: it darkens the edge of a light shape on a dark
-/// background. Good enough until the whole pipeline agrees on a working space.
-func shittyBlend(_ source: borrowing Pixel, _ destination: inout Pixel, _ opacity: Float) {
-  let sourceAlpha = Float(source[3]) / 255 * opacity.clamped(from: 0, to: 1)
+/// Source-over in linear light. `source` is linear RGB with straight alpha in `w`; `destination`
+/// is sRGB-encoded RGBA8, so it gets decoded, composited premultiplied, and re-encoded. Blending
+/// the encoded values directly is what darkens the edges of a light shape on a dark background.
+@inline(__always)
+func blend(_ source: SIMD4<Float>, _ destination: inout Pixel, _ opacity: Float) {
+  let sourceAlpha = source.w * opacity.clamped(from: 0, to: 1)
   guard sourceAlpha > 0 else { return }
 
   let destinationAlpha = Float(destination[3]) / 255
@@ -158,18 +156,26 @@ func shittyBlend(_ source: borrowing Pixel, _ destination: inout Pixel, _ opacit
   }
 
   for channel in 0..<3 {
-    let s = Float(source[channel]) / 255
-    let d = Float(destination[channel]) / 255
-    // premultiply, composite, then divide back out to straight alpha
-    let blended = (s * sourceAlpha + d * destinationAlpha * (1 - sourceAlpha)) / outAlpha
-    destination[channel] = channelToByte(blended)
+    let d = srgbToLinearTable[Int(destination[channel])]
+    // premultiplied source-over, then divide back out to straight alpha
+    let composited =
+      source[channel] * sourceAlpha + d * destinationAlpha * (1 - sourceAlpha)
+    destination[channel] = linearToSrgbByte(composited / outAlpha)
   }
-  destination[3] = channelToByte(outAlpha)
+  destination[3] = UInt8((outAlpha * 255).rounded().clamped(from: 0, to: 255))
+}
+
+/// 256 entries, so decoding the destination is a load instead of a `pow`
+private let srgbToLinearTable: [Float] = (0...255).map { byte in
+  let x = Float(byte) / 255
+  return x <= 0.04045 ? x / 12.92 : pow((x + 0.055) / 1.055, 2.4)
 }
 
 @inline(__always)
-private func channelToByte(_ value: Float) -> UInt8 {
-  UInt8((value * 255).rounded().clamped(from: 0, to: 255))
+private func linearToSrgbByte(_ linear: Float) -> UInt8 {
+  let x = linear.clamped(from: 0, to: 1)
+  let encoded = x <= 0.0031308 ? x * 12.92 : 1.055 * pow(x, 1 / 2.4) - 0.055
+  return UInt8((encoded * 255).rounded())
 }
 
 /// triangle wave: 0 -> 1 over the first winding, 1 -> 0 over the second, and so on
