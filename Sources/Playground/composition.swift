@@ -92,6 +92,7 @@ class Delegate: Swinit.EventLoopDelegate {
     var compositor: Compositor!
     var animationController: CompositorAnimationController!
     var springCircles: SpringCircleScene!
+    var tiltCard: TiltCardScene!
 
     func setupLayer(root: Layer) {
         root.size = [800, 600]
@@ -106,9 +107,16 @@ class Delegate: Swinit.EventLoopDelegate {
             bounds: root.size
         )
 
+        tiltCard = TiltCardScene(
+            compositor: compositor,
+            controller: animationController,
+            bounds: root.size
+        )
+
         root.insert(buildLayersWithCompositionGroup(compositor))
         root.insert(springCircles.canvas)
         root.insert(buildAnimationDemo(compositor))
+        root.insert(tiltCard.card)
     }
 
     func canCreateSurfaces(_ eventLoop: Swinit.EventLoop) {
@@ -154,6 +162,7 @@ class Delegate: Swinit.EventLoopDelegate {
                 compositor.root.size = SIMD2(Float(size.width), Float(size.height))
                 compositor.configureSurface(surfaceConfig)
                 springCircles.updateBounds(compositor.root.size)
+                tiltCard.updateBounds(compositor.root.size)
             }
 
         case .keyboardInput(_, let event, _) where event.state == .pressed:
@@ -163,6 +172,7 @@ class Delegate: Swinit.EventLoopDelegate {
 
         case .cursorMoved(_, let p):
             springCircles.move(toward: Vec2(Float(p.x), Float(p.y)))
+            tiltCard.pointerMoved(Vec2(Float(p.x), Float(p.y)))
 
         case .closeRequested:
             compositor.stop {
