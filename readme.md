@@ -1,6 +1,13 @@
 # Abelia
 ui library??
 
+> [!NOTE]
+> Weird edge around shapes are not AA bug but a compositing bug. It wont happen for in app surface only the os when composite it.
+
+# Features
+- SDF drawing primitive with ops like union, intersect, onion. See (Inigo Quilez's article)[https://iquilezles.org/articles/distfunctions2d/].
+- Offscreen pass for opacity group and effect group. 
+
 ## Dev dependencies
 - `slangc > v2026.12.1` (cuz it has weird `nonuniformExt` bug)
 

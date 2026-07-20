@@ -78,9 +78,10 @@ VertexOutput vsMain(VertexInput input) {
   output.drawMode = item.drawMode;
 
   let renderNode = renderNodeData[item.index];
-  
-  let antialiasingExpand: float = 2;
-  let expand: float = (item.drawMode == DrawMode.Shadow ? (renderNode.shadowSpread + renderNode.shadowBlur) : 0) + antialiasingExpand;
+
+  let antialiasingExpand : float = 2;
+  let expand : float = (item.drawMode == DrawMode.Shadow ? (renderNode.shadowSpread + renderNode.shadowBlur) : 0) + antialiasingExpand;
+  let offset = item.drawMode == DrawMode.Shadow ? float2(renderNode.shadowOffsetX, renderNode.shadowOffsetY) : float2(0);
 
   let boundSize = float2(renderNode.boundMaxX, renderNode.boundMaxY) - float2(renderNode.boundMinX, renderNode.boundMinY);
   let uvExpand = float2(expand) / boundSize ;
@@ -90,24 +91,23 @@ VertexOutput vsMain(VertexInput input) {
   switch (input.vertexIndex) {
   case 0:
   case 5:
-    pos = float2(renderNode.boundMinX, renderNode.boundMinY) - expand;
+    pos = float2(renderNode.boundMinX, renderNode.boundMinY) - expand + offset;
     output.uv = uv - uvExpand;
     break;
   case 1:
-    pos = float2(renderNode.boundMaxX + expand, renderNode.boundMinY - expand);
+    pos = float2(renderNode.boundMaxX + expand, renderNode.boundMinY - expand) + offset;
     output.uv = float2(uv.x + uvExpand.x, uv.y - uvExpand.y);
     break;
   case 2:
   case 3:
-    pos = float2(renderNode.boundMaxX, renderNode.boundMaxY) + expand;
+    pos = float2(renderNode.boundMaxX, renderNode.boundMaxY) + expand + offset;
     output.uv = uv + uvExpand;
     break;
   default: // case 4
-    pos = float2(renderNode.boundMinX - expand, renderNode.boundMaxY + expand);
+    pos = float2(renderNode.boundMinX - expand, renderNode.boundMaxY + expand) + offset;
     output.uv = float2(uv.x - uvExpand.x, uv.y + uvExpand.y);
     break;
   }
-
 
   output.localPosition = pos;
   output.sv_position = mul(viewMatrix, mul(renderNode.affine, float4(pos, 0.0, 1.0)));
@@ -151,11 +151,11 @@ float4 computeBorder(RenderNode renderNode, float2 position) {
 }
 
 float4 computeShadow(RenderNode renderNode, float2 position) {
-  let d = sdfDistance(renderNode, position + float2(renderNode.shadowOffsetX, renderNode.shadowOffsetY)) - renderNode.shadowSpread;
-  let color = renderNode.shadowColor;
-  let progress = clamp(1 - d / (renderNode.shadowBlur * 2), 0, 1);
-
-  return color * renderNode.shadowOpacity * pow(progress, 4); // we really should use erf
+  let d = sdfDistance(renderNode, position - float2(renderNode.shadowOffsetX, renderNode.shadowOffsetY)) - renderNode.shadowSpread;
+  let color = renderNode.shadowColor;  
+  let progress = clamp(1 - d / renderNode.shadowBlur, 0, 1);
+  // TODO: use erf for this
+  return color * renderNode.shadowOpacity * pow(progress, 2); // we really should use erf
 }
 
 
