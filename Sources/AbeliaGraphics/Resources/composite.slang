@@ -132,7 +132,8 @@ float4 fsMain(VertexOutput input): SV_Target {
 }
 
 float4 computeBorder(RenderNode renderNode, float2 position) {
-  var d = sdfDistance(renderNode, position);
+  // stroke is an onion of the shape: half in, half out, centered on the edge
+  let d = opOnion(sdfDistance(renderNode, position), renderNode.borderWidth / 2);
   var color = float4(0.0, 0.0, 0.0, 0.0);
 
   // TODO: correction term when merging
@@ -145,11 +146,7 @@ float4 computeBorder(RenderNode renderNode, float2 position) {
     // premultiply
     color.xyz *= color.w;
   }
-  
-  if (d < -renderNode.borderWidth / 2) {
-    d = -d - renderNode.borderWidth;
-  }
-  
+
   return color * smoothCoverageOf(d);
 }
 
@@ -163,7 +160,7 @@ float4 computeShadow(RenderNode renderNode, float2 position) {
 
 
 float4 computeFill(RenderNode renderNode, float2 position, float2 uv) {
-  let d = sdfDistance(renderNode, position) + renderNode.borderWidth;
+  let d = sdfDistance(renderNode, position);
   var color = float4(0.0, 0.0, 0.0, 0.0);
 
   if (renderNode.brushKind == BrushKind.solid) {
