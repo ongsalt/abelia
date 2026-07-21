@@ -42,6 +42,13 @@ let package = Package(
             name: "CPlatform",
             linkerSettings: linkerSettings,
         ),
+        .target(
+            name: "CHarfbuzz",
+            cxxSettings: [
+                .headerSearchPath("../../Vendors/harfbuzz/src"),
+                .define("HB_HAS_GPU")
+            ]
+        ),
         
         .target(name: "Reactivity"),
         .target(name: "ReactivityGraph"),
