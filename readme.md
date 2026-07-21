@@ -12,4 +12,7 @@ ui library??
 - `slangc > v2026.12.1` (cuz it has weird `nonuniformExt` bug)
 
 ## Todo
-- fix shadow offset bounds calculation
+- multiple border (-> outline + stroke)
+- clipping stack
+- allow 2d transform on sdf merging
+- harfbuzz gpu 
