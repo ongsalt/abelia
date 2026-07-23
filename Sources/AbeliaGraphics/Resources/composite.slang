@@ -176,7 +176,7 @@ float4 computeFill(RenderNode renderNode, float2 position, float2 uv) {
     color.xyz *= color.w;
   }
   
-  return color * smoothCoverageOf(d) * renderNode.opacity;
+  return color * smoothCoverageOf(d);
 }
 
 float2 textureLocalPositionOf(float2 uv, TextureBrush brush) {
