@@ -112,9 +112,13 @@ public class GraphicsContext: @unchecked Sendable {
         let device = try DeviceContext(compatibleWith: surface, context: self)
         if let wsiSurface = surface as? VulkanWSISurface {
             wsiSurface.associate(device: device)
-        } else if let dxgiSurface = surface as? DXGISurface {
+        }
+        
+        #if os(Windows)  
+        if let dxgiSurface = surface as? DXGISurface {
             dxgiSurface.associate(device: device)
         }
+        #endif
 
         return device
     }
