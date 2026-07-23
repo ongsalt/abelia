@@ -16,3 +16,5 @@ ui library??
 - clipping stack
 - allow 2d transform on sdf merging
 - harfbuzz gpu 
+- proper erf box shadow
+- offthread animation

@@ -25,7 +25,7 @@ let package = Package(
         .package(
             url: "https://github.com/ongsalt/swift-vulkan",
             revision: "7545f1c64236fe2c13dfdbaeda1810aaf96274db"),
-        .package(url: "https://github.com/tomasf/Apus.git", branch: "master"),
+        // .package(url: "https://github.com/tomasf/Apus.git", branch: "master"),
         // .package(url: "https://github.com/LuizZak/swift-blend2d", branch: "master"),
 
     ],
@@ -80,7 +80,6 @@ let package = Package(
                 "CSTBImage",
                 "ReactivityGraph",
                 .product(name: "Vulkan", package: "swift-vulkan"),
-                .product(name: "Apus", package: "Apus"),
                 // .product(name: "SwiftBlend2D", package: "swift-blend2d"),
                 .product(name: "Swinit", package: "swinit"),
             ],

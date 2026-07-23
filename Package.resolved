@@ -1,15 +1,6 @@
 {
-  "originHash" : "074cd62b5a88ab9a4cd6515658fb9de814937058e8e3e8e47dfd0e2b85bc77a9",
+  "originHash" : "ed95d4ec18ae8336bd622cce6833dd3aca8edcc31a8fa878e204924c1f130079",
   "pins" : [
-    {
-      "identity" : "apus",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/tomasf/Apus.git",
-      "state" : {
-        "branch" : "master",
-        "revision" : "3ccc37d65daada2a675ddcc3d8a534e5db94726d"
-      }
-    },
     {
       "identity" : "swift-argument-parser",
       "kind" : "remoteSourceControl",

@@ -123,6 +123,7 @@ public class _BaseLayer: Identifiable {
     public func insert(_ layer: _BaseLayer, before: _BaseLayer? = nil) {
         children.append(layer)
         layer.parent = self
+        layer.compositor = self.compositor
     }
 
     public func insert(before: _BaseLayer? = nil, @LayerBuilder builder: () -> [_BaseLayer]) {
@@ -133,6 +134,7 @@ public class _BaseLayer: Identifiable {
 
     public func remove(_ layer: _BaseLayer) {
         layer.parent = nil
+        layer.compositor = nil
         children.removeAll { $0.id == layer.id }
     }
 

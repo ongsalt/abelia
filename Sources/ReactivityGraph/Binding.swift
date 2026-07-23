@@ -43,7 +43,7 @@ public struct Bindable<T: Equatable> {
         storage = .const(wrappedValue)
     }
 
-    public mutating func bind(_ expression: @autoclosure @escaping () -> T) {
+    public mutating func bind(_ expression: @escaping () -> T) {
         self.storage = .thunk(_Thunk(computation: expression))
     }
 
