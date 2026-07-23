@@ -34,11 +34,11 @@ sdf shape now might emit multiple bounds
 - allow arbtritary clip by just do another shape merging pass like in the shader
 
 ## `Layer`
-- wont force split composition group
+- wont force split composition group (at layer level)
 - Multiplicative opacity
 - Basic BlendMode
 - Expose children `origin`
-- Seperate `anchor` in parent spacce and `transformAnchor`
+- Seperate `anchor` in parent space and `transformAnchor`
 
 ## `OffscreenLayer`
 - Rect+sdf clip, stencil?

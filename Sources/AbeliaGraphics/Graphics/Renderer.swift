@@ -192,8 +192,6 @@ extension Renderer {
                 in: commandBuffer
             )
 
-        case .blur(let regions):
-            break
         case .effect(let regions):
             break
         }

@@ -35,10 +35,6 @@ public class Layer: _BaseLayer {
     public var shadow: Shadow? {
         didSet { dirtyFlags.insert(.draw) }
     }
-
-    override var isCompositionGroupRoot: Bool {
-        shouldRasterize || (opacity != 0 && opacity != 1) || shuoldClipStartCompositionGroup
-    }
 }
 
 public struct Border: Equatable {

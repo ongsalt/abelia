@@ -46,8 +46,15 @@ class Node: Identifiable {
 class LayoutNode: Node {
     var layer: Layer = Layer()
 
+    // MARK: Layout param,
     @Bindable
+    var width: Float = .zero
+    @Bindable
+    var height: Float = .zero
+
     var finalOffset: SIMD2<Float> = .zero
+    var finalSize: SIMD2<Float> = .zero
+
 
     override init() {
         super.init()

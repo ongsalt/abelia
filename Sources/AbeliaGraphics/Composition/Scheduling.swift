@@ -30,8 +30,8 @@ struct TransformResolver {
             accumulatableAffineCache[layer.id] = current
             localAffineCache[layer.id] = layer.localTotalAffine(current)
 
-            if layer.isCompositionGroupRoot {
-                for l in layer.children {
+            if let offscreenLayer = layer as? OffscreenLayer {
+                for l in offscreenLayer.children {
                     walk(l, nil)
                 }
             } else {
@@ -56,9 +56,9 @@ struct CompositionPlanner {
         func walk(_ layer: _BaseLayer, in group: inout CompositionGroup) {
             group.layers.append(layer)
 
-            if layer.isCompositionGroupRoot {
-                var new = CompositionGroup(root: layer, layers: [])
-                for l in layer.children {
+            if let offscreenLayer = layer as? OffscreenLayer {
+                var new = CompositionGroup(root: offscreenLayer, layers: [])
+                for l in offscreenLayer.children {
                     walk(l, in: &new)
                 }
 
@@ -106,17 +106,19 @@ struct PassScheduler {
                 }
                 return new
 
-            case .blur:
-                let region = (layer as! EffectLayer).blurRegion(affine)
-                let new = Pass(target: .sameAsPrevious(key: key))
-                new.kind = .blur(regions: [region])
-                return new
+            // case .blur:
+            //     let region = (layer as! EffectLayer).blurRegion(affine)
+            //     let new = Pass(target: .sameAsPrevious(key: key))
+            //     new.kind = .blur(regions: [region])
+            //     return new
 
-            case .effect:
-                let region = (layer as! EffectLayer).effectRegion(affine)
-                let new = Pass(target: .alternate(key: key))
-                new.kind = .effect(regions: [region])
-                return new
+            // case .effect:
+            //     let region = (layer as! EffectLayer).effectRegion(affine)
+            //     let new = Pass(target: .alternate(key: key))
+            //     new.kind = .effect(regions: [region])
+            //     return new
+            default:
+                fatalError()
             }
         }
 
@@ -155,10 +157,11 @@ struct PassScheduler {
                     switch p.kind {
                     case .composite:
                         if layer.kind == .composite {
-                            if layer.isCompositionGroupRoot {
+                            if let offscreenLayer = layer as? OffscreenLayer {
                                 // add sampling mode
                                 if let new = walk(group.dependencies[layer.id]!) {
-                                    let node = (layer as! Layer).renderNode(sampling: new.target.key, affine)
+                                    let node = offscreenLayer.renderNode(
+                                        sampling: new.target.key, affine)
                                     p.addRenderNode(node)
                                     p.dependencies.append(new)
                                 }
@@ -179,30 +182,31 @@ struct PassScheduler {
                         }  // other kind of node that DO NOT overlap. just continue searching
 
                     // if overlap -> force new pass
-                    case .blur:
-                        if p.overlap(with: bounds) {
-                            // force new pass, based on that node kind
-                            let new = makeNewPass(basedOn: layer, affine: affine, key: key)
-                            new.dependencies.append(localPasses.last!)
-                            localPasses.append(new)
-                            continue outer
-                        } else if layer.kind == .blur {
-                            p.addBlurRegion((layer as! EffectLayer).blurRegion(affine))
-                            continue outer
-                        }
+                    // case .blur:
+                    //     if p.overlap(with: bounds) {
+                    //         // force new pass, based on that node kind
+                    //         let new = makeNewPass(basedOn: layer, affine: affine, key: key)
+                    //         new.dependencies.append(localPasses.last!)
+                    //         localPasses.append(new)
+                    //         continue outer
+                    //     } else if layer.kind == .blur {
+                    //         p.addBlurRegion((layer as! EffectLayer).blurRegion(affine))
+                    //         continue outer
+                    //     }
 
-                    case .effect:
-                        if p.overlap(with: bounds) {
-                            let new = makeNewPass(basedOn: layer, affine: affine, key: key)
-                            new.dependencies.append(localPasses.last!)
-                            localPasses.append(new)
-                            continue outer
-                        } else if layer.kind == .effect {
-                            p.addEffectRegion((layer as! EffectLayer).effectRegion(affine))
-                            continue outer
-                        }
+                    // case .effect:
+                    //     if p.overlap(with: bounds) {
+                    //         let new = makeNewPass(basedOn: layer, affine: affine, key: key)
+                    //         new.dependencies.append(localPasses.last!)
+                    //         localPasses.append(new)
+                    //         continue outer
+                    //     } else if layer.kind == .effect {
+                    //         p.addEffectRegion((layer as! EffectLayer).effectRegion(affine))
+                    //         continue outer
+                    //     }
+                    default:
+                        fatalError("Effect is not supported")
                     }
-
                 }
 
                 // not found
@@ -238,16 +242,6 @@ extension Pass {
         case .composite(_, _):
             return false
 
-        case .blur(let regions):
-            for r in regions {
-                let bounds = r.shape.bounds.atOrigin.transformBounds(r.affine)
-                // print("comparing \(bounds) with \(rect)")
-                if bounds.overlap(with: rect) {
-                    return true
-                }
-            }
-            return false
-
         case .effect(let regions):
             for r in regions {
                 let bounds = r.shape.bounds.atOrigin.transformBounds(r.affine)
@@ -268,14 +262,6 @@ extension Pass {
         self.kind = .composite(nodes: nodes, useCustomBlend: useCustomBlend)
     }
 
-    func addBlurRegion(_ region: BlurRegion) {
-        guard case .blur(var regions) = kind else {
-            fatalError("Invalid state")
-        }
-        regions.append(region)
-        self.kind = .blur(regions: regions)
-    }
-
     func addEffectRegion(_ region: EffectRegion) {
         guard case .effect(var regions) = kind else {
             fatalError("Invalid state")
@@ -290,7 +276,6 @@ extension Pass {
 
         let k =
             switch kind {
-            case .blur(let regions): "blur (\(regions.count))"
             case .composite(let nodes, _): "composite (\(nodes.count))"
             case .effect(let regions): "effect (\(regions.count))"
             }
@@ -307,7 +292,6 @@ extension Pass {
 
 enum PassKind: Sendable {
     case composite(nodes: [RenderNode], useCustomBlend: Bool = false)
-    case blur(regions: [BlurRegion])
     case effect(regions: [EffectRegion])
 }
 
@@ -319,16 +303,7 @@ enum LayerKind: Sendable {
 
 extension _BaseLayer {
     fileprivate var kind: LayerKind {
-        if self is Layer || self is ShapeLayer {
-            return .composite
-        } else if let s = self as? EffectLayer {
-            if case .blur(_) = s.effect {
-                return .blur
-            } else {
-                return .effect
-            }
-        }
-        fatalError("impossible")
+        .composite
     }
 }
 
@@ -383,77 +358,70 @@ extension Layer {
 
         return nil
     }
+}
 
+extension OffscreenLayer {
     // textureIndex will be key before we resolve that to actual texture id
     // it will need to be resove again in writing pass
     //
     // this need to render content that can not be included in the subgroup such as shadow
     func renderNode(sampling key: Int, _ affine: Affine) -> RenderNode {
         var node = RenderNode()
-        node.brush = .backdrop(key: key)
-        node.shape = Shape.rect(
-            width: size.x, height: size.y, cornerRadius: cornerRadius, cornerDegree: cornerDegree)
-        if let border {
-            node.border = NodeBorder(width: border.width, brush: border.brush.brush)
-        }
-        if let shadow {
-            node.shadow = NodeShadow(
-                offset: shadow.offset, blur: shadow.blur, spread: shadow.spread,
-                color: shadow.color, opacity: shadow.opacity)
-        }
+        node.brush = .backdrop(key: key) // should be Texture
+        node.shape = Shape.rect(width: size.x, height: size.y)
         node.opacity = self.opacity
         node.affine = affine
         return node
     }
 }
 
-extension EffectLayer {
-    // it actually another shader
-    func effectNode(sampling textureIndex: UInt32, affine: Affine) -> EffectNode {
-        EffectNode(
-            samplingTextureIndex: textureIndex,
-            region: EffectRegion(
-                shape: shape,
-                affine: affine,
-                effect: effect
-            )
-        )
-    }
+// extension EffectLayer {
+//     // it actually another shader
+//     func effectNode(sampling textureIndex: UInt32, affine: Affine) -> EffectNode {
+//         EffectNode(
+//             samplingTextureIndex: textureIndex,
+//             region: EffectRegion(
+//                 shape: shape,
+//                 affine: affine,
+//                 effect: effect
+//             )
+//         )
+//     }
 
-    func blurNode(sampling textureIndex: UInt32, affine: Affine) -> BlurNode {
-        guard case .blur(let radius) = self.effect else {
-            fatalError("Not a blur node")
-        }
-        return BlurNode(
-            samplingTextureIndex: textureIndex,
-            region: BlurRegion(
-                shape: shape,
-                affine: affine,
-                radius: radius
-            )
-        )
-    }
+//     func blurNode(sampling textureIndex: UInt32, affine: Affine) -> BlurNode {
+//         guard case .blur(let radius) = self.effect else {
+//             fatalError("Not a blur node")
+//         }
+//         return BlurNode(
+//             samplingTextureIndex: textureIndex,
+//             region: BlurRegion(
+//                 shape: shape,
+//                 affine: affine,
+//                 radius: radius
+//             )
+//         )
+//     }
 
-    func blurRegion(_ affine: Affine) -> BlurRegion {
-        guard case .blur(let radius) = self.effect else {
-            fatalError("Not a blur node")
-        }
-        return BlurRegion(
-            shape: shape,
-            affine: affine,
-            radius: radius
-        )
-    }
+//     func blurRegion(_ affine: Affine) -> BlurRegion {
+//         guard case .blur(let radius) = self.effect else {
+//             fatalError("Not a blur node")
+//         }
+//         return BlurRegion(
+//             shape: shape,
+//             affine: affine,
+//             radius: radius
+//         )
+//     }
 
-    func effectRegion(_ affine: Affine) -> EffectRegion {
-        return EffectRegion(
-            shape: shape,
-            affine: affine,
-            effect: effect
-        )
-    }
+//     func effectRegion(_ affine: Affine) -> EffectRegion {
+//         return EffectRegion(
+//             shape: shape,
+//             affine: affine,
+//             effect: effect
+//         )
+//     }
 
-}
+// }
 
 extension ShapeItem {
     func renderNode(baseAffine: Affine) -> RenderNode {

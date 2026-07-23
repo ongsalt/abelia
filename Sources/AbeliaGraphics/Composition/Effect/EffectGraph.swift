@@ -1,4 +1,40 @@
-// import ReactivityGraph
+import ReactivityGraph
+
+// Or we do CoreImage-like api, and compile the graph manually
+
+public protocol CompositionEffect {
+
+}
+
+
+// provide texture index + sizing?
+public protocol EffectSource {
+     
+}
+
+class BlurEffect: CompositionEffect {
+    @Bindable
+    var radius: Float = 16.0
+    var source: any EffectSource
+
+    init(source: any EffectSource, radius: Float = 16.0) {
+        self.source = source
+        self.radius = radius
+    }
+}
+
+func apiYomama() {
+    // let blur = BlurEffect(
+    //     // source: ,
+    //     // radius: ,
+    // )
+}
+
+
+struct EffectRegion: Sendable {
+  let shape: any ShapeProtocol
+  let affine: Affine
+}
 
 // class EffectGraph {
 //   protocol Node {

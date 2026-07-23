@@ -7,6 +7,7 @@ public class _BaseLayer: Identifiable {
         Int(bitPattern: ObjectIdentifier(self))
     }
 
+    // TODO: make each layer appear only once in a given tree
     var compositor: Compositor? {
         didSet {
             if let compositor {
@@ -23,11 +24,9 @@ public class _BaseLayer: Identifiable {
     public var shouldRasterize: Bool = false {
         didSet { dirtyFlags.insert(.compositionGroup) }
     }
-    var isCompositionGroupRoot: Bool {
-        shouldRasterize || shuoldClipStartCompositionGroup
-    }
 
     private(set) var parent: _BaseLayer!
+    var offscreenParent: OffscreenLayer?
     private(set) var children: [_BaseLayer] = []
 
     public var shape: any ShapeProtocol {
@@ -81,15 +80,6 @@ public class _BaseLayer: Identifiable {
         didSet { dirtyFlags.insert(.compositionGroup) }
     }
 
-    internal var shuoldClipStartCompositionGroup: Bool {
-        if clipped,
-            let shape = shape as? Shape  // case .rect(_, _, let cornerRadius, _) = shape
-        {
-            return true
-        }
-        return false
-    }
-
     // public var anchor: Anchor = .topLeft {
     //     didSet { dirtyFlags.insert(.transform) }
     // }
@@ -118,11 +108,21 @@ public class _BaseLayer: Identifiable {
             .translated(x: anchorDx, y: anchorDy)
     }
 
-    var hidden: Bool = false
+    @Bindable
+    public var hidden: Bool = false
 
     public func insert(_ layer: _BaseLayer, before: _BaseLayer? = nil) {
         children.append(layer)
         layer.parent = self
+
+        if let s = self as? OffscreenLayer {
+            layer.offscreenParent = s
+            s.offscreenChildren.append(layer)
+        } else {
+            layer.offscreenParent = self.offscreenParent
+            self.offscreenParent?.offscreenChildren.append(layer)
+        }
+
         layer.compositor = self.compositor
     }
 
@@ -134,10 +134,16 @@ public class _BaseLayer: Identifiable {
 
     public func remove(_ layer: _BaseLayer) {
         layer.parent = nil
+        layer.offscreenParent = nil
         layer.compositor = nil
         children.removeAll { $0.id == layer.id }
-    }
 
+        if let s = self as? OffscreenLayer {
+            s.offscreenChildren.removeAll { $0.id == layer.id }
+        } else {
+            self.offscreenParent?.offscreenChildren.removeAll { $0.id == layer.id }
+        }
+    }
 }
 
 public enum Anchor {

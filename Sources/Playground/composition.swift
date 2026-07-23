@@ -67,7 +67,7 @@ final class SpringCircleScene {
                         smoothing: 40
                     ),
                 brush: .solid(.black),
-                shadow: Shadow(blur: 20, opacity: 0.18),
+                shadow: Shadow(),
                 offset: center
             )
         ]
@@ -397,19 +397,4 @@ func buildAnimationDemo(_ compositor: Compositor) -> Layer {
     compositor.requestAnimationFrame(callback: tick)
     return root
 }
-func nonOverlapBlurGrid(w: Int, h: Int, size: Float = 10) -> Layer {
-    let root = Layer(size: SIMD2(Float(w) * size, Float(h) * size))
-    for x in 0..<w {
-        for y in 0..<h {
-            root.insert(
-                EffectLayer(
-                    offset: SIMD3(Float(x) * size, Float(y) * size, 0),
-                    shape: Shape.rect(width: size, height: size, cornerRadius: 10),
-                    effect: .blur(radius: 20)
-                )
-            )
-        }
-    }
 
-    return root
-}

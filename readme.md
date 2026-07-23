@@ -6,7 +6,13 @@ ui library??
 
 # Features
 - SDF drawing primitive with ops like union, intersect, onion. See (Inigo Quilez's article)[https://iquilezles.org/articles/distfunctions2d/].
-- Offscreen pass for opacity group and effect group. 
+- Offscreen pass for opacity group and effect group.
+
+# Dependencies
+
+## Linux
+
+- `fontconfig`
 
 ## Dev dependencies
 - `slangc > v2026.12.1` (cuz it has weird `nonuniformExt` bug)

@@ -6,6 +6,8 @@ public enum CompositionBrush: Equatable {
     crop: Rect = .unit,
     nineSlices: Rect = .unit
   )
+
+  // case effect(any CompositionEffect)
   // mapped to Brush.texture
   // case gradient(Color) mapped to Brush.texture
 
