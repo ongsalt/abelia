@@ -1,4 +1,4 @@
-package enum BindableStorage<T: Equatable> {
+package enum BindableStorage<T> {
     case const(T)
     case getter(() -> T)
     case thunk(Computed<T>)
@@ -21,7 +21,7 @@ package enum BindableStorage<T: Equatable> {
 }
 
 @propertyWrapper
-public struct Bindable<T: Equatable> {
+public struct Bindable<T> {
     package var storage: BindableStorage<T>
 
     public var projectedValue: Self {
