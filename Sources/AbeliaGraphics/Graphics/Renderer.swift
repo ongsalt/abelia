@@ -66,6 +66,7 @@ extension Renderer {
         resource.renderNodeStorage.resetOffset()
         resource.shapeGroupStorage.resetOffset()
         resource.polygonVertexStorage.resetOffset()
+        resource.clipRuns.reset()
 
         let texture = try walk(pass, commandBuffer)
 
@@ -330,6 +331,37 @@ extension Renderer {
         data.shapeStartIndex = UInt32(startIndex)
         data.shapeCount = UInt32(instructions.count)
 
+        // clip stack: intersect every clip shape into one merge program in the same buffer. Written
+        // once per unique stack per frame (keyed by ClipStack identity) so a clip shared by many
+        // descendants isn't duplicated; each clip's program is re-based into world space by baking
+        // its transform into the pushes.
+        if !node.clip.isEmpty {
+            let key = ObjectIdentifier(node.clip)
+            let run =
+                resource.clipRuns[key]
+                ?? {
+                    let clipStart = resource.shapeGroupStorage.offset
+                    var clipCount = 0
+                    for (i, clip) in node.clip.shapes.enumerated() {
+                        for inst in clip.shape.drawInstructions {
+                            resource.shapeGroupStorage.append(
+                                appendingPolygonVertices(inst.transformed(by: clip.transform)))
+                            clipCount += 1
+                        }
+                        if i > 0 {
+                            resource.shapeGroupStorage.append(
+                                ShapeMergingInstruction.merge(.intersect, smoothing: 0).c)
+                            clipCount += 1
+                        }
+                    }
+                    let run = (start: UInt32(clipStart), count: UInt32(clipCount))
+                    resource.clipRuns[key] = run
+                    return run
+                }()
+            data.clipStartIndex = run.start
+            data.clipCount = run.count
+        }
+
         let bounds = node.shape.bounds
         let padding = node.border?.width ?? 0
         data.boundMinX = bounds.left - padding
@@ -460,6 +492,17 @@ extension Renderer {
     }
 }
 
+/// Per-frame map from a `ClipStack`'s identity to the run it was written to in the shape buffer, so
+/// a clip shared by many nodes is emitted once. A class so it survives `RendererFrameResource` copies.
+final class ClipRunCache {
+    private var runs: [ObjectIdentifier: (start: UInt32, count: UInt32)] = [:]
+    subscript(key: ObjectIdentifier) -> (start: UInt32, count: UInt32)? {
+        get { runs[key] }
+        set { runs[key] = newValue }
+    }
+    func reset() { runs.removeAll(keepingCapacity: true) }
+}
+
 // this should be per frame context
 struct RendererFrameResource {
     let mainDescriptorSet: DescriptorSet
@@ -467,6 +510,7 @@ struct RendererFrameResource {
     let shapeGroupStorage: ShapeBuffer
     let drawListStorage: DrawListBuffer
     let polygonVertexStorage: PolygonVertexBuffer
+    let clipRuns = ClipRunCache()
 
     fileprivate init(index: Int, context: borrowing DeviceContext, pipelines: borrowing Pipelines)
         throws(Vulkan.Result)

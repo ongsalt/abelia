@@ -32,6 +32,14 @@ public struct Transform2D: Sendable, Equatable {
     Transform2D(offset: t)
   }
 
+  /// Drop a 4x4 affine to its 2D part (x/y basis + translation). Valid for 2D transforms;
+  /// any 3D rotation/perspective component is ignored.
+  public init(_ a: Affine) {
+    self.col0 = SIMD2(a.col0.x, a.col0.y)
+    self.col1 = SIMD2(a.col1.x, a.col1.y)
+    self.translation = SIMD2(a.col3.x, a.col3.y)
+  }
+
   @inline(__always) func applyLinear(_ v: SIMD2<Float>) -> SIMD2<Float> {
     v.x * col0 + v.y * col1
   }
@@ -81,6 +89,15 @@ public enum ShapeMergingInstruction {
   case modify(ModifyMode, radius: Float)
 }
 
+extension ShapeMergingInstruction {
+  /// Pre-compose `transform` onto a `push` (leaving `merge`/`modify` untouched), so a shape's
+  /// program can be re-based into another space.
+  func transformed(by transform: Transform2D) -> ShapeMergingInstruction {
+    guard case .push(let meta) = self else { return self }
+    return .push(ShapeMetadata(meta.shape, transform.concatenating(meta.transform)))
+  }
+}
+
 /// Unary distance-field operators from https://iquilezles.org/articles/distfunctions2d/
 public enum ModifyMode: UInt32, Sendable {
   /// `d - r`: grows the shape outward, rounding convex corners
@@ -116,6 +133,8 @@ public enum Shape: Sendable {
   /// arbitrary closed polygon; `vertices` are in local space (0,0 is the center). Stored in a dedicated GPU vertex buffer.
   case polygon(_ vertices: [SIMD2<Float>], perimeterOffset: Float = 0)
 }
+
+extension Shape: Equatable {}
 
 extension Shape {
   public static func circle(_ radius: Float) -> Self {

@@ -25,6 +25,18 @@ public class _BaseLayer: Identifiable {
         didSet { dirtyFlags.insert(.compositionGroup) }
     }
 
+    /// Clips descendants to a geometry, evaluated directly as an SDF in the fragment shader (no
+    /// offscreen pass). Modeled after Windows.UI.Composition `Visual.Clip`: `nil` means no clip.
+    /// Clips nest — a fragment survives only inside every clipping ancestor.
+    @Bindable
+    public var clip: LayerClip? = nil {
+        didSet { dirtyFlags.insert(.draw) }
+    }
+
+    /// This layer's own clip resolved to a shape in its local (center-origin) space plus the
+    /// transform into world/pass space. `nil` when the layer does not clip.
+    var resolvedClip: Computed<ClipShape?>!
+
     private(set) var parent: _BaseLayer?
     var offscreenParent: OffscreenLayer?
     private(set) var children: [_BaseLayer] = []
@@ -92,6 +104,17 @@ public class _BaseLayer: Identifiable {
     var effectiveTransform: Computed<Affine>!
     var accumulatedTransform: Computed<Affine>!
 
+    /// Clip stack this layer hands to its descendants: the stack applying to its own content plus
+    /// its own clip if any. A non-clipping layer forwards the parent's *same* instance so an entire
+    /// subtree shares one `ClipStack` (letting the renderer write it once). Resets at offscreen
+    /// boundaries — those clips apply to the composited quad in the parent pass instead.
+    var contributedClipStack: Computed<ClipStack>!
+
+    /// Clip stack applying to this layer's own content (what its parent contributes).
+    var contentClipStack: ClipStack {
+        parent?.contributedClipStack.value ?? .empty
+    }
+
     init() {
         accumulatedTransform = Computed { [unowned self] in
             let o = transformOrigin * size
@@ -118,6 +141,33 @@ public class _BaseLayer: Identifiable {
 
         effectiveOpacity = Computed { [unowned self] in
             self.accumulatedOpacity.value
+        }
+
+        resolvedClip = Computed { [unowned self] in
+            guard let clip else { return nil }
+            let world = Transform2D(effectiveTransform.value)
+            switch clip {
+            case .bounds:
+                return ClipShape(shape: shape, transform: world)
+            case .shape(let s):
+                return ClipShape(shape: s, transform: world)
+            case .inset(let top, let right, let bottom, let left, let cornerRadius):
+                let center = SIMD2<Float>((left - right) / 2, (top - bottom) / 2)
+                return ClipShape(
+                    shape: Shape.rect(
+                        width: size.x - left - right, height: size.y - top - bottom,
+                        cornerRadius: cornerRadius),
+                    transform: world.concatenating(.translation(center)))
+            }
+        }
+
+        contributedClipStack = Computed { [unowned self] in
+            // an offscreen layer begins a new pass in its own coordinate space; ancestor clips
+            // apply to its composited quad, not inline to its subtree — so children start fresh.
+            if self is OffscreenLayer { return .empty }
+            let base = parent?.contributedClipStack.value ?? .empty
+            guard let own = resolvedClip.value else { return base }  // no clip: forward parent's instance
+            return ClipStack(base.shapes + [own])
         }
     }
 

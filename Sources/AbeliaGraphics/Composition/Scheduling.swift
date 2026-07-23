@@ -64,14 +64,18 @@ struct PassScheduler {
     func schedule(
         root: borrowing CompositionGroup,
     ) -> Pass? {
-        func makeNewPass(basedOn layer: _BaseLayer, affine: Affine, key: Int) -> Pass {
+        func makeNewPass(basedOn layer: _BaseLayer, affine: Affine, key: Int, clip: ClipStack)
+            -> Pass
+        {
             switch layer.kind {
             case .composite:
                 let new = Pass(target: .sameAsPrevious(key: key))
                 if let shapeLayer = layer as? ShapeLayer {
-                    for node in shapeLayer.shapeItemRenderNodes(affine) { new.addRenderNode(node) }
+                    for node in shapeLayer.shapeItemRenderNodes(affine) {
+                        new.addRenderNode(node.applying(clip: clip))
+                    }
                 } else {
-                    new.addRenderNode((layer as! Layer).compositeRenderNode(affine))
+                    new.addRenderNode((layer as! Layer).compositeRenderNode(affine).applying(clip: clip))
                 }
                 return new
 
@@ -119,6 +123,7 @@ struct PassScheduler {
             outer: for layer in group.layers {
                 let affine = layer.effectiveTransform.value
                 let bounds = layer.bounds.transformBounds(affine)
+                let clip = layer.contentClipStack
 
                 // add it to topmost non covered matching pass
                 // otherwise create a pass
@@ -131,20 +136,21 @@ struct PassScheduler {
                                 if let new = walk(group.dependencies[offscreenLayer.id]!) {
                                     let node = offscreenLayer.renderNode(
                                         sampling: new.target.key, affine)
-                                    p.addRenderNode(node)
+                                    p.addRenderNode(node.applying(clip: clip))
                                     p.dependencies.append(new)
                                 }
                             } else if let shapeLayer = layer as? ShapeLayer {
                                 for node in shapeLayer.shapeItemRenderNodes(affine) {
-                                    p.addRenderNode(node)
+                                    p.addRenderNode(node.applying(clip: clip))
                                 }
                             } else {
-                                p.addRenderNode((layer as! Layer).compositeRenderNode(affine))
+                                p.addRenderNode(
+                                    (layer as! Layer).compositeRenderNode(affine).applying(clip: clip))
                             }
                             continue outer
                         } else if p.overlap(with: bounds) {  // other kind of node that overlap
                             // force new pass
-                            let new = makeNewPass(basedOn: layer, affine: affine, key: key)
+                            let new = makeNewPass(basedOn: layer, affine: affine, key: key, clip: clip)
                             new.dependencies.append(localPasses.last!)
                             localPasses.append(new)
                             continue outer
@@ -179,7 +185,7 @@ struct PassScheduler {
                 }
 
                 // not found
-                let new = makeNewPass(basedOn: layer, affine: affine, key: key)
+                let new = makeNewPass(basedOn: layer, affine: affine, key: key, clip: clip)
                 new.dependencies.append(localPasses.last!)
                 localPasses.append(new)
             }
@@ -273,6 +279,15 @@ enum LayerKind: Sendable {
 extension _BaseLayer {
     fileprivate var kind: LayerKind {
         .composite
+    }
+}
+
+extension RenderNode {
+    fileprivate func applying(clip: ClipStack) -> RenderNode {
+        if clip.isEmpty { return self }
+        var copy = self
+        copy.clip = clip
+        return copy
     }
 }
 

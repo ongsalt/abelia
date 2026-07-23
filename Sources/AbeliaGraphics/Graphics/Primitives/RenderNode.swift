@@ -13,9 +13,35 @@ public struct RenderNode: Sendable {
     public var border: NodeBorder?
     public var shadow: NodeShadow?
 
+    /// Ancestor clip shapes, each in the same (pass/world) space as `affine`. The fragment is kept
+    /// only where it is inside *all* of them (their SDF intersection). Reuses the shape merge buffer.
+    public var clip: ClipStack = .empty
+
     public var opacity: Float = 1
     // TODO: backfaceVisibility, might just filter out
     public var affine: Affine = .identity
+}
+
+/// A single clip shape plus the transform placing it into pass/world space (shape-local -> world).
+public struct ClipShape: Sendable {
+    public var shape: any ShapeProtocol
+    public var transform: Transform2D
+
+    public init(shape: any ShapeProtocol, transform: Transform2D) {
+        self.shape = shape
+        self.transform = transform
+    }
+}
+
+/// A resolved clip stack, shared by reference across every node it applies to. Because sibling nodes
+/// point at the *same* instance, the renderer can write its merge program to the shape buffer once
+/// per frame and key the run by object identity — instead of duplicating it per node.
+public final class ClipStack: @unchecked Sendable {
+    public let shapes: [ClipShape]
+    public var isEmpty: Bool { shapes.isEmpty }
+
+    public init(_ shapes: [ClipShape]) { self.shapes = shapes }
+    public static let empty = ClipStack([])
 }
 
 public struct NodeShadow: Sendable {

@@ -111,7 +111,7 @@ union Brush {
 };
 
 // Matches RenderNode in types.slang exactly.
-// Layout: affine(64) + shapeStartIndex(4) + shapeCount(4) + _pad_shape(8)
+// Layout: affine(64) + shapeStartIndex(4) + shapeCount(4) + clipStartIndex(4) + clipCount(4)
 //       + brushData(64) + brushKind(4) + borderBrushKind(4) + borderWidth(4) + opacity(4)
 //       + shadowOffsetX(4) + shadowOffsetY(4) + shadowBlur(4) + shadowSpread(4)
 //       + shadowColor(16) + shadowOpacity(4) + _pad(12) + borderBrushData(64)
@@ -121,7 +121,9 @@ struct RenderNode {
 
   uint32_t shapeStartIndex;
   uint32_t shapeCount;
-  uint32_t _pad_shape[2];
+  // clip stack: a run in the same shapeGroup buffer whose merge program intersects all clip shapes
+  uint32_t clipStartIndex;
+  uint32_t clipCount;
 
   union Brush brushData;
 

@@ -113,9 +113,11 @@ class Delegate: Swinit.EventLoopDelegate {
         c.opacity = 0.5
         c.rotation = .degrees(30)
 
-        // root.insert(a)
+        root.insert(a)
         root.insert(b)
         root.insert(c)
+
+        root.insert(buildClipDemo())
         
         // root.insert(buildAnimationDemo(compositor))
         // root.insert(tiltCard.card)
@@ -243,6 +245,27 @@ func gammaTest() -> Layer {
     makeBar(Color(red: 1.0, green: 0.0, blue: 0.0), y: 100)
     makeBar(Color(red: 0.0, green: 1.0, blue: 0.0), y: 200)
     makeBar(Color(red: 0.0, green: 0.0, blue: 1.0), y: 300)
+
+    return container
+}
+
+// Demonstrates the SDF clip stack: nested clips intersect (rounded-rect ∩ circle), all evaluated
+// directly in the fragment shader with no offscreen pass.
+func buildClipDemo() -> Layer {
+    // container clips its descendants to its own rounded rect (.bounds respects cornerRadius)
+    let container = Layer(
+        offset: [420, 40, 0], size: [240, 240], brush: .solid(.red.with(alpha: 0.12)),
+        cornerRadius: 40)
+    container.clip = .bounds
+
+    // oversized child that overflows the container — cut to the rounded corners
+    container.insert(Layer(offset: [-400, -400, 0], size: [1000, 1000], brush: .solid(.blue.with(alpha: 0.5))))
+
+    // nested clip: its child is clipped to circle ∩ container-rounded-rect (the accumulated stack)
+    let inner = Layer(offset: [60, 140, 0], size: [160, 160])
+    inner.clip = .shape(Shape.circle(80))
+    inner.insert(Layer(offset: [-30, -10, 0], size: [220, 220], brush: .solid(.orange)))
+    container.insert(inner)
 
     return container
 }

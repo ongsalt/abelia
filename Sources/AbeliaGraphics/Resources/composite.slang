@@ -121,16 +121,30 @@ float4 fsMain(VertexOutput input): SV_Target {
 
   // return float4(1.0, input.uv, 1.0);
 
+  let clip = clipCoverage(renderNode, position);
+
   switch (input.drawMode) {
     case DrawMode.Fill:
-      return computeFill(renderNode, position, input.uv) * renderNode.opacity;
+      return computeFill(renderNode, position, input.uv) * renderNode.opacity * clip;
     case DrawMode.Stroke:
-      return computeBorder(renderNode, position) * renderNode.opacity;
+      return computeBorder(renderNode, position) * renderNode.opacity * clip;
     case DrawMode.Shadow:
-      return computeShadow(renderNode, position) * renderNode.opacity;
+      return computeShadow(renderNode, position) * renderNode.opacity * clip;
   }
 
   return float4(0.0);
+}
+
+// Coverage from the clip stack: the fragment survives only inside the intersection of all clip
+// shapes. Clip shapes live in world/pass space, so map the fragment there via the node's affine.
+float clipCoverage(RenderNode renderNode, float2 position) {
+  if (renderNode.clipCount == 0) {
+    return 1.0;
+  }
+  float4 world = mul(renderNode.affine, float4(position, 0.0, 1.0));
+  float2 worldPos = world.xy / world.w;
+  let d = sdfMerge(worldPos, renderNode.clipStartIndex, renderNode.clipCount);
+  return smoothCoverageOf(d);
 }
 
 float4 computeBorder(RenderNode renderNode, float2 position) {

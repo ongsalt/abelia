@@ -44,6 +44,17 @@ public class Layer: _BaseLayer {
     }
 }
 
+/// A layer clip, after Windows.UI.Composition `Visual.Clip`.
+public enum LayerClip: Sendable {
+    /// Clip to the layer's own shape (respects its corner radius).
+    case bounds
+    /// Clip to the layer's bounds inset on each edge, optionally rounded — like Windows `InsetClip`.
+    case inset(top: Float = 0, right: Float = 0, bottom: Float = 0, left: Float = 0, cornerRadius: Float = 0)
+    /// Clip to an explicit shape in the layer's local (center-origin) space — any SDF shape,
+    /// including merges (`union`/`intersect`/…) and modifiers.
+    case shape(any ShapeProtocol)
+}
+
 public struct Border: Equatable {
     public var width: Float = 1
     public var brush: CompositionBrush = .solid(Color.black.with(alpha: 0.3))

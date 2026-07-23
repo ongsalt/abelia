@@ -177,7 +177,7 @@ public TextureBrush unpackTextureBrush(uint4 d0, uint4 d1, uint4 d2, uint4 d3) {
 }
 
 // Matches C struct RenderNode exactly.
-// Layout: affine(64) + shapeStartIndex(4) + shapeCount(4) + _pad_shape(8)
+// Layout: affine(64) + shapeStartIndex(4) + shapeCount(4) + clipStartIndex(4) + clipCount(4)
 //       + brushData(64) + brushKind(4) + borderBrushKind(4) + borderWidth(4) + opacity(4)
 //       + shadowOffsetX(4) + shadowOffsetY(4) + shadowBlur(4) + shadowSpread(4)
 //       + shadowColor(16) + shadowOpacity(4) + _pad(12) + borderBrushData(64)
@@ -187,8 +187,9 @@ public struct RenderNode {
 
   public uint shapeStartIndex;
   public uint shapeCount;
-  public uint _pad_shape0;
-  public uint _pad_shape1;
+  // clip stack: a run in the same shapeGroup buffer whose merge program intersects all clip shapes
+  public uint clipStartIndex;
+  public uint clipCount;
 
   // raw Brush union (64 bytes) split into four uint4 chunks.
   // solid:   bit_cast<SolidColorBrush>(brushData0)
