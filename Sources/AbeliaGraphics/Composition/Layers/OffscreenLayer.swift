@@ -1,16 +1,18 @@
 import ReactivityGraph
 
-class OffscreenLayer: _BaseLayer {
-    @Bindable
-    public var opacity: Float = 1 {
-        didSet { dirtyFlags.insert(.compositionGroup) }
-    }
-
+public class OffscreenLayer: Layer {
 
     // effect
     // clip
 
     // MARK: private
     var offscreenChildren: [_BaseLayer] = []
-}
 
+    override init() {
+        super.init()
+        accumulatedOpacity = Computed { 1.0 }
+        effectiveOpacity = Computed { [unowned self] in
+            (parent?.accumulatedOpacity.value ?? 1.0) * self.opacity
+        }
+    }
+}

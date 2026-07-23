@@ -64,7 +64,7 @@ public struct Affine: Sendable, Equatable {
 
     // MARK: - Chaining Methods (Returns new Affine)
 
-    public func scaled(x: Float, y: Float, z: Float = 1.0) -> Affine {
+    public func scaled(x: Float = 1.0, y: Float = 1.0, z: Float = 1.0) -> Affine {
         let scaleMatrix = Affine(
             col0: SIMD4<Float>(x, 0, 0, 0),
             col1: SIMD4<Float>(0, y, 0, 0),
@@ -74,7 +74,7 @@ public struct Affine: Sendable, Equatable {
         return self.multiplied(by: scaleMatrix)
     }
 
-    public func translated(x: Float, y: Float, z: Float = 0.0) -> Affine {
+    public func translated(x: Float = 0.0, y: Float = 0.0, z: Float = 0.0) -> Affine {
         let translationMatrix = Affine(
             col0: SIMD4<Float>(1, 0, 0, 0),
             col1: SIMD4<Float>(0, 1, 0, 0),

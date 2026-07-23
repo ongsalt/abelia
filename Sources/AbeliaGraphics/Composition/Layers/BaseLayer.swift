@@ -25,7 +25,7 @@ public class _BaseLayer: Identifiable {
         didSet { dirtyFlags.insert(.compositionGroup) }
     }
 
-    private(set) var parent: _BaseLayer!
+    private(set) var parent: _BaseLayer?
     var offscreenParent: OffscreenLayer?
     private(set) var children: [_BaseLayer] = []
 
@@ -74,38 +74,51 @@ public class _BaseLayer: Identifiable {
         didSet { dirtyFlags.insert(.transform) }
     }
 
-    // TODO: clip
+    // in parent space, relative to self
     @Bindable
-    public var clipped: Bool = false {
-        didSet { dirtyFlags.insert(.compositionGroup) }
+    public var anchor: SIMD2<Float> = .zero {
+        didSet { dirtyFlags.insert(.transform) }
     }
 
-    // public var anchor: Anchor = .topLeft {
-    //     didSet { dirtyFlags.insert(.transform) }
-    // }
-
-    /// pivot point for scale and rotation, in local space — behaves like CSS transform-origin
-    // will be computed outside on, wont include self
-
-    var accumulatableAffine: Affine {
-        let ox = transformOrigin.x
-        let oy = transformOrigin.y
-        return Affine.identity
-            .translated(x: offset.x, y: offset.y, z: offset.z)
-            .translated(x: ox, y: oy)
-            .multiplied(by: affine)
-            .rotated(rotation, axis: rotationAxis)
-            .scaled(x: scale.x, y: scale.y)
-            .translated(x: -ox, y: -oy)
+    // For children
+    @Bindable
+    public var origin: SIMD3<Float> = .zero {
+        didSet { dirtyFlags.insert(.transform) }
     }
 
-    func localTotalAffine(_ accumulatableAffine: Affine) -> Affine {
-        let (ax, ay) = Anchor.topLeft.unitCoordinates
-        let anchorDx = (0.5 - ax) * size.x
-        let anchorDy = (0.5 - ay) * size.y
-        return
-            accumulatableAffine
-            .translated(x: anchorDx, y: anchorDy)
+    var effectiveOpacity: Computed<Float>!
+    var accumulatedOpacity: Computed<Float>!
+
+    var effectiveTransform: Computed<Affine>!
+    var accumulatedTransform: Computed<Affine>!
+
+    init() {
+        accumulatedTransform = Computed { [unowned self] in
+            let o = transformOrigin * size
+
+            return (parent?.accumulatedTransform.value ?? .identity)
+                .translated(x: offset.x, y: offset.y, z: offset.z)
+                .translated(x: o.x, y: o.y)
+                .multiplied(by: affine)
+                .rotated(rotation, axis: rotationAxis)
+                .scaled(x: scale.x, y: scale.y)
+                .translated(x: -o.x, y: -o.y)
+        }
+
+        effectiveTransform = Computed { [unowned self] in
+            let d = (0.5 - anchor) * size
+            return
+                accumulatedTransform.value
+                .translated(x: d.x, y: d.y)
+        }
+
+        accumulatedOpacity = Computed { [unowned self] in
+            parent?.accumulatedOpacity.value ?? 1.0
+        }
+
+        effectiveOpacity = Computed { [unowned self] in
+            self.accumulatedOpacity.value
+        }
     }
 
     @Bindable

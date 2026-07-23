@@ -97,7 +97,7 @@ public class Computed<T>: Identifiable, Source<T>, Sink {
         // reevaluate all source
         // compare it to last known value
         // if nothing changed return
-        guard dependencies.first(where: { $0.isChanged }) != nil else {
+        if !dependencies.contains(where: { $0.isChanged }) && !dependencies.isEmpty {
             return
         }
 

@@ -1,49 +1,19 @@
 struct RenderScheduler {
     // TODO: cache this
-    var transformResolver = TransformResolver()
     var compositionPlanner = CompositionPlanner()
     var passScheduler = PassScheduler()
 
     // may mark layer as clean
     mutating func schedule(root: _BaseLayer) -> Pass? {
-        transformResolver.resolve(root: root)
         let group = compositionPlanner.plan(root: root)
-        let pass = passScheduler.schedule(root: group, transformResolver)
+        Log.debug(.scheduler, "\(group)")
 
-        return pass
-    }
-}
+        let pass = passScheduler.schedule(root: group)
 
-struct TransformResolver {
-    typealias LayerID = _BaseLayer.ID
-    var accumulatableAffineCache: [LayerID: Affine] = [:]
-    var localAffineCache: [LayerID: Affine] = [:]
-
-    func get(_ layer: borrowing _BaseLayer) -> Affine? {
-        localAffineCache[layer.id]
-    }
-
-    mutating func resolve(root: _BaseLayer) {
-        func walk(_ layer: _BaseLayer, _ affine: Affine?) {
-            let current =
-                affine?.multiplied(by: layer.accumulatableAffine) ?? layer.accumulatableAffine
-            accumulatableAffineCache[layer.id] = current
-            localAffineCache[layer.id] = layer.localTotalAffine(current)
-
-            if let offscreenLayer = layer as? OffscreenLayer {
-                for l in offscreenLayer.children {
-                    walk(l, nil)
-                }
-            } else {
-                for l in layer.children {
-                    // accumulate it
-                    walk(l, current)
-                }
-            }
+        if let tree = pass?.dumpTree() {
+            Log.debug(.scheduler, tree)
         }
-
-        walk(root, nil)
-
+        return pass
     }
 }
 
@@ -93,7 +63,6 @@ struct CompositionGroup {
 struct PassScheduler {
     func schedule(
         root: borrowing CompositionGroup,
-        _ transformResolver: borrowing TransformResolver
     ) -> Pass? {
         func makeNewPass(basedOn layer: _BaseLayer, affine: Affine, key: Int) -> Pass {
             switch layer.kind {
@@ -127,7 +96,7 @@ struct PassScheduler {
 
             // initially composite, might not reuse texture, also need to calculate it size with child
             let layer = group.root
-            let affine = transformResolver.get(layer)!
+            let affine = layer.effectiveTransform.value
             let bounds = layer.bounds.transformBounds(affine)
             if bounds.size == .zero {
                 return nil
@@ -148,7 +117,7 @@ struct PassScheduler {
             // all use the same texture size
             var localPasses = [pass]
             outer: for layer in group.layers {
-                let affine = transformResolver.get(layer)!
+                let affine = layer.effectiveTransform.value
                 let bounds = layer.bounds.transformBounds(affine)
 
                 // add it to topmost non covered matching pass
@@ -159,7 +128,7 @@ struct PassScheduler {
                         if layer.kind == .composite {
                             if let offscreenLayer = layer as? OffscreenLayer {
                                 // add sampling mode
-                                if let new = walk(group.dependencies[layer.id]!) {
+                                if let new = walk(group.dependencies[offscreenLayer.id]!) {
                                     let node = offscreenLayer.renderNode(
                                         sampling: new.target.key, affine)
                                     p.addRenderNode(node)
@@ -367,7 +336,7 @@ extension OffscreenLayer {
     // this need to render content that can not be included in the subgroup such as shadow
     func renderNode(sampling key: Int, _ affine: Affine) -> RenderNode {
         var node = RenderNode()
-        node.brush = .backdrop(key: key) // should be Texture
+        node.brush = .backdrop(key: key)  // should be Texture
         node.shape = Shape.rect(width: size.x, height: size.y)
         node.opacity = self.opacity
         node.affine = affine

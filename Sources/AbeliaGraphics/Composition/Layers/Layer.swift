@@ -35,6 +35,13 @@ public class Layer: _BaseLayer {
     public var shadow: Shadow? {
         didSet { dirtyFlags.insert(.draw) }
     }
+
+    override init() {
+        super.init()
+        accumulatedOpacity = Computed { [unowned self] in
+            (parent?.accumulatedOpacity.value ?? 1.0) * self.opacity
+        }
+    }
 }
 
 public struct Border: Equatable {
@@ -59,9 +66,9 @@ public struct Shadow: Equatable {
     public var rendering: ShadowRendering = .auto
 
     public init(
-        offset: SIMD2<Float> = .zero, 
+        offset: SIMD2<Float> = .zero,
         blur: Float = 48,
-        spread: Float = 0, 
+        spread: Float = 0,
         color: Color = .black,
         opacity: Float = 0.36,
         rendering: ShadowRendering = .auto

@@ -1,12 +1,6 @@
 import AbeliaGraphics
-
 import Foundation
-
 import Swinit
-
-#if canImport(WaylandClient)
-    import WaylandClient
-#endif
 
 @MainActor
 final class SpringCircleScene {
@@ -85,6 +79,7 @@ final class SpringCircleScene {
         return Vec2(x, y)
     }
 }
+
 class Delegate: Swinit.EventLoopDelegate {
     var window: Window!
     var surfaceConfig: SurfaceConfiguration2!
@@ -92,31 +87,36 @@ class Delegate: Swinit.EventLoopDelegate {
     var compositor: Compositor!
     var animationController: CompositorAnimationController!
     var springCircles: SpringCircleScene!
-    var tiltCard: TiltCardScene!
 
     func setupLayer(root: Layer) {
         root.size = [800, 600]
-        #if !os(Windows)
-        root.brush = .solid(.white.with(alpha: 0.7))
-        #endif
+        root.brush = .solid(.white)
 
-    
         springCircles = SpringCircleScene(
             compositor: compositor,
             controller: animationController,
             bounds: root.size
         )
+        // root.insert(springCircles.canvas)
 
-        tiltCard = TiltCardScene(
-            compositor: compositor,
-            controller: animationController,
-            bounds: root.size
-        )
 
-        root.insert(buildLayersWithCompositionGroup(compositor))
-        root.insert(springCircles.canvas)
-        root.insert(buildAnimationDemo(compositor))
-        root.insert(tiltCard.card)
+        let a = buildLayers()
+
+        let b = OffscreenLayer(offset: [100, 0, 0], size: [100, 100]) {
+            buildLayers()
+        }
+        b.opacity = 0.5
+
+        let c = buildLayers()
+        c.offset = [0, 100, 0]
+        c.opacity = 0.5
+
+        // root.insert(a)
+        root.insert(b)
+        root.insert(c)
+        
+        // root.insert(buildAnimationDemo(compositor))
+        // root.insert(tiltCard.card)
     }
 
     func canCreateSurfaces(_ eventLoop: Swinit.EventLoop) {
@@ -162,7 +162,6 @@ class Delegate: Swinit.EventLoopDelegate {
                 compositor.root.size = SIMD2(Float(size.width), Float(size.height))
                 compositor.configureSurface(surfaceConfig)
                 springCircles.updateBounds(compositor.root.size)
-                tiltCard.updateBounds(compositor.root.size)
             }
 
         case .keyboardInput(_, let event, _) where event.state == .pressed:
@@ -172,7 +171,6 @@ class Delegate: Swinit.EventLoopDelegate {
 
         case .cursorMoved(_, let p):
             springCircles.move(toward: Vec2(Float(p.x), Float(p.y)))
-            tiltCard.pointerMoved(Vec2(Float(p.x), Float(p.y)))
 
         case .closeRequested:
             compositor.stop {
@@ -187,6 +185,7 @@ class Delegate: Swinit.EventLoopDelegate {
 
     func aboutToWait(_ eventLoop: EventLoop) {}
 }
+
 @MainActor
 func buildLayersWithCompositionGroup(_ compositor: Compositor) -> Layer {
     let layer = Layer(brush: .solid(.white))
@@ -217,6 +216,7 @@ func buildLayersWithCompositionGroup(_ compositor: Compositor) -> Layer {
 
     return layer
 }
+
 func gammaTest() -> Layer {
     let container = Layer()
 
@@ -244,6 +244,7 @@ func gammaTest() -> Layer {
 
     return container
 }
+
 public func buildLayers() -> Layer {
     // EventLoop().run(Delegate())
     let layer = Layer(size: [100, 100])
@@ -283,6 +284,7 @@ public func buildLayers() -> Layer {
 
     return layer
 }
+
 func buildHealthRings() -> Layer {
     let root = Layer(size: [800, 600])
 
@@ -343,6 +345,7 @@ func buildHealthRings() -> Layer {
     root.insert(rings)
     return root
 }
+
 @MainActor
 func buildAnimationDemo(_ compositor: Compositor) -> Layer {
     let root = Layer()
@@ -397,4 +400,3 @@ func buildAnimationDemo(_ compositor: Compositor) -> Layer {
     compositor.requestAnimationFrame(callback: tick)
     return root
 }
-
