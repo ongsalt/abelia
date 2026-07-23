@@ -394,8 +394,7 @@ extension Renderer {
         )
         var entry = CShim.ShapeMergingEntry()
         entry.kind = .push
-        entry.data.shape = CShim.ShapeMetadata(
-            shapeKind: .polygon, shape: shape, offset: (meta.offset.x, meta.offset.y))
+        entry.data.shape = meta.cMetadata(kind: .polygon, shape: shape)
         return entry
     }
 

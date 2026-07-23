@@ -332,8 +332,13 @@ func buildHealthRings() -> Layer {
     )
 
     let blob = ShapeItem(
+        // the unioned circle is rotated + non-uniformly scaled into a tilted lobe
         shape: Shape.rect(width: 240, height: 240, cornerRadius: 80)
-            .union(Shape.circle(100), offset: [100, 100], smoothing: 60),
+            .union(
+                Shape.circle(100),
+                offset: [100, 100], rotation: .degrees(35), scale: [1.6, 0.7],
+                smoothing: 60
+            ),
         brush: .solid(.blue),
         border: Border(width: 3, brush: .solid(.mint)),
         shadow: Shadow(blur: 30),

@@ -132,6 +132,20 @@ public struct Rect: Sendable {
             && self.top < other.bottom && self.bottom > other.top
     }
 
+    /// axis-aligned bound of this rect after a 2D affine transform
+    public func transformed(by transform: Transform2D) -> Rect {
+        let vs = vertices
+        let vt0 = transform.apply(vs[0])
+        let vt1 = transform.apply(vs[1])
+        let vt2 = transform.apply(vs[2])
+        let vt3 = transform.apply(vs[3])
+        let x1 = min(vt0.x, vt1.x, vt2.x, vt3.x)
+        let x2 = max(vt0.x, vt1.x, vt2.x, vt3.x)
+        let y1 = min(vt0.y, vt1.y, vt2.y, vt3.y)
+        let y2 = max(vt0.y, vt1.y, vt2.y, vt3.y)
+        return Rect(top: y1, left: x1, bottom: y2, right: x2)
+    }
+
     public func transformBounds(_ affine: Affine) -> Rect {
         let vs = vertices
         let vt0 = affine.multiplyVector(SIMD4(lowHalf: vs[0], highHalf: SIMD2(0, 1)))

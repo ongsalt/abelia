@@ -159,10 +159,16 @@ enum __attribute__((enum_extensibility(closed))) MergeMode : uint32_t {
   subtract = 3
 };
 
+// Layout: shapeKind(4) + shape(16) + invLinear(16) + translation(8) + distanceScale(4) = 48 bytes
 struct ShapeMetadata {
   enum ShapeKind shapeKind;
   union Shape shape;
-  float offset[2];
+  // inverse of the forward 2x2 linear part, column-major (invCol0.xy, invCol1.xy): world -> shape-local
+  float invLinear[4];
+  // forward translation (shape-local -> world)
+  float translation[2];
+  // multiply the shape-local SDF distance by this to convert it back to world units
+  float distanceScale;
 };
 
 struct MergeNode {
@@ -195,7 +201,7 @@ union ShapeMergingInstruction {
 };
 
 // Packed kind + data for use as a StructuredBuffer element.
-// Layout: kind(4) + data(28) = 32 bytes
+// Layout: kind(4) + data(48, sized by ShapeMetadata) = 52 bytes
 struct ShapeMergingEntry {
   enum ShapeMergingInstructionKind kind;
   union ShapeMergingInstruction data;

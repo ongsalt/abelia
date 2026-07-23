@@ -124,6 +124,22 @@ extension Affine {
   }
 }
 
+extension ShapeMetadata {
+  /// Pack into the C ShapeMetadata, folding `transform` into the inverse form the shader consumes.
+  /// `shape`/`kind` are passed in so the renderer can substitute a polygon whose vertex-buffer
+  /// startIndex it patched in.
+  func cMetadata(kind: CShim.ShapeKind, shape: CShim.Shape) -> CShim.ShapeMetadata {
+    let g = transform.gpu
+    return CShim.ShapeMetadata(
+      shapeKind: kind,
+      shape: shape,
+      invLinear: (g.invCol0.x, g.invCol0.y, g.invCol1.x, g.invCol1.y),
+      translation: (g.translation.x, g.translation.y),
+      distanceScale: g.distanceScale
+    )
+  }
+}
+
 extension ShapeMergingInstruction {
   var c: CShim.ShapeMergingEntry {
     var entry = CShim.ShapeMergingEntry()
@@ -138,11 +154,7 @@ extension ShapeMergingInstruction {
     case .push(let metadata):
       let (kind, shapeData) = metadata.shape.c
       entry.kind = .push
-      entry.data.shape = CShim.ShapeMetadata(
-        shapeKind: kind,
-        shape: shapeData,
-        offset: (metadata.offset.x, metadata.offset.y)
-      )
+      entry.data.shape = metadata.cMetadata(kind: kind, shape: shapeData)
     case .modify(let mode, let radius):
       entry.kind = .modify
       entry.data.modify = CShim.ModifyNode(

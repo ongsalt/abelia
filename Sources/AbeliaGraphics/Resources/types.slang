@@ -99,8 +99,10 @@ public enum MergeMode : uint {
 
 public struct ShapeMetadata {
   public ShapeKind shapeKind;
-  public uint4 shape;   // raw Shape union data (bit_cast to Rect/Arc/Pie/Ellipse)
-  public float2 offset;
+  public uint4 shape;        // raw Shape union data (bit_cast to Rect/Arc/Pie/Ellipse)
+  public float4 invLinear;   // inverse 2x2 (invCol0.xy, invCol1.xy): world -> shape-local
+  public float2 translation; // forward translation (shape-local -> world)
+  public float distanceScale;// shape-local SDF distance -> world units
 };
 
 public struct MergeNode {
@@ -131,9 +133,9 @@ public struct ShapeMergingInstruction {
 };
 
 // Packed kind + data — use this as the StructuredBuffer element type.
-// Layout: kind(4) + mergeMode_or_shapeKind(4) + data(16) + offset(8) = 32 bytes
-// Uses scalar fields only: std430 gives uint4 16-byte alignment which would
-// add 8 bytes of padding after mergeMode_or_shapeKind, mismatching the C layout.
+// Layout: kind(4) + mergeMode_or_shapeKind(4) + data(16) + invLinear(16) + translation(8) + distanceScale(4) = 52 bytes
+// Uses scalar fields only: std430 gives vector types 16-byte alignment which would
+// insert padding and mismatch the tightly-packed C layout.
 public struct ShapeMergingEntry {
   public ShapeMergingInstructionKind kind;
   public uint mergeMode_or_shapeKind;
@@ -141,11 +143,19 @@ public struct ShapeMergingEntry {
   public uint data1;
   public uint data2;
   public uint data3;
-  public float offsetX;
-  public float offsetY;
+  // push only: inverse 2x2 (world -> shape-local), forward translation, and distance rescale
+  public float m00;  // invCol0.x
+  public float m01;  // invCol0.y
+  public float m10;  // invCol1.x
+  public float m11;  // invCol1.y
+  public float tx;
+  public float ty;
+  public float distanceScale;
 
   public property uint4 data { get { return uint4(data0, data1, data2, data3); } }
-  public property float2 offset { get { return float2(offsetX, offsetY); } }
+  public property float2 invCol0 { get { return float2(m00, m01); } }
+  public property float2 invCol1 { get { return float2(m10, m11); } }
+  public property float2 translation { get { return float2(tx, ty); } }
 };
 
 public TextureBrush unpackTextureBrush(uint4 d0, uint4 d1, uint4 d2, uint4 d3) {

@@ -1,12 +1,75 @@
 import Foundation
 
+/// A 2D affine transform (scale, then rotate, then translate) applied to a shape inside a merge group.
+///
+/// Stored as the forward transform in column-major form: `world = [col0 col1] · local + translation`.
+/// The GPU only ever needs the inverse (world → shape-local), produced by `gpu`.
+public struct Transform2D: Sendable, Equatable {
+  public var col0: SIMD2<Float>
+  public var col1: SIMD2<Float>
+  public var translation: SIMD2<Float>
+
+  public init(col0: SIMD2<Float>, col1: SIMD2<Float>, translation: SIMD2<Float>) {
+    self.col0 = col0
+    self.col1 = col1
+    self.translation = translation
+  }
+
+  public static let identity = Transform2D(
+    col0: SIMD2(1, 0), col1: SIMD2(0, 1), translation: .zero)
+
+  /// scale is applied first, then rotation, then translation.
+  public init(offset: SIMD2<Float> = .zero, rotation: Angle = .radians(0), scale: SIMD2<Float> = .one) {
+    let a = rotation.radians
+    let c = cos(a), s = sin(a)
+    // R · S, taken column by column
+    self.col0 = SIMD2(c, s) * scale.x
+    self.col1 = SIMD2(-s, c) * scale.y
+    self.translation = offset
+  }
+
+  public static func translation(_ t: SIMD2<Float>) -> Transform2D {
+    Transform2D(offset: t)
+  }
+
+  @inline(__always) func applyLinear(_ v: SIMD2<Float>) -> SIMD2<Float> {
+    v.x * col0 + v.y * col1
+  }
+  @inline(__always) func apply(_ p: SIMD2<Float>) -> SIMD2<Float> {
+    applyLinear(p) + translation
+  }
+
+  /// `self ∘ other` — `other` runs first (its output is fed into `self`).
+  public func concatenating(_ other: Transform2D) -> Transform2D {
+    Transform2D(
+      col0: applyLinear(other.col0),
+      col1: applyLinear(other.col1),
+      translation: apply(other.translation))
+  }
+
+  /// Inverse linear part (world → local) as columns, the forward translation, and the world-space
+  /// distance scale used to convert a shape-local SDF distance back to world units.
+  var gpu:
+    (invCol0: SIMD2<Float>, invCol1: SIMD2<Float>, translation: SIMD2<Float>, distanceScale: Float)
+  {
+    let det = col0.x * col1.y - col1.x * col0.y
+    let invDet: Float = det == 0 ? 0 : 1 / det
+    let invCol0 = SIMD2(col1.y, -col0.y) * invDet
+    let invCol1 = SIMD2(-col1.x, col0.x) * invDet
+    // conservative for SDFs: the smaller of the two axis scales
+    let sx = (col0.x * col0.x + col0.y * col0.y).squareRoot()
+    let sy = (col1.x * col1.x + col1.y * col1.y).squareRoot()
+    return (invCol0, invCol1, translation, min(sx, sy))
+  }
+}
+
 public struct ShapeMetadata: Sendable {
   public var shape: Shape
-  public var offset: SIMD2<Float>
+  public var transform: Transform2D
 
-  public init(_ shape: Shape, _ offset: SIMD2<Float>) {
+  public init(_ shape: Shape, _ transform: Transform2D = .identity) {
     self.shape = shape
-    self.offset = offset
+    self.transform = transform
   }
 }
 
@@ -64,7 +127,7 @@ extension Shape {
 extension Shape: ShapeProtocol {
   @inlinable
   public var drawInstructions: some Sequence<ShapeMergingInstruction> {
-    CollectionOfOne(.push(ShapeMetadata(self, .zero)))
+    CollectionOfOne(.push(ShapeMetadata(self, .identity)))
   }
 
   public var bounds: Rect {
@@ -135,33 +198,36 @@ public struct MergedShape<First: ShapeProtocol, Second: ShapeProtocol>: Sendable
   @usableFromInline let smoothing: Float
   @usableFromInline let first: First
   @usableFromInline let second: Second
-  @usableFromInline let secondOffset: SIMD2<Float>
+  @usableFromInline let secondTransform: Transform2D
 
   @inlinable
-  init(mode: MergeMode, smoothing: Float, first: First, second: Second, secondOffset: SIMD2<Float>)
-  {
+  init(
+    mode: MergeMode, smoothing: Float, first: First, second: Second, secondTransform: Transform2D
+  ) {
     self.mode = mode
     self.smoothing = smoothing
     self.first = first
     self.second = second
-    self.secondOffset = secondOffset
+    self.secondTransform = secondTransform
   }
 }
 
 extension MergedShape: ShapeProtocol {
   @inlinable
   public var drawInstructions: some Sequence<ShapeMergingInstruction> {
-    first.drawInstructions
+    let secondTransform = self.secondTransform
+    return
+      first.drawInstructions
       .chain(second.drawInstructions.lazy.map { instruction in
         guard case .push(let meta) = instruction else { return instruction }
-        return .push(ShapeMetadata(meta.shape, meta.offset + secondOffset))
+        return .push(ShapeMetadata(meta.shape, secondTransform.concatenating(meta.transform)))
       })
       .chain(CollectionOfOne(.merge(self.mode, smoothing: self.smoothing)))
   }
 
   public var bounds: Rect {
     let a = first.bounds
-    let b = second.bounds.offset(secondOffset)
+    let b = second.bounds.transformed(by: secondTransform)
     let left = min(a.left, b.left)
     let top = min(a.top, b.top)
     return Rect(topLeft: SIMD2(left, top), size: SIMD2(max(a.right, b.right) - left, max(a.bottom, b.bottom) - top))
@@ -169,8 +235,10 @@ extension MergedShape: ShapeProtocol {
   }
 
   public func sdf(_ p: SIMD2<Float>) -> Float {
+    let g = secondTransform.gpu
+    let local = g.invCol0 * (p.x - g.translation.x) + g.invCol1 * (p.y - g.translation.y)
     let d1 = first.sdf(p)
-    let d2 = second.sdf(p - secondOffset)
+    let d2 = second.sdf(local) * g.distanceScale
     let k = smoothing
     switch mode {
     case .union:
@@ -182,6 +250,43 @@ extension MergedShape: ShapeProtocol {
     case .xor:
       return max(min(d1, d2), -max(d1, d2))
     }
+  }
+
+  public func contains(_ point: SIMD2<Float>) -> Bool {
+    sdf(point) <= 0
+  }
+}
+
+/// Wraps a shape with a 2D affine transform (translate · rotate · scale).
+public struct TransformedShape<Base: ShapeProtocol>: Sendable {
+  @usableFromInline let transform: Transform2D
+  @usableFromInline let base: Base
+
+  @inlinable
+  init(transform: Transform2D, base: Base) {
+    self.transform = transform
+    self.base = base
+  }
+}
+
+extension TransformedShape: ShapeProtocol {
+  @inlinable
+  public var drawInstructions: some Sequence<ShapeMergingInstruction> {
+    let transform = self.transform
+    return base.drawInstructions.lazy.map { instruction in
+      guard case .push(let meta) = instruction else { return instruction }
+      return .push(ShapeMetadata(meta.shape, transform.concatenating(meta.transform)))
+    }
+  }
+
+  public var bounds: Rect {
+    base.bounds.transformed(by: transform)
+  }
+
+  public func sdf(_ p: SIMD2<Float>) -> Float {
+    let g = transform.gpu
+    let local = g.invCol0 * (p.x - g.translation.x) + g.invCol1 * (p.y - g.translation.y)
+    return base.sdf(local) * g.distanceScale
   }
 
   public func contains(_ point: SIMD2<Float>) -> Bool {
@@ -240,35 +345,58 @@ public struct MergeNode: Sendable {
 }
 
 extension ShapeProtocol {
+  /// Wrap the shape in a 2D affine transform (scale, then rotate, then translate).
+  @inlinable
+  public func transformed(
+    offset: SIMD2<Float> = .zero, rotation: Angle = .radians(0), scale: SIMD2<Float> = .one
+  ) -> TransformedShape<Self> {
+    TransformedShape(
+      transform: Transform2D(offset: offset, rotation: rotation, scale: scale), base: self)
+  }
+
+  @inlinable
+  public func transformed(_ transform: Transform2D) -> TransformedShape<Self> {
+    TransformedShape(transform: transform, base: self)
+  }
+
   @inlinable
   public func union<Other: ShapeProtocol>(
-    _ other: Other, offset: SIMD2<Float> = .zero, smoothing: Float = 0
+    _ other: Other, offset: SIMD2<Float> = .zero, rotation: Angle = .radians(0),
+    scale: SIMD2<Float> = .one, smoothing: Float = 0
   ) -> MergedShape<Self, Other> {
     MergedShape(
-      mode: .union, smoothing: smoothing, first: self, second: other, secondOffset: offset)
+      mode: .union, smoothing: smoothing, first: self, second: other,
+      secondTransform: Transform2D(offset: offset, rotation: rotation, scale: scale))
   }
 
   @inlinable
   public func intersect<Other: ShapeProtocol>(
-    _ other: Other, offset: SIMD2<Float> = .zero, smoothing: Float = 0
+    _ other: Other, offset: SIMD2<Float> = .zero, rotation: Angle = .radians(0),
+    scale: SIMD2<Float> = .one, smoothing: Float = 0
   ) -> MergedShape<Self, Other> {
     MergedShape(
-      mode: .intersect, smoothing: smoothing, first: self, second: other, secondOffset: offset)
+      mode: .intersect, smoothing: smoothing, first: self, second: other,
+      secondTransform: Transform2D(offset: offset, rotation: rotation, scale: scale))
   }
 
   @inlinable
   public func subtract<Other: ShapeProtocol>(
-    _ other: Other, offset: SIMD2<Float> = .zero, smoothing: Float = 0
+    _ other: Other, offset: SIMD2<Float> = .zero, rotation: Angle = .radians(0),
+    scale: SIMD2<Float> = .one, smoothing: Float = 0
   ) -> MergedShape<Self, Other> {
     MergedShape(
-      mode: .subtract, smoothing: smoothing, first: self, second: other, secondOffset: offset)
+      mode: .subtract, smoothing: smoothing, first: self, second: other,
+      secondTransform: Transform2D(offset: offset, rotation: rotation, scale: scale))
   }
 
   @inlinable
   public func xor<Other: ShapeProtocol>(
-    _ other: Other, offset: SIMD2<Float> = .zero, smoothing: Float = 0
+    _ other: Other, offset: SIMD2<Float> = .zero, rotation: Angle = .radians(0),
+    scale: SIMD2<Float> = .one, smoothing: Float = 0
   ) -> MergedShape<Self, Other> {
-    MergedShape(mode: .xor, smoothing: smoothing, first: self, second: other, secondOffset: offset)
+    MergedShape(
+      mode: .xor, smoothing: smoothing, first: self, second: other,
+      secondTransform: Transform2D(offset: offset, rotation: rotation, scale: scale))
   }
 
   /// opRound: grow the shape outward by `radius`, rounding its convex corners.

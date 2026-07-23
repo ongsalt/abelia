@@ -202,7 +202,10 @@ float sdfMerge(float2 position, uint startIndex, uint count) {
   for (uint i = 0u; i < count; i++) {
     ShapeMergingEntry entry = shapeGroupData[startIndex + i];
     if (entry.kind == ShapeMergingInstructionKind.push) {
-      stack[top] = sdf(position - entry.offset, bit_cast<ShapeKind>(entry.mergeMode_or_shapeKind), entry.data);
+      // world -> shape-local via the inverse 2x2, then rescale the local SDF distance back to world units
+      float2 rel = position - entry.translation;
+      float2 local = entry.invCol0 * rel.x + entry.invCol1 * rel.y;
+      stack[top] = sdf(local, bit_cast<ShapeKind>(entry.mergeMode_or_shapeKind), entry.data) * entry.distanceScale;
       top += 1;
     } else if (entry.kind == ShapeMergingInstructionKind.modify) {
       // unary op on the top of the stack (opRound / opOnion)

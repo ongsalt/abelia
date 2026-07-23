@@ -7,6 +7,7 @@ ui library??
 # Features
 - SDF drawing primitive with ops like union, intersect, onion. See (Inigo Quilez's article)[https://iquilezles.org/articles/distfunctions2d/].
 - Offscreen pass for opacity group and effect group.
+- no text yet cuz [text rendering hates you](https://faultlore.com/blah/text-hates-you/) 
 
 # Dependencies
 
