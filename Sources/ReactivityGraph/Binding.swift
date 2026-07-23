@@ -1,7 +1,7 @@
 package enum BindableStorage<T: Equatable> {
     case const(T)
     case getter(() -> T)
-    case thunk(_Thunk<T>)
+    case thunk(Computed<T>)
 
     var value: T {
         switch self {
@@ -44,7 +44,7 @@ public struct Bindable<T: Equatable> {
     }
 
     public mutating func bind(_ expression: @escaping () -> T) {
-        self.storage = .thunk(_Thunk(computation: expression))
+        self.storage = .thunk(Computed(computation: expression))
     }
 
     public mutating func _bind(getter: @escaping () -> T) {
@@ -52,7 +52,7 @@ public struct Bindable<T: Equatable> {
     }
 
     // must itself be a computed node. so we can report .dirty/need pull
-    public mutating func bind(source: _Thunk<T>) {
+    public mutating func bind(source: Computed<T>) {
         self.storage = .thunk(source)
     }
 }

@@ -1,7 +1,8 @@
 import Foundation
 
 // pure
-public class _Cell<T: Equatable>: Identifiable, Source<T> {
+@propertyWrapper
+public class Signal<T>: Identifiable, Source<T> {
     private var _value: T
     public var untracked: T { _value }
     public var value: T {
@@ -12,7 +13,7 @@ public class _Cell<T: Equatable>: Identifiable, Source<T> {
             return _value
         }
         set {
-            if newValue != value {
+            if !_eq(_value, newValue) {
                 _value = newValue
                 notify(&subscribers)
             }
@@ -22,12 +23,34 @@ public class _Cell<T: Equatable>: Identifiable, Source<T> {
     // should be weak?
     var subscribers: [WeakSink] = []
 
-    init(_ value: T) {
+    public var _eq: ((borrowing T, borrowing T) -> Bool)
+
+    public init(_ value: T) where T: Equatable {
         self._value = value
+        _eq = { a, b in a == b }
+    }
+
+    public init(_ value: T) {
+        self._value = value
+        _eq = { _, _ in false }
+    }
+
+    // property wrapper
+    public var wrappedValue: T {
+        _read {
+            yield value
+        }
+        _modify {
+            yield &value
+        }
+    }
+
+    convenience public init(wrappedValue: T) {
+        self.init(wrappedValue)
     }
 }
 
-public class _Thunk<T: Equatable>: Identifiable, Source<T>, Sink {
+public class Computed<T>: Identifiable, Source<T>, Sink {
     var dependencies: [any EdgeProtocol] = []
     var subscribers: [WeakSink] = []
     var dirty: Bool = true
@@ -49,9 +72,17 @@ public class _Thunk<T: Equatable>: Identifiable, Source<T>, Sink {
         return untracked
     }
 
-    init(computation: @escaping () -> T) {
+    public init(computation: @escaping () -> T) where T: Equatable {
         self.computation = computation
+        _eq = { a, b in a == b }
     }
+
+    public init(computation: @escaping () -> T) {
+        self.computation = computation
+        _eq = { _, _ in false }
+    }
+
+    public var _eq: ((borrowing T, borrowing T) -> Bool)
 
     public func markDirty() {
         if self.dirty { return }
@@ -82,7 +113,7 @@ public class _Thunk<T: Equatable>: Identifiable, Source<T>, Sink {
     }
 }
 
-struct Edge<T: Equatable>: EdgeProtocol {
+struct Edge<T>: EdgeProtocol {
     let source: any Source<T>
     let savedValue: T
 
@@ -92,7 +123,7 @@ struct Edge<T: Equatable>: EdgeProtocol {
     }
 
     var isChanged: Bool {
-        source.value != savedValue
+        !source._eq(savedValue, source.value)
     }
 }
 
@@ -103,18 +134,23 @@ protocol EdgeProtocol {
 enum TrackingContext {
     nonisolated(unsafe) static var currentSubsciber: (any Sink)? {
         get {
-            Thread.current.threadDictionary["Abelia.ReactivityGraph.TrackingContext.current"] as? (any Sink)
+            Thread.current.threadDictionary["Abelia.ReactivityGraph.TrackingContext.current"]
+                as? (any Sink)
         }
         set {
-            Thread.current.threadDictionary["Abelia.ReactivityGraph.TrackingContext.current"] = newValue
+            Thread.current.threadDictionary["Abelia.ReactivityGraph.TrackingContext.current"] =
+                newValue
         }
     }
 }
 
 public protocol Source<T>: AnyObject {
-    associatedtype T: Equatable
+    associatedtype T
     var value: T { get }
     var untracked: T { get }
+
+    var _eq: ((borrowing T, borrowing T) -> Bool) { get }
+
 }
 
 public protocol Sink: AnyObject {
