@@ -119,6 +119,8 @@ float4 fsMain(VertexOutput input): SV_Target {
   let renderNode = renderNodeData[input.renderNodeDataIndex];
   let position = input.localPosition;
 
+  // return float4(1.0, input.uv, 1.0);
+
   switch (input.drawMode) {
     case DrawMode.Fill:
       return computeFill(renderNode, position, input.uv) * renderNode.opacity;

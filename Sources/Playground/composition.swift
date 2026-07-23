@@ -92,11 +92,11 @@ class Delegate: Swinit.EventLoopDelegate {
         root.size = [800, 600]
         root.brush = .solid(.white)
 
-        springCircles = SpringCircleScene(
-            compositor: compositor,
-            controller: animationController,
-            bounds: root.size
-        )
+        // springCircles = SpringCircleScene(
+        //     compositor: compositor,
+        //     controller: animationController,
+        //     bounds: root.size
+        // )
         // root.insert(springCircles.canvas)
 
 
@@ -106,10 +106,12 @@ class Delegate: Swinit.EventLoopDelegate {
             buildLayers()
         }
         b.opacity = 0.5
+        b.rotation = .degrees(30)
 
         let c = buildLayers()
         c.offset = [0, 100, 0]
         c.opacity = 0.5
+        c.rotation = .degrees(30)
 
         // root.insert(a)
         root.insert(b)
@@ -161,16 +163,16 @@ class Delegate: Swinit.EventLoopDelegate {
                 // make these happen on render thread
                 compositor.root.size = SIMD2(Float(size.width), Float(size.height))
                 compositor.configureSurface(surfaceConfig)
-                springCircles.updateBounds(compositor.root.size)
+                // springCircles.updateBounds(compositor.root.size)
             }
 
         case .keyboardInput(_, let event, _) where event.state == .pressed:
             let x = Float.random(in: 0...compositor.root.size.x)
             let y = Float.random(in: 0...compositor.root.size.y)
-            springCircles.move(toward: Vec2(x, y))
+            // springCircles.move(toward: Vec2(x, y))
 
-        case .cursorMoved(_, let p):
-            springCircles.move(toward: Vec2(Float(p.x), Float(p.y)))
+        // case .cursorMoved(_, let p):
+        //     springCircles.move(toward: Vec2(Float(p.x), Float(p.y)))
 
         case .closeRequested:
             compositor.stop {

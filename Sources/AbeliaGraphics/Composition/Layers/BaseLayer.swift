@@ -64,7 +64,7 @@ public class _BaseLayer: Identifiable {
 
     /// pivot point for scale and rotation, in local space — behaves like CSS transform-origin
     @Bindable
-    public var transformOrigin: SIMD2<Float> = .zero {
+    public var transformOrigin: SIMD2<Float> = SIMD2(0.5, 0.5) {
         didSet { dirtyFlags.insert(.transform) }
     }
 

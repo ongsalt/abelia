@@ -96,8 +96,8 @@ struct PassScheduler {
 
             // initially composite, might not reuse texture, also need to calculate it size with child
             let layer = group.root
-            let affine = layer.effectiveTransform.value
-            let bounds = layer.bounds.transformBounds(affine)
+            // is this needed for OffscreenLayer -> may be if we do renderscale?
+            let bounds = layer.bounds
             if bounds.size == .zero {
                 return nil
             }
@@ -307,6 +307,7 @@ extension Layer {
                 offset: shadow.offset, blur: shadow.blur, spread: shadow.spread,
                 color: shadow.color, opacity: shadow.opacity)
         }
+        node.opacity = effectiveOpacity.value
         node.affine = affine
         return node
     }
@@ -338,7 +339,7 @@ extension OffscreenLayer {
         var node = RenderNode()
         node.brush = .backdrop(key: key)  // should be Texture
         node.shape = Shape.rect(width: size.x, height: size.y)
-        node.opacity = self.opacity
+        node.opacity = self.effectiveOpacity.value
         node.affine = affine
         return node
     }

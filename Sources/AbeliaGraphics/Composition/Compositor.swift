@@ -22,7 +22,7 @@ public class Compositor {
     // private var knownSurfaces: [Angle] = []
     // TODO: move compositionSurface out
     nonisolated(unsafe) private let surface: any Surface2
-    public var root = Layer()
+    public let root = OffscreenLayer()
 
     private var scheduler = RenderScheduler()
 
