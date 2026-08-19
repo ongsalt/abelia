@@ -6,7 +6,7 @@ import Swinit
 final class SpringCircleScene {
     let canvas: ShapeLayer
     private let compositor: Compositor
-    private let primaryCircle: SpringAnimator<Vec2<Float>>
+    private let primaryCircle: SpringAnimator<SIMD2<Float>>
 
     private let primaryRadius: Float = 48
     private let secondaryRadius: Float = 48
@@ -34,7 +34,7 @@ final class SpringCircleScene {
         refreshShapes()
     }
 
-    func move(toward position: Vec2<Float>) {
+    func move(toward position: SIMD2<Float>) {
         primaryCircle.value = clamp(position, within: canvas.size, radius: primaryRadius)
     }
 
@@ -57,7 +57,7 @@ final class SpringCircleScene {
                     .circle(primaryRadius)
                     .union(
                         Shape.circle(secondaryRadius),
-                        offset: primaryCircle.value.simd - c,
+                        offset: primaryCircle.value - c,
                         smoothing: 40
                     ),
                 brush: .solid(.black),
@@ -67,16 +67,14 @@ final class SpringCircleScene {
         ]
     }
 
-    private func clamp(_ point: Vec2<Float>, within bounds: SIMD2<Float>, radius: Float) -> Vec2<
-        Float
-    > {
+    private func clamp(_ point: SIMD2<Float>, within bounds: SIMD2<Float>, radius: Float)
+        -> SIMD2<Float>
+    {
         guard bounds.x > radius * 2, bounds.y > radius * 2 else {
-            return Vec2(bounds.x * 0.5, bounds.y * 0.5)
+            return bounds * 0.5
         }
 
-        let x = min(max(point.x, radius), bounds.x - radius)
-        let y = min(max(point.y, radius), bounds.y - radius)
-        return Vec2(x, y)
+        return point.clamped(lowerBound: SIMD2(repeating: radius), upperBound: bounds - SIMD2(repeating: radius))
     }
 }
 
@@ -171,10 +169,10 @@ class Delegate: Swinit.EventLoopDelegate {
         case .keyboardInput(_, let event, _) where event.state == .pressed:
             let x = Float.random(in: 0...compositor.root.size.x)
             let y = Float.random(in: 0...compositor.root.size.y)
-            // springCircles.move(toward: Vec2(x, y))
+            // springCircles.move(toward: SIMD2(x, y))
 
         // case .cursorMoved(_, let p):
-        //     springCircles.move(toward: Vec2(Float(p.x), Float(p.y)))
+        //     springCircles.move(toward: SIMD2(Float(p.x), Float(p.y)))
 
         case .closeRequested:
             compositor.stop {
