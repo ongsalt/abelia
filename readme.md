@@ -20,8 +20,6 @@ ui library??
 
 ## Todo
 - multiple border (-> outline + stroke)
-- clipping stack
-- allow 2d transform on sdf merging
 - harfbuzz gpu 
 - proper erf box shadow
 - offthread animation

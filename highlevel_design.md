@@ -31,7 +31,7 @@ sdf shape now might emit multiple bounds
 - Pixel snapping
 - Is a rect with brush
 - Backface visibility
-- allow arbtritary clip by just do another shape merging pass like in the shader
+- allow arbitary clip by just do another shape merging pass like in the shader
 
 ## `Layer`
 - wont force split composition group (at layer level)
@@ -41,7 +41,7 @@ sdf shape now might emit multiple bounds
 - Seperate `anchor` in parent space and `transformAnchor`
 
 ## `OffscreenLayer`
-- Rect+sdf clip, stencil?
+- Rect+sdf clip
 - Allow attaching effect graph to entire layer
 - so this allow real
 
@@ -66,3 +66,7 @@ an effect graph, also stolen from wuc
 # Shape API
 - sdf from https://iquilezles.org/articles/distfunctions2d/
 - allow unary ops: `onion, round`, binary ops: `union, intersect, xor, subtract` with smoothing. All operate in a per shape local space.
+
+# Threading
+- rewrite getter Bindable + maintain getter list, per compositor
+- pull diff on frame 

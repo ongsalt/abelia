@@ -1,6 +1,13 @@
 import Vulkan
 
 class GradientRenderer {
+  let device: DeviceContext
+  let buffer: GPUBuffer<UInt8>
+  init(device: DeviceContext) throws(Vulkan.Result) {
+    self.device = device
+    // stop buffer: interpolationSpace, stopCount, stops{space r g b a}
+    self.buffer = try GPUBuffer(context: device)
+  } 
 
   func get() -> GPUTask<RenderTexture> {
     fatalError("unimplemented")

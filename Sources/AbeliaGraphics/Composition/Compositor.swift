@@ -230,6 +230,7 @@ public class Compositor {
         self.onStop = onStop
     }
 }
+
 class RenderNotifier: @unchecked Sendable {
     let condition = NSCondition()
     let ignored: Bool
@@ -274,7 +275,6 @@ class RenderNotifier: @unchecked Sendable {
                 hasRequested = false
                 return true
             }
-            Log.verbose(.scheduler, "Waiting")
             condition.wait()
             hasRequested = false
             return !shouldStop

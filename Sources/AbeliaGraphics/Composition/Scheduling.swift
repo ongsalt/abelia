@@ -1,3 +1,11 @@
+/// Generating draw commands from Layer tree
+/// - Use OffscreenLayer as CompositionGroup root, maybe maintain children list
+///     - OffscreenLayer size is real pixel size, no transform
+/// - traverse tree of OffscreenLayer to generate graph of Pass
+///     - Pass caching granularity is at OffscreenLayer level
+///     - resolve actual texture
+/// - traverse tree and emit draw commands
+
 struct RenderScheduler {
     // TODO: cache this
     var compositionPlanner = CompositionPlanner()

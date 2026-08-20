@@ -205,6 +205,14 @@ float2 textureLocalPositionOf(float2 uv, TextureBrush brush) {
   return uv * float2(brush.cropWidth, brush.cropHeight) + float2(brush.cropLeft, brush.cropTop);
 }
 
+float FRAC_2_SQRT_PI = 1.12837916709551257;
+float compute_erf7(float x) {
+  let x = x * FRAC_2_SQRT_PI;
+  let xx = x * x;
+  let x2 = x + (0.24295 + (0.03395 + 0.0104 * xx) * xx) * (x * xx);
+  return sqrt(x2 / (1.0 + x2 * x2));
+}
+
 float sdfDistance(RenderNode renderNode, float2 position) {
   return sdfMerge(position, renderNode.shapeStartIndex, renderNode.shapeCount);
 }

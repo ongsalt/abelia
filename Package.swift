@@ -72,6 +72,15 @@ let package = Package(
         ),
 
         .target(
+            name: "AbeliaRHI",
+            dependencies: [
+                "CPlatform",
+                "ReactivityGraph",
+                .product(name: "Vulkan", package: "swift-vulkan"),
+            ],
+        ),
+
+        .target(
             name: "AbeliaGraphics",
             dependencies: [
                 "Cnanosvg",
