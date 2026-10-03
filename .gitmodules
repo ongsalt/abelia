@@ -7,3 +7,9 @@
 [submodule "Vendors/harfbuzz"]
 	path = Vendors/harfbuzz
 	url = https://github.com/harfbuzz/harfbuzz
+[submodule "Vendors/volk"]
+	path = Vendors/volk
+	url = https://github.com/zeux/volk
+[submodule "Vendors/VulkanMemoryAllocator"]
+	path = Vendors/VulkanMemoryAllocator
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator

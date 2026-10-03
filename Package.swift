@@ -22,9 +22,6 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/swiftlang/swift-syntax", from: "602.0.0"),
         .package(url: "https://github.com/ongsalt/swinit", branch: "main", traits: ["WaylandCSD"]),
-        .package(
-            url: "https://github.com/ongsalt/swift-vulkan",
-            revision: "7545f1c64236fe2c13dfdbaeda1810aaf96274db"),
         // .package(url: "https://github.com/tomasf/Apus.git", branch: "master"),
         // .package(url: "https://github.com/LuizZak/swift-blend2d", branch: "master"),
 
@@ -32,11 +29,9 @@ let package = Package(
     targets: [
         .target(name: "Cnanosvg"),
         .target(name: "CSTBImage"),
+        
         .target(
-            name: "CShim",
-            dependencies: [
-                .product(name: "Vulkan", package: "swift-vulkan"),
-            ],
+            name: "CVulkan",
         ),
         .target(
             name: "CPlatform",
@@ -71,33 +66,25 @@ let package = Package(
             ]
         ),
 
-        // .target(
-        //     name: "AbeliaRHI",
-        //     dependencies: [
-        //         "CPlatform",
-        //         "ReactivityGraph",
-        //         .product(name: "Vulkan", package: "swift-vulkan"),
-        //     ],
-        // ),
-
         .target(
             name: "AbeliaGraphics",
             dependencies: [
                 "Cnanosvg",
-                "CShim",
                 "CPlatform",
                 "CSTBImage",
+                "CVulkan",
                 "ReactivityGraph",
-                .product(name: "Vulkan", package: "swift-vulkan"),
-                // .product(name: "SwiftBlend2D", package: "swift-blend2d"),
                 .product(name: "Swinit", package: "swinit"),
             ],
-            exclude: [
-                "Resources/"
+            swiftSettings: [
+                .enableExperimentalFeature("Lifetimes")
             ],
-            resources: [
-                .copy("Generated/Resources")
-            ],
+            // exclude: [
+            //     "Resources/"
+            // ],
+            // resources: [
+            //     .copy("Generated/Resources")
+            // ],
         ),
 
         .executableTarget(

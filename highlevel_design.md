@@ -20,10 +20,12 @@
     - simple: just switch pipeline
     - advanced: dynamic rendering localread (no perf benefit on desktop)
 - Brush & Effect
-    - image brush is positioned relative to Layer
-    - BackdropEffect
+    - image brush is positioned relative to canvas
+    - BackdropBrush do not require `let bacdrop = canvas.sample()` but we might provide this too. Currently its upto the renderer to do pass split
     - Effect is at layer level
 
+## Api
+- Canvas with persisted brush/path/effect object
 
 ## Path rendering
 stolen from vello hybrid ["sparse strips"](https://ethz.ch/content/dam/ethz/special-interest/infk/inst-pls/plf-dam/documents/StudentProjects/MasterTheses/2025-Laurenz-Thesis.pdf)
