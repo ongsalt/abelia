@@ -53,14 +53,14 @@ let package = Package(
         .target(name: "Reactivity"),
         .target(name: "ReactivityGraph"),
 
-        .target(
-            name: "AbeliaUI",
-            dependencies: [
-                "AbeliaGraphics",
-                "DSLMacro",
-                .product(name: "Swinit", package: "swinit"),
-            ],
-        ),
+        // .target(
+        //     name: "AbeliaUI",
+        //     dependencies: [
+        //         "AbeliaGraphics",
+        //         "DSLMacro",
+        //         .product(name: "Swinit", package: "swinit"),
+        //     ],
+        // ),
 
         .macro(
             name: "DSLMacro",

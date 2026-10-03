@@ -1,54 +1,39 @@
-# Graphics
-expose kinda `windows.ui.composition`-like api. You construct a tree of `Layer` (or `Visual` in WUC term) which will be retained. Most of shape rendered are sdf.
+# Highlevel design
+`AbeliaUI` manage composition and animation now. `AbeliaGraphics` only provide scene descriptor and rendering. `Swinit` and `swift-vulkan` is also nuked
 
-## Drawing Primitive
-Sdf shape (+ stroke), analytic shadow, path strip?
 
-Brush: Solid color, Texture (including offscreen texture)
+# AbeliaUI
+`AbeliaUI` will provide a retained mode traditional widget object like DOM `Element` (that may or may not exposed) but it also provide solidjs-like reactive layer.
+- layouting is basically compose
+- might take `Modifier` from compose
+
+# AbeliaGraphics
+
+- 3 Coverage provider: SDF, Sparse strips for path, harfbuzz-gpu for text
+- Clipping
+    - Allow arbitrary nested SDF Clipping
+    - 1 level of path clipping
+- Shadow
+    - SDF: allow arbitrary shadow even if everything that is not rounded rect provide incorrect shadow
+    - everything else require offscreen pass
+- Blend mode
+    - simple: just switch pipeline
+    - advanced: dynamic rendering localread (no perf benefit on desktop)
+- Brush & Effect
+    - image brush is positioned relative to Layer
+    - BackdropEffect
+    - Effect is at layer level
+
 
 ## Path rendering
 stolen from vello hybrid ["sparse strips"](https://ethz.ch/content/dam/ethz/special-interest/infk/inst-pls/plf-dam/documents/StudentProjects/MasterTheses/2025-Laurenz-Thesis.pdf)
 
 sort and break path segments into tile. merge them into strip generating 2 kind of quad AA for said strip and Solid for interior area then let the gpu do the rest.
 
-### NOT YET FINALIZED
-- break curve into polyline or monotonic quadratic bezier?
-    - need to reevaluate when transform change
-- compute prepass just for generating coverage texture for aa
-    - 1 thread = 1 row in a group, 1 group = 4 row of a strip?
-    - rebake once in while when animating transform, rebake again at correct scale once dont 
-- fragment: loopblinn?
-
 ## Draw ordering
 backdrop filter, advanced blend (or anything require reading image below) will force a pass split then pingponging
 
 - need to think about opaque only pass
-
-# Layer API
-sdf shape now might emit multiple bounds
-
-## `BaseLayer`
-- Pixel snapping
-- Is a rect with brush
-- Backface visibility
-- allow arbitary clip by just do another shape merging pass like in the shader
-
-## `Layer`
-- wont force split composition group (at layer level)
-- Multiplicative opacity
-- Basic BlendMode
-- Expose children `origin`
-- Seperate `anchor` in parent space and `transformAnchor`
-
-## `OffscreenLayer`
-- Rect+sdf clip
-- Allow attaching effect graph to entire layer
-- so this allow real
-
-## `ShapeLayer` or `CanvasLayer`?
-- Expose full sdf primitive
-- Force split composition group
-- every brush fill in any shape under this will operate at the layer space
 
 # Brush API
 - solid color is solid color
