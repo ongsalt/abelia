@@ -16,7 +16,7 @@ class BumpAllocator {
         }
 
         let ptr = buffer.baseAddress! + current
-        return UnsafeMutablePointer(ptr)
+        return ptr.assumingMemoryBound(to: T.self)
     }
 
     /// Make sure there are no dangling ref
