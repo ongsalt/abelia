@@ -2,9 +2,9 @@
 
 #if canImport(WaylandClient)
     import WaylandClient
-#endif
+#endif // canImport(WaylandClient)
 
-class Surface {
+public class Surface {
     var vkSurface: VkSurfaceKHR
     // let storage: SurfaceInner
 

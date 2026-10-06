@@ -3,15 +3,6 @@
         {
             "type": "swift",
             "request": "launch",
-            "name": "Launch Playground",
-            "program": "${workspaceRoot}/.build/debug/Playground",
-            "args": [],
-            "env": {},
-            "cwd": "${workspaceRoot}"
-        },
-        {
-            "type": "swift",
-            "request": "launch",
             "args": [],
             "cwd": "${workspaceFolder:abelia}",
             "name": "Debug Playground",
@@ -33,21 +24,21 @@
             "type": "swift",
             "request": "launch",
             "args": [],
-            "cwd": "${workspaceFolder:graphics-101}",
-            "name": "Debug TestTarget",
-            "target": "TestTarget",
+            "cwd": "${workspaceFolder:abelia}",
+            "name": "Debug AbeliaGraphics",
+            "target": "AbeliaGraphics",
             "configuration": "debug",
-            "preLaunchTask": "swift: Build Debug TestTarget"
+            "preLaunchTask": "swift: Build Debug AbeliaGraphics"
         },
         {
             "type": "swift",
             "request": "launch",
             "args": [],
-            "cwd": "${workspaceFolder:graphics-101}",
-            "name": "Release TestTarget",
-            "target": "TestTarget",
+            "cwd": "${workspaceFolder:abelia}",
+            "name": "Release AbeliaGraphics",
+            "target": "AbeliaGraphics",
             "configuration": "release",
-            "preLaunchTask": "swift: Build Release TestTarget"
+            "preLaunchTask": "swift: Build Release AbeliaGraphics"
         }
     ]
 }

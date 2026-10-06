@@ -2,7 +2,7 @@
 
 extension VulkanInstance {
     /// Requests a device with a graphics queue that can present to this instance's surface.
-    func requestDevice(compatibleWith surface: Surface? = nil) throws(VulkanError) -> VulkanDevice {
+    public func requestDevice(compatibleWith surface: Surface? = nil) throws(VulkanError) -> VulkanDevice {
         let nativeSurface: VkSurfaceKHR? = surface?.vkSurface
         var allocator = BumpAllocator()
         let selection = try selectGraphicsDevice(

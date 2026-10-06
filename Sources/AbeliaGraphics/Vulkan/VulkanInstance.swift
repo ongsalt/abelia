@@ -1,9 +1,10 @@
 @preconcurrency import CVulkan
 
-final class VulkanInstance {
+// we should actually let the user pass this in
+public final class VulkanInstance {
     let instance: VkInstance
 
-    init() throws(VulkanError) {
+    public init() throws(VulkanError) {
         try volkInitialize().expect("volkInitialize")
         let supportedVersion = volkGetInstanceVersion()
         guard supportedVersion >= vulkanAPIVersion else {
@@ -22,7 +23,7 @@ final class VulkanInstance {
     #if os(Linux)
         /// The returned object owns its native surface and retains this instance.
         /// Keep the Wayland display and surface alive while the Vulkan surface is in use.
-        func createSurface(display: OpaquePointer, surface: OpaquePointer)
+        public func createSurface(display: OpaquePointer, surface: OpaquePointer)
             throws(VulkanError) -> Surface
         {
             var info = VkWaylandSurfaceCreateInfoKHR()

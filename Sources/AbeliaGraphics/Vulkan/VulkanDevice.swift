@@ -1,6 +1,8 @@
 @preconcurrency import CVulkan
 
-class VulkanDevice {
+// Currently, we own the device but actually the user shuold
+
+public class VulkanDevice {
     let instance: VulkanInstance
     let physicalDevice: VkPhysicalDevice
     let device: VkDevice

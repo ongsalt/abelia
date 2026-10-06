@@ -1,6 +1,6 @@
 @preconcurrency import CVulkan
 
-enum VulkanError: Error {
+public enum VulkanError: Error {
     case unexpectedResult(VkResult, operation: String?)
     case unsupportedAPIVersion(supported: UInt32)
     case incompatibleSurface

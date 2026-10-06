@@ -21,7 +21,7 @@ let package = Package(
     name: "graphics-101",
     dependencies: [
         .package(url: "https://github.com/swiftlang/swift-syntax", from: "602.0.0"),
-        .package(url: "https://github.com/ongsalt/swinit", branch: "main", traits: ["WaylandCSD"]),
+        .package(url: "https://github.com/ongsalt/SwiftWayland", branch: "master"),
         // .package(url: "https://github.com/tomasf/Apus.git", branch: "master"),
         // .package(url: "https://github.com/LuizZak/swift-blend2d", branch: "master"),
 
@@ -48,14 +48,6 @@ let package = Package(
         .target(name: "Reactivity"),
         .target(name: "ReactivityGraph"),
 
-        // .target(
-        //     name: "AbeliaUI",
-        //     dependencies: [
-        //         "AbeliaGraphics",
-        //         "DSLMacro",
-        //         .product(name: "Swinit", package: "swinit"),
-        //     ],
-        // ),
 
         .macro(
             name: "DSLMacro",
@@ -66,15 +58,15 @@ let package = Package(
             ]
         ),
 
-        .target(
+        .executableTarget(
             name: "AbeliaGraphics",
             dependencies: [
-                "Cnanosvg",
+                // "Cnanosvg",
                 "CPlatform",
-                "CSTBImage",
+                // "CSTBImage",
                 "CVulkan",
-                "ReactivityGraph",
-                .product(name: "Swinit", package: "swinit"),
+                // "ReactivityGraph",
+                .product(name: "WaylandClient", package: "SwiftWayland"),
             ],
             swiftSettings: [
                 .enableExperimentalFeature("Lifetimes")
@@ -87,13 +79,13 @@ let package = Package(
             // ],
         ),
 
-        .executableTarget(
-            name: "Playground",
-            dependencies: [
-                "AbeliaGraphics",
-                .product(name: "Swinit", package: "swinit"),
-            ],
-        ),
+        // .executableTarget(
+        //     name: "Playground",
+        //     dependencies: [
+        //         "AbeliaGraphics",
+        //         .product(name: "WaylandClient", package: "SwiftWayland"),
+        //     ],
+        // ),
 
         .testTarget(
             name: "ReactivityTests",
